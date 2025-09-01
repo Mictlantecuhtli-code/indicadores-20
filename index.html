@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Indicadores 2.0 – MVP</title>
+  <!-- Tailwind (CDN para MVP) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS (UMD: define window.supabase) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+  <div class="max-w-7xl mx-auto p-4 md:p-8">
+    <header class="mb-6">
+      <h1 class="text-2xl md:text-3xl font-bold">Indicadores 2.0 – MVP</h1>
+      <p class="text-sm text-slate-600">Demo con Captura y Consulta</p>
+      <div id="connectionStatus" class="text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-gray-200">
+        Conectando...
+      </div>
+    </header>
+
+    <!-- HOME / MENÚ PRINCIPAL -->
+    <section id="secHome" class="grid sm:grid-cols-2 gap-6">
+      <button id="btnGoCaptura" class="bg-white rounded-2xl shadow p-6 text-left hover:ring-2 hover:ring-indigo-300 transition-all">
+        <div class="text-4xl">📝</div>
+        <div class="mt-2 text-xl font-semibold">Captura</div>
+        <p class="text-slate-600 text-sm mt-1">Registrar valores, metas y ver comparativa anual.</p>
+      </button>
+      <button id="btnGoConsulta" class="bg-white rounded-2xl shadow p-6 text-left hover:ring-2 hover:ring-indigo-300 transition-all">
+        <div class="text-4xl">📊</div>
+        <div class="mt-2 text-xl font-semibold">Consulta</div>
+        <p class="text-slate-600 text-sm mt-1">Visualizar por Pasajeros / Operaciones / Carga.</p>
+      </button>
+    </section>
+
+    <!-- CAPTURA -->
+    <section id="secCaptura" class="hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Captura</h2>
+        <button id="btnBackHome1" class="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300">← Inicio</button>
+      </div>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl shadow p-4 md:p-6">
+          <h3 class="text-lg font-semibold mb-4">Módulo de captura</h3>
+          <form id="formCaptura" class="grid grid-cols-2 gap-3">
+            <label class="col-span-2">Área
+              <select id="area" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                <option value="comercial">Aviación Comercial</option>
+                <option value="general">Aviación General</option>
+                <option value="carga">Aviación de Carga</option>
+              </select>
+            </label>
+            <label class="col-span-2">Indicador
+              <select id="indicador" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
+            </label>
+            <label>Año
+              <input id="anio" type="number" min="2022" max="2100" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
+            </label>
+            <label>Mes
+              <select id="mes" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
+            </label>
+            <label>Valor
+              <input id="valor" type="number" step="0.01" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Valor real" />
+            </label>
+            <label>Meta
+              <input id="meta" type="number" step="0.01" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Meta planeada" />
+            </label>
+            <div class="col-span-2 text-sm text-slate-600 bg-slate-50 p-3 rounded-xl">
+              % Cumplimiento: <span id="pct" class="font-semibold text-indigo-600">—</span>
+            </div>
+            <div class="col-span-2 flex gap-2 mt-2">
+              <button class="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors" type="submit">Guardar</button>
+              <button id="btnLimpiar" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 transition-colors" type="button">Limpiar</button>
+              <button id="btnCargarEjemplo" class="px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors" type="button">Cargar Datos Ejemplo</button>
+            </div>
+            <p id="msg" class="col-span-2 text-sm mt-2"></p>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow p-4 md:p-6">
+          <h3 class="text-lg font-semibold mb-4">Comparativa anual (líneas)</h3>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <label>Área
+              <select id="fArea" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                <option value="comercial">Aviación Comercial</option>
+                <option value="general">Aviación General</option>
+                <option value="carga">Aviación de Carga</option>
+              </select>
+            </label>
+            <label>Indicador
+              <select id="fIndicador" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
+            </label>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-4">
+            <canvas id="lineChart" height="140"></canvas>
+          </div>
+          <p id="notice" class="text-sm text-slate-500 mt-2 text-center"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONSULTA -->
+    <section id="secVisual" class="hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Consulta</h2>
+        <button id="btnBackHome2" class="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300">← Inicio</button>
+      </div>
+
+      <!-- Menú de Consulta (3 íconos) -->
+      <div id="menuVisual" class="grid sm:grid-cols-3 gap-4 mb-6">
+        <button data-vmenu="pasajeros" class="bg-white rounded-2xl shadow p-6 hover:ring-2 hover:ring-indigo-300 text-left transition-all">
+          <div class="text-3xl">🧍‍➡️🧍‍⬅️</div>
+          <div class="mt-2 font-semibold">Pasajeros</div>
+          <p class="text-sm text-slate-600">(Comercial / General)</p>
+        </button>
+        <button data-vmenu="operaciones" class="bg-white rounded-2xl shadow p-6 hover:ring-2 hover:ring-indigo-300 text-left transition-all">
+          <div class="text-3xl">🛫🛬</div>
+          <div class="mt-2 font-semibold">Operaciones</div>
+          <p class="text-sm text-slate-600">(Comercial / General)</p>
+        </button>
+        <button data-vmenu="carga" class="bg-white rounded-2xl shadow p-6 hover:ring-2 hover:ring-indigo-300 text-left transition-all">
+          <div class="text-3xl">📦✈️</div>
+          <div class="mt-2 font-semibold">Carga</div>
+          <p class="text-sm text-slate-600">(Operaciones / Toneladas)</p>
+        </button>
+      </div>
+
+      <button id="btnRegresar" class="hidden mb-4 px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300">← Menú de consulta</button>
+
+      <div id="visualPanel" class="hidden bg-white rounded-2xl shadow p-4 md:p-6">
+        <div class="grid md:grid-cols-3 gap-3 mb-4">
+          <label>Año(s) - Mantén Ctrl para seleccionar múltiples
+            <select id="vAnios" multiple size="6" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
+          </label>
+          <label>Tipo
+            <select id="vTipo" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
+          </label>
+          <div class="flex items-end">
+            <button id="btnAplicar" class="w-full px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">Aplicar filtros</button>
+          </div>
+        </div>
+        <div class="overflow-x-auto mb-4">
+          <table id="vTabla" class="min-w-full border border-gray-300 text-sm bg-white"></table>
+        </div>
+        <div class="bg-gray-50 rounded-xl p-4">
+          <canvas id="vChart" height="120"></canvas>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+/* ====== CONFIG SUPABASE ====== */
+const SUPABASE_URL = "https://zmzdqfonlykuhjjovloa.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptemRxZm9ubHlrdWhqam92bG9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTUwNTMsImV4cCI6MjA3MjMzMTA1M30.mqIhVKOK_6-XPu1o0oFW29wRMQieFp7eRg7shHnyv40";
+
+let sb;
+
+/* Inicializar Supabase y diagnosticar conexión */
+(async () => {
+  const statusEl = document.getElementById('connectionStatus');
+  
+  try {
+    console.log('Inicializando Supabase...');
+    console.log('supabase global:', typeof supabase, !!supabase?.createClient);
+    
+    if (typeof supabase === 'undefined') {
+      throw new Error('Supabase no está disponible');
+    }
+    
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Cliente Supabase creado:', !!sb);
+    
+    // Probar conexión
+    const { count, error } = await sb.from('medicion').select('*', { head: true, count: 'exact' });
+    console.log('Prueba de conexión - filas:', count, 'error:', error);
+    
+    if (error) {
+      statusEl.textContent = `Error de conexión: ${error.message}`;
+      statusEl.className = 'text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-red-200 text-red-800';
+    } else {
+      statusEl.textContent = `Conectado - ${count || 0} registros disponibles`;
+      statusEl.className = 'text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-green-200 text-green-800';
+      
+      // Si no hay datos, mostrar botón para cargar ejemplos
+      if (count === 0) {
+        const ejemploBtn = document.getElementById('btnCargarEjemplo');
+        ejemploBtn.style.display = 'inline-block';
+      }
+    }
+  } catch (e) {
+    console.error('Error inicializando Supabase:', e);
+    statusEl.textContent = `Error: ${e.message}`;
+    statusEl.className = 'text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-red-200 text-red-800';
+  }
+})();
+
+/* ====== CONSTANTES ====== */
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const INDICADORES_POR_AREA = {
+  comercial: ["operaciones","pasajeros"],
+  general:   ["operaciones","pasajeros"],
+  carga:     ["operaciones","toneladas"]
+};
+
+// Colores para las gráficas
+const CHART_COLORS = [
+  'rgb(99, 102, 241)',   // indigo
+  'rgb(239, 68, 68)',    // red
+  'rgb(34, 197, 94)',    // green
+  'rgb(251, 191, 36)',   // yellow
+  'rgb(168, 85, 247)',   // purple
+  'rgb(59, 130, 246)',   // blue
+  'rgb(236, 72, 153)',   // pink
+  'rgb(20, 184, 166)',   // teal
+];
+
+/* ====== UTIL ====== */
+const $ = (sel) => document.querySelector(sel);
+function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
+</script>
+</body>
+</html>
+
+/* ====== NAVEGACIÓN ====== */
+const secHome    = $('#secHome');
+const secCaptura = $('#secCaptura');
+const secVisual  = $('#secVisual');
+const btnGoCaptura = $('#btnGoCaptura');
+const btnGoConsulta = $('#btnGoConsulta');
+const btnBackHome1 = $('#btnBackHome1');
+const btnBackHome2 = $('#btnBackHome2');
+
+function show(section){
+  [secHome, secCaptura, secVisual].forEach(s => s.classList.add('hidden'));
+  section.classList.remove('hidden');
+}
+
+btnGoCaptura.onclick = () => { 
+  show(secCaptura); 
+  fillIndicadores($('#fArea'), $('#fIndicador')); 
+  loadLine(); 
+};
+btnGoConsulta.onclick = () => { 
+  show(secVisual); 
+  setupVisualFilters(); 
+};
+btnBackHome1.onclick = () => show(secHome);
+btnBackHome2.onclick = () => show(secHome);
+
+/* ====== CAPTURA ====== */
+/* Rellenar meses */
+(function initMeses(){
+  const sel = $('#mes');
+  MESES.forEach((m,i)=>{ 
+    const o=document.createElement('option'); 
+    o.value=i+1; 
+    o.textContent=m; 
+    sel.appendChild(o); 
+  });
+  // Seleccionar mes actual
+  sel.value = new Date().getMonth() + 1;
+})();
+
+/* Rellenar indicadores según área */
+function fillIndicadores(areaSel, indSel){
+  const currentValue = indSel.value;
+  indSel.innerHTML = '';
+  (INDICADORES_POR_AREA[areaSel.value] || []).forEach(v=>{
+    const o=document.createElement('option');
+    o.value=v; 
+    o.textContent = v === 'toneladas' ? 'Toneladas Transportadas' : 
+                   v.charAt(0).toUpperCase()+v.slice(1);
+    indSel.appendChild(o);
+  });
+  
+  // Mantener selección si es posible
+  if (currentValue && indSel.querySelector(`option[value="${currentValue}"]`)) {
+    indSel.value = currentValue;
+  } else if (indSel.options.length) {
+    indSel.selectedIndex = 0;
+  }
+}
+
+// Inicializar indicadores
+fillIndicadores($('#area'), $('#indicador'));
+fillIndicadores($('#fArea'), $('#fIndicador'));
+
+$('#area').onchange = () => fillIndicadores($('#area'), $('#indicador'));
+$('#fArea').onchange = () => { 
+  fillIndicadores($('#fArea'), $('#fIndicador')); 
+  loadLine(); 
+};
+$('#fIndicador').onchange = () => loadLine();
+
+/* Año por defecto */
+(function initAnios(){ 
+  $('#anio').value = new Date().getFullYear(); 
+})();
+
+/* % cumplimiento en vivo */
+function updatePct(){
+  const v = parseFloat($('#valor').value || '0');
+  const m = parseFloat($('#meta').value || '0');
+  const pctEl = $('#pct');
+  
+  if (m > 0 && v >= 0) {
+    const pct = (v / m * 100);
+    pctEl.textContent = pct.toFixed(1) + "%";
+    
+    // Colores según cumplimiento
+    if (pct >= 100) {
+      pctEl.className = 'font-semibold text-green-600';
+    } else if (pct >= 80) {
+      pctEl.className = 'font-semibold text-yellow-600';
+    } else {
+      pctEl.className = 'font-semibold text-red-600';
+    }
+  } else {
+    pctEl.textContent = '—';
+    pctEl.className = 'font-semibold text-slate-600';
+  }
+}
+['valor','meta'].forEach(id=> $('#'+id).addEventListener('input', updatePct));
+
+/* Guardar (upsert por llave única) */
+$('#formCaptura').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  
+  if (!sb) {
+    $('#msg').textContent = 'Error: No hay conexión a la base de datos';
+    $('#msg').className = 'col-span-2 text-sm mt-2 text-red-600';
+    return;
+  }
+  
+  const payload = {
+    area: $('#area').value,
+    indicador: $('#indicador').value,
+    anio: clamp(parseInt($('#anio').value||0), 2022, 2100),
+    mes:  clamp(parseInt($('#mes').value||1), 1, 12),
+    valor: parseFloat($('#valor').value||0),
+    meta:  parseFloat($('#meta').value||0)
+  };
+  
+  console.log('Guardando:', payload);
+  
+  const { error } = await sb.from('medicion').upsert(payload, { onConflict: 'area,indicador,anio,mes' });
+  const msg = $('#msg');
+  
+  if(error){ 
+    console.error('Error al guardar:', error);
+    msg.textContent = 'Error: '+error.message; 
+    msg.className='col-span-2 text-sm mt-2 text-red-600'; 
+  } else { 
+    msg.textContent = 'Guardado ✔'; 
+    msg.className='col-span-2 text-sm mt-2 text-green-600'; 
+    loadLine();
+    
+    // Actualizar contador de conexión
+    const { count } = await sb.from('medicion').select('*', { head: true, count: 'exact' });
+    const statusEl = document.getElementById('connectionStatus');
+    statusEl.textContent = `Conectado - ${count || 0} registros disponibles`;
+  }
+});
+
+$('#btnLimpiar').onclick = ()=>{
+  ['valor','meta'].forEach(id=> $('#'+id).value=''); 
+  updatePct(); 
+  $('#msg').textContent='';
+};
+
+/* Botón para cargar datos de ejemplo */
+$('#btnCargarEjemplo').onclick = async () => {
+  if (!sb) return;
+  
+  const btn = $('#btnCargarEjemplo');
+  const originalText = btn.textContent;
+  btn.textContent = 'Cargando...';
+  btn.disabled = true;
+  
+  try {
+    // Datos de ejemplo para 2023 y 2024
+    const datosEjemplo = [];
+    
+    // Aviación Comercial - Operaciones y Pasajeros
+    for (let año = 2023; año <= 2024; año++) {
+      for (let mes = 1; mes <= 12; mes++) {
+        // Operaciones comerciales (variación estacional)
+        const baseOp = 150;
+        const variacion = Math.sin((mes - 1) * Math.PI / 6) * 30;
+        const operaciones = Math.round(baseOp + variacion + (Math.random() * 20 - 10));
+        const metaOp = Math.round(operaciones * (0.9 + Math.random() * 0.2));
+        
+        datosEjemplo.push({
+          area: 'comercial',
+          indicador: 'operaciones',
+          anio: año,
+          mes: mes,
+          valor: operaciones,
+          meta: metaOp
+        });
+        
+        // Pasajeros comerciales
+        const basePax = 12000;
+        const variacionPax = Math.sin((mes - 1) * Math.PI / 6) * 3000;
+        const pasajeros = Math.round(basePax + variacionPax + (Math.random() * 1000 - 500));
+        const metaPax = Math.round(pasajeros * (0.85 + Math.random() * 0.3));
+        
+        datosEjemplo.push({
+          area: 'comercial',
+          indicador: 'pasajeros',
+          anio: año,
+          mes: mes,
+          valor: pasajeros,
+          meta: metaPax
+        });
+      }
+    }
+    
+    // Aviación General
+    for (let año = 2023; año <= 2024; año++) {
+      for (let mes = 1; mes <= 12; mes++) {
+        // Operaciones generales
+        const opGen = Math.round(80 + Math.random() * 40);
+        const metaOpGen = Math.round(opGen * (0.8 + Math.random() * 0.4));
+        
+        datosEjemplo.push({
+          area: 'general',
+          indicador: 'operaciones',
+          anio: año,
+          mes: mes,
+          valor: opGen,
+          meta: metaOpGen
+        });
+        
+        // Pasajeros generales
+        const paxGen = Math.round(500 + Math.random() * 300);
+        const metaPaxGen = Math.round(paxGen * (0.8 + Math.random() * 0.4));
+        
+        datosEjemplo.push({
+          area: 'general',
+          indicador: 'pasajeros',
+          anio: año,
+          mes: mes,
+          valor: paxGen,
+          meta: metaPaxGen
+        });
+      }
+    }
+    
+    // Aviación de Carga
+    for (let año = 2023; año <= 2024; año++) {
+      for (let mes = 1; mes <= 12; mes++) {
+        // Operaciones de carga
+        const opCarga = Math.round(25 + Math.random() * 15);
+        const metaOpCarga = Math.round(opCarga * (0.9 + Math.random() * 0.2));
+        
+        datosEjemplo.push({
+          area: 'carga',
+          indicador: 'operaciones',
+          anio: año,
+          mes: mes,
+          valor: opCarga,
+          meta: metaOpCarga
+        });
+        
+        // Toneladas
+        const toneladas = Math.round(450 + Math.random() * 200);
+        const metaTon = Math.round(toneladas * (0.85 + Math.random() * 0.3));
+        
+        datosEjemplo.push({
+          area: 'carga',
+          indicador: 'toneladas',
+          anio: año,
+          mes: mes,
+          valor: toneladas,
+          meta: metaTon
+        });
+      }
+    }
+    
+    console.log('Cargando', datosEjemplo.length, 'registros de ejemplo');
+    const { error } = await sb.from('medicion').upsert(datosEjemplo);
+    
+    if (error) {
+      throw error;
+    }
+    
+    $('#msg').textContent = `Cargados ${datosEjemplo.length} registros de ejemplo ✔`;
+    $('#msg').className = 'col-span-2 text-sm mt-2 text-green-600';
+    
+    // Actualizar gráfica y contador
+    loadLine();
+    const { count } = await sb.from('medicion').select('*', { head: true, count: 'exact' });
+    const statusEl = document.getElementById('connectionStatus');
+    statusEl.textContent = `Conectado - ${count || 0} registros disponibles`;
+    
+    // Ocultar botón
+    btn.style.display = 'none';
+    
+  } catch (error) {
+    console.error('Error cargando datos:', error);
+    $('#msg').textContent = 'Error cargando datos: ' + error.message;
+    $('#msg').className = 'col-span-2 text-sm mt-2 text-red-600';
+    
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+};
+
+/* Gráfica de líneas */
+let lineChart;
+async function loadLine() {
+  if (!sb) return;
+  
+  const area = ($('#fArea')?.value) || 'comercial';
+  const indSel = $('#fIndicador');
+  const indicador = (indSel && indSel.value) ? indSel.value : 'operaciones';
+  const notice = $('#notice');
+  
+  try {
+    const { data, error } = await sb
+      .from('medicion')
+      .select('anio,mes,valor')
+      .eq('area', area)
+      .eq('indicador', indicador)
+      .order('anio', { ascending: true })
+      .order('mes', { ascending: true });
+
+    if (error) { 
+      console.error('Error cargando datos para gráfica:', error); 
+      notice.textContent = 'Error cargando datos: ' + error.message;
+      notice.className = 'text-sm text-red-500 mt-2 text-center';
+      return; 
+    }
+
+    if (!data || data.length === 0) {
+      notice.textContent = 'Sin datos para los filtros seleccionados.';
+      notice.className = 'text-sm text-slate-500 mt-2 text-center';
+      
+      if (lineChart) lineChart.destroy();
+      const ctx = document.getElementById('lineChart').getContext('2d');
+      lineChart = new Chart(ctx, { 
+        type:'line', 
+        data:{ labels: MESES, datasets: [] },
+        options:{ 
+          responsive: true,
+          plugins:{ 
+            legend:{ display:false },
+            title: { 
+              display: true, 
+              text: `${area.charAt(0).toUpperCase() + area.slice(1)} - ${indicador.charAt(0).toUpperCase() + indicador.slice(1)}`
+            }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+      return;
+    } else {
+      notice.textContent = `Mostrando ${data.length} registros`;
+      notice.className = 'text-sm text-slate-500 mt-2 text-center';
+    }
+
+    // Agrupar por año
+    const byYear = {};
+    data.forEach(r => { 
+      (byYear[r.anio] ||= Array(12).fill(null))[r.mes - 1] = r.valor; 
+    });
+    
+    const years = Object.keys(byYear).sort();
+    const ds = years.map((y, idx) => ({ 
+      label: y, 
+      data: byYear[y],
+      borderColor: CHART_COLORS[idx % CHART_COLORS.length],
+      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] + '20',
+      fill: false,
+      tension: 0.1
+    }));
+
+    const ctx = document.getElementById('lineChart').getContext('2d');
+    if (lineChart) lineChart.destroy();
+    
+    lineChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: MESES, datasets: ds },
+      options: { 
+        responsive: true, 
+        plugins: { 
+          legend: { 
+            position: 'bottom',
+            display: years.length > 1
+          },
+          title: { 
+            display: true, 
+            text: `${area.charAt(0).toUpperCase() + area.slice(1)} - ${indicador.charAt(0).toUpperCase() + indicador.slice(1)}`
+          }
+        },
+        scales: {
+          y: { 
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: indicador === 'pasajeros' ? 'Pasajeros' : 
+                   indicador === 'toneladas' ? 'Toneladas' : 'Operaciones'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Meses'
+            }
+          }
+        }
+      }
+    });
+  } catch (e) {
+    console.error('loadLine exception:', e);
+    notice.textContent = 'Error: ' + e.message;
+    notice.className = 'text-sm text-red-500 mt-2 text-center';
+  }
+}
