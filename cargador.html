@@ -1,0 +1,72 @@
+<!doctype html>
+const [YEAR, TYPE, MONTH, VALUE] = parts.map(s=>String(s).trim());
+const map = TIPO_MAP[TYPE];
+const mes = MESES[MONTH.toUpperCase()];
+const val = sanitizeNumber(VALUE);
+
+
+if(!map || !mes || isNaN(parseInt(YEAR)) || val==null){
+rows.push({ _error: true, raw: line });
+continue;
+}
+rows.push({ area: map.area, indicador: map.indicador, anio: parseInt(YEAR), mes, valor: val });
+}
+return rows;
+}
+
+
+function renderPreview(rows){
+const cont = document.getElementById('preview');
+const tbl = document.getElementById('tblPrev');
+const countEl = document.getElementById('count');
+const warnEl = document.getElementById('warn');
+tbl.innerHTML = '';
+const good = rows.filter(r=>!r._error);
+const bad = rows.filter(r=>r._error);
+countEl.textContent = `${good.length} válidos`;
+warnEl.textContent = bad.length? `| ${bad.length} filas con error (se omitirán)` : '';
+cont.classList.remove('hidden');
+const head = `<thead><tr><th class="border px-2 py-1">area</th><th class="border px-2 py-1">indicador</th><th class="border px-2 py-1">año</th><th class="border px-2 py-1">mes</th><th class="border px-2 py-1">valor</th></tr></thead>`;
+const body = '<tbody>' + good.slice(0,50).map(r=>
+`<tr><td class="border px-2 py-1">${r.area}</td><td class="border px-2 py-1">${r.indicador}</td><td class="border px-2 py-1 text-right">${r.anio}</td><td class="border px-2 py-1 text-right">${r.mes}</td><td class="border px-2 py-1 text-right">${r.valor}</td></tr>`
+).join('') + (good.length>50? `<tr><td class="px-2 py-1" colspan="5">… (${good.length-50} más)</td></tr>`:'') + '</tbody>';
+tbl.innerHTML = head + body;
+}
+
+
+function chunk(arr, size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size)); return out; }
+
+
+async function upload(){
+const url = document.getElementById('sbUrl').value.trim();
+const key = document.getElementById('sbKey').value.trim();
+const metaDefault = sanitizeNumber(document.getElementById('metaDefault').value)||0;
+if(!url || !key){ alert('Completa SUPABASE_URL y SUPABASE_ANON_KEY'); return; }
+const sb = supabase.createClient(url, key);
+const data = parsed.filter(r=>!r._error).map(r=>({ ...r, meta: metaDefault }));
+if(!data.length){ alert('No hay registros válidos que subir'); return; }
+const size = Math.max(1, parseInt(document.getElementById('chunkSize').value)||500);
+const batches = chunk(data, size);
+const log = document.getElementById('log');
+log.textContent = `Subiendo ${data.length} registros en ${batches.length} lote(s)…`;
+for(let i=0;i<batches.length;i++){
+const { error } = await sb.from('medicion').upsert(batches[i], { onConflict: 'area,indicador,anio,mes' });
+if(error){
+log.textContent += `\n❌ Lote ${i+1}/${batches.length}: ${error.message}`;
+return;
+} else {
+log.textContent += `\n✅ Lote ${i+1}/${batches.length} subido`;
+}
+}
+log.textContent += `\n✔ Listo`;
+}
+
+
+// eventos
+document.getElementById('btnParse').onclick = ()=>{ parsed = parseRaw(); renderPreview(parsed); };
+document.getElementById('btnUpload').onclick = upload;
+document.getElementById('btnClear').onclick = ()=>{ document.getElementById('raw').value=''; parsed=[]; document.getElementById('preview').classList.add('hidden'); };
+document.getElementById('btnEjemplo').onclick = ()=>{ document.getElementById('raw').value = "YEAR\tTYPE\tMONTH\tVALUE"; };
+</script>
+</body>
+</html>
