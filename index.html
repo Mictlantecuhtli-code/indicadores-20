@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Indicadores 2.0 – MVP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div class="max-w-7xl mx-auto p-4 md:p-8">
+<header class="flex items-center justify-between mb-6">
+<h1 class="text-2xl md:text-3xl font-bold">Indicadores 2.0 – MVP</h1>
+<nav class="flex gap-2">
+<button id="btnCaptura" class="px-3 py-2 rounded-xl bg-indigo-600 text-white shadow">Captura</button>
+<button id="btnVisual" class="px-3 py-2 rounded-xl bg-slate-200">Visualización</button>
+</nav>
+</header>
+
+
+<!-- CAPTURA -->
+<section id="secCaptura" class="grid md:grid-cols-2 gap-6">
+<div class="bg-white rounded-2xl shadow p-4 md:p-6">
+<h2 class="text-xl font-semibold mb-4">Módulo de captura</h2>
+<form id="formCaptura" class="grid grid-cols-2 gap-3">
+<label class="col-span-2">Área
+<select id="area" class="w-full mt-1 px-3 py-2 rounded-xl border">
+<option value="comercial">Aviación Comercial</option>
+<option value="general">Aviación General</option>
+<option value="carga">Aviación de Carga</option>
+</select>
+</label>
+<label class="col-span-2">Indicador
+<select id="indicador" class="w-full mt-1 px-3 py-2 rounded-xl border"></select>
+</label>
+<label>Año
+<input id="anio" type="number" min="2022" max="2100" class="w-full mt-1 px-3 py-2 rounded-xl border" />
+</label>
+<label>Mes
+<select id="mes" class="w-full mt-1 px-3 py-2 rounded-xl border"></select>
+</label>
+<label>Valor
+<input id="valor" type="number" step="0.01" class="w-full mt-1 px-3 py-2 rounded-xl border" />
+</label>
+<label>Meta
+<input id="meta" type="number" step="0.01" class="w-full mt-1 px-3 py-2 rounded-xl border" />
+</label>
+<div class="col-span-2 text-sm text-slate-600">% Cumplimiento: <span id="pct" class="font-semibold">—</span></div>
+<div class="col-span-2 flex gap-2 mt-2">
+<button class="px-4 py-2 rounded-xl bg-indigo-600 text-white" type="submit">Guardar</button>
+<button id="btnLimpiar" class="px-4 py-2 rounded-xl bg-slate-200" type="button">Limpiar</button>
+</div>
+<p id="msg" class="col-span-2 text-sm mt-2"></p>
+</form>
+</div>
+
+
+<div class="bg-white rounded-2xl shadow p-4 md:p-6">
+<h2 class="text-xl font-semibold mb-4">Comparativa anual (líneas)</h2>
+<div class="grid grid-cols-2 gap-3 mb-3">
+<label>Área
+<select id="fArea" class="w-full mt-1 px-3 py-2 rounded-xl border">
+<option value="comercial">Aviación Comercial</option>
+<option value="general">Aviación General</option>
+<option value="carga">Aviación de Carga</option>
+</select>
+</label>
+<label>Indicador
+<select id="fIndicador" class="w-full mt-1 px-3 py-2 rounded-xl border"></select>
+</html>
