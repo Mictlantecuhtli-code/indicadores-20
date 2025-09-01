@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="es">
 <head>
@@ -11,12 +10,10 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
     
-    <!-- PARTE 1: HTML ESTRUCTURA - INICIO -->
-    
     <!-- Menú Principal -->
     <div id="menuPrincipal" class="container mx-auto p-4">
         <div class="bg-white rounded-lg shadow-lg p-6">
-            <h1 class="text-2xl font-bold text-center mb-6 text-blue-800">Sistema de Indicadores de AIFA</h1>
+            <h1 class="text-2xl font-bold text-center mb-6 text-blue-800">Sistema de Indicadores de Aviación</h1>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
                 <button onclick="showCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg transition-colors">
                     <div class="text-3xl mb-2">📊</div>
@@ -46,9 +43,9 @@
                     <label class="block text-sm font-medium mb-1">Área</label>
                     <select id="fArea" class="w-full border rounded px-3 py-2">
                         <option value="">Seleccionar...</option>
-                        <option value="comercial"> Comercial</option>
-                        <option value="general"> General</option>
-                        <option value="carga"> de Carga</option>
+                        <option value="comercial">Aviación Comercial</option>
+                        <option value="general">Aviación General</option>
+                        <option value="carga">Aviación de Carga</option>
                     </select>
                 </div>
                 <div>
@@ -165,8 +162,7 @@
             
             <!-- Tabla de resultados -->
             <div class="overflow-x-auto mb-6">
-                <table id="vTabla" class="min-w-full border-collapse border border-gray-300">
-                </table>
+                <div id="tablaVisualizacion"></div>
             </div>
             
             <!-- Gráfica -->
@@ -177,10 +173,8 @@
         </div>
     </div>
 
-    <!-- PARTE 1: HTML ESTRUCTURA - FIN -->
-
     <script>
-        // PARTE 2: CONFIGURACIÓN Y CONSTANTES - INICIO
+                // PARTE 2: CONFIGURACIÓN Y CONSTANTES - INICIO
         
         // Configuración de Supabase
         const SUPABASE_URL = 'https://zmzdqfonlykuhjjovloa.supabase.co';
@@ -193,9 +187,9 @@
                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
         const AREAS = {
-            'comercial': ' Comercial',
-            'general': ' General',
-            'carga': ' de Carga'
+            'comercial': 'Aviación Comercial',
+            'general': 'Aviación General',
+            'carga': 'Aviación de Carga'
         };
 
         const INDICADORES = {
@@ -213,30 +207,28 @@
         const $$ = (selector) => document.querySelectorAll(selector);
 
         // PARTE 2: CONFIGURACIÓN Y CONSTANTES - FIN
-
-        // PARTE 3: FUNCIONES DE NAVEGACIÓN Y UI - INICIO
+                // PARTE 3: FUNCIONES DE NAVEGACIÓN Y UI - INICIO
 
         // Funciones de navegación
         function showMenu() {
-            $('.hidden')?.classList.remove('hidden');
-            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $$('.container').forEach(div => div.classList.add('hidden'));
             $('#menuPrincipal').classList.remove('hidden');
         }
 
         function showCaptura() {
-            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $$('.container').forEach(div => div.classList.add('hidden'));
             $('#moduloCaptura').classList.remove('hidden');
             initCaptura();
         }
 
         function showVisualizacion() {
-            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $$('.container').forEach(div => div.classList.add('hidden'));
             $('#menuVisualizacion').classList.remove('hidden');
         }
 
         function showVisualizacionDetalle(modo) {
             vContext.modo = modo;
-            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $$('.container').forEach(div => div.classList.add('hidden'));
             $('#visualizacionDetalle').classList.remove('hidden');
             
             let titulo = '';
@@ -325,7 +317,7 @@
 
         // PARTE 3: FUNCIONES DE NAVEGACIÓN Y UI - FIN
 
-        // PARTE 4: FUNCIONES DE DATOS Y VISUALIZACIÓN - INICIO
+                // PARTE 4: FUNCIONES DE DATOS Y VISUALIZACIÓN - INICIO
 
         // Funciones de datos para captura
         async function loadCapturaData() {
@@ -522,11 +514,19 @@
                     selT.appendChild(o);
                 });
             }
+
+            // Configurar event listener para el botón aplicar
+            document.getElementById('btnAplicar').onclick = aplicarFiltrosVisualizacion;
         }
 
-        $('#btnAplicar')?.addEventListener('click', async () => {
+        async function aplicarFiltrosVisualizacion() {
             const years = Array.from($('#vAnios').selectedOptions).map(o => parseInt(o.value));
             const tipo = $('#vTipo').value;
+            
+            if (!tipo) {
+                alert('Por favor seleccione un tipo');
+                return;
+            }
             
             // Mapear a (area, indicador) según modo
             let area, indicador;
@@ -541,8 +541,8 @@
                 indicador = tipo;
             }
             
-            const { data, error } = await sb.from('medicion')
-                .select('anio,mes,valor')
+            const { data, error } = await sb.from('v_medicion')
+                .select('anio,mes,valor,meta,cumplimiento')
                 .eq('area', area).eq('indicador', indicador)
                 .in('anio', years.length ? years : [new Date().getFullYear()])
                 .order('anio', { ascending: true }).order('mes', { ascending: true });
@@ -556,82 +556,137 @@
             const uYears = Array.from(new Set(data.map(r => r.anio))).sort();
             const pivot = MESES.map((m, idx) => {
                 const row = { mes: m };
-                uYears.forEach(y => { row[y] = null; });
-                data.filter(r => r.mes === idx + 1).forEach(r => { row[r.anio] = r.valor; });
+                uYears.forEach(y => { 
+                    row[`valor_${y}`] = null; 
+                    row[`meta_${y}`] = null;
+                    row[`cumplimiento_${y}`] = null;
+                });
+                data.filter(r => r.mes === idx + 1).forEach(r => { 
+                    row[`valor_${r.anio}`] = r.valor;
+                    row[`meta_${r.anio}`] = r.meta;
+                    row[`cumplimiento_${r.anio}`] = r.cumplimiento;
+                });
                 return row;
             });
             
-            // Render tabla
-            const tbl = $('#vTabla');
-            tbl.innerHTML = '';
-            const thead = document.createElement('thead');
-            const trh = document.createElement('tr');
-            trh.innerHTML = '<th class="border border-gray-300 px-4 py-2">Mes</th>' + 
-                           uYears.map(y => `<th class="border border-gray-300 px-4 py-2 text-right">${y}</th>`).join('');
-            thead.appendChild(trh);
-            tbl.appendChild(thead);
+            // Render tabla con valor, meta y cumplimiento
+            const container = $('#tablaVisualizacion');
+            container.innerHTML = '';
             
+            const table = document.createElement('table');
+            table.className = 'min-w-full border-collapse border border-gray-300';
+            
+            // Header
+            const thead = document.createElement('thead');
+            thead.className = 'bg-gray-50';
+            const trh = document.createElement('tr');
+            trh.innerHTML = '<th class="border border-gray-300 px-4 py-2">Mes</th>';
+            
+            uYears.forEach(y => {
+                trh.innerHTML += `
+                    <th class="border border-gray-300 px-2 py-2 text-center" colspan="3">${y}</th>
+                `;
+            });
+            thead.appendChild(trh);
+            
+            // Subheader
+            const trSub = document.createElement('tr');
+            trSub.innerHTML = '<th class="border border-gray-300 px-4 py-2"></th>';
+            uYears.forEach(y => {
+                trSub.innerHTML += `
+                    <th class="border border-gray-300 px-2 py-1 text-xs">Valor</th>
+                    <th class="border border-gray-300 px-2 py-1 text-xs">Meta</th>
+                    <th class="border border-gray-300 px-2 py-1 text-xs">%</th>
+                `;
+            });
+            thead.appendChild(trSub);
+            table.appendChild(thead);
+            
+            // Body
             const tbody = document.createElement('tbody');
             pivot.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="border border-gray-300 px-4 py-2">${row.mes}</td>` + 
-                              uYears.map(y => `<td class="border border-gray-300 px-4 py-2 text-right">${row[y] ?? ''}</td>`).join('');
+                tr.innerHTML = `<td class="border border-gray-300 px-4 py-2 font-medium">${row.mes}</td>`;
+                
+                uYears.forEach(y => {
+                    const valor = row[`valor_${y}`] || '';
+                    const meta = row[`meta_${y}`] || '';
+                    const cumplimiento = row[`cumplimiento_${y}`];
+                    
+                    let cumplimientoText = '-';
+                    let cumplimientoClass = '';
+                    if (cumplimiento !== null && cumplimiento !== undefined) {
+                        cumplimientoText = `${cumplimiento}%`;
+                        cumplimientoClass = cumplimiento >= 100 ? 'text-green-600 font-semibold' : 
+                                          cumplimiento >= 80 ? 'text-yellow-600' : 'text-red-600';
+                    }
+                    
+                    tr.innerHTML += `
+                        <td class="border border-gray-300 px-2 py-2 text-right">${valor}</td>
+                        <td class="border border-gray-300 px-2 py-2 text-right">${meta}</td>
+                        <td class="border border-gray-300 px-2 py-2 text-right ${cumplimientoClass}">${cumplimientoText}</td>
+                    `;
+                });
+                
                 tbody.appendChild(tr);
             });
-            tbl.appendChild(tbody);
+            table.appendChild(tbody);
+            container.appendChild(table);
             
-            // Gráfica a partir de la tabla (una serie por año)
+            // Gráfica a partir de los valores (una serie por año)
             const ds = uYears.map(y => ({
                 label: y.toString(),
-                data: pivot.map(r => r[y]),
+                data: pivot.map(r => r[`valor_${y}`]),
                 borderColor: getColorForYear(y),
                 backgroundColor: getColorForYear(y) + '20',
                 fill: false,
                 tension: 0.1
             }));
             
-                const ctx = document.getElementById('vChart').getContext('2d');
-                if (window.vChart) window.vChart.destroy();
+            const ctx = document.getElementById('vChart').getContext('2d');
+            if (window.vChart) window.vChart.destroy();
+
             // Título dinámico para la gráfica
-                let chartTitle = '';
-                if (vContext.modo === 'pasajeros') {
-                    chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Pasajeros`;
-                } else if (vContext.modo === 'operaciones') {
-                    chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Operaciones`;
-                } else {
-                    chartTitle = `Aviación de Carga - ${tipo === 'operaciones' ? 'Operaciones' : 'Toneladas'}`;
-                }
-            
-                window.vChart = new Chart(ctx, {
-                    type: 'line',
-                    data: { labels: MESES, datasets: ds },
-                    options: {
-                        responsive: true,
-                        plugins: {
+            let chartTitle = '';
+            if (vContext.modo === 'pasajeros') {
+                chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Pasajeros`;
+            } else if (vContext.modo === 'operaciones') {
+                chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Operaciones`;
+            } else {
+                chartTitle = `Aviación de Carga - ${tipo === 'operaciones' ? 'Operaciones' : 'Toneladas'}`;
+            }
+
+            window.vChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: MESES, datasets: ds },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartTitle
+                        },
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
                             title: {
                                 display: true,
-                                text: chartTitle
-                            },
-                            legend: { position: 'bottom' }
+                                text: vContext.modo === 'carga' && tipo === 'toneladas' ? 'Toneladas' : 
+                                      vContext.modo === 'pasajeros' ? 'Número de Pasajeros' : 'Número de Operaciones'
+                            }
                         },
-                        scales: {
-                            y: { 
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: vContext.modo === 'carga' && tipo === 'toneladas' ? 'Toneladas' : 
-                                          vContext.modo === 'pasajeros' ? 'Número de Pasajeros' : 'Número de Operaciones'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Meses'
-                                }
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Meses'
                             }
                         }
                     }
-                });
+                }
+            });
+        }
 
         // PARTE 4: FUNCIONES DE DATOS Y VISUALIZACIÓN - FIN
 
