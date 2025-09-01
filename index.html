@@ -1,625 +1,617 @@
+
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Indicadores 2.0 – MVP</title>
-  <!-- Tailwind (CDN para MVP) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS (UMD: define window.supabase) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indicadores Aviación 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-slate-50 text-slate-800">
-  <div class="max-w-7xl mx-auto p-4 md:p-8">
-    <header class="mb-6">
-      <h1 class="text-2xl md:text-3xl font-bold">Indicadores 2.0 – MVP</h1>
-      <p class="text-sm text-slate-600">Demo con Captura y Consulta</p>
-      <div id="connectionStatus" class="text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-gray-200">
-        Conectando...
-      </div>
-    </header>
-
-    <!-- HOME / MENÚ PRINCIPAL -->
-    <section id="secHome" class="grid sm:grid-cols-2 gap-6">
-      <button id="btnGoCaptura" class="bg-white rounded-2xl shadow p-6 text-left hover:ring-2 hover:ring-indigo-300 transition-all">
-        <div class="text-4xl">📝</div>
-        <div class="mt-2 text-xl font-semibold">Captura</div>
-        <p class="text-slate-600 text-sm mt-1">Registrar valores, metas y ver comparativa anual.</p>
-      </button>
-      <button id="btnGoConsulta" class="bg-white rounded-2xl shadow p-6 text-left hover:ring-2 hover:ring-indigo-300 transition-all">
-        <div class="text-4xl">📊</div>
-        <div class="mt-2 text-xl font-semibold">Consulta</div>
-        <p class="text-slate-600 text-sm mt-1">Visualizar por Pasajeros / Operaciones / Carga.</p>
-      </button>
-    </section>
-
-    <!-- CAPTURA -->
-    <section id="secCaptura" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Captura</h2>
-        <button id="btnBackHome1" class="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300">← Inicio</button>
-      </div>
-      <div class="grid md:grid-cols-2 gap-6">
-        <div class="bg-white rounded-2xl shadow p-4 md:p-6">
-          <h3 class="text-lg font-semibold mb-4">Módulo de captura</h3>
-          <form id="formCaptura" class="grid grid-cols-2 gap-3">
-            <label class="col-span-2">Área
-              <select id="area" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                <option value="comercial">Aviación Comercial</option>
-                <option value="general">Aviación General</option>
-                <option value="carga">Aviación de Carga</option>
-              </select>
-            </label>
-            <label class="col-span-2">Indicador
-              <select id="indicador" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
-            </label>
-            <label>Año
-              <input id="anio" type="number" min="2022" max="2100" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-            </label>
-            <label>Mes
-              <select id="mes" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
-            </label>
-            <label>Valor
-              <input id="valor" type="number" step="0.01" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Valor real" />
-            </label>
-            <label>Meta
-              <input id="meta" type="number" step="0.01" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" placeholder="Meta planeada" />
-            </label>
-            <div class="col-span-2 text-sm text-slate-600 bg-slate-50 p-3 rounded-xl">
-              % Cumplimiento: <span id="pct" class="font-semibold text-indigo-600">—</span>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- PARTE 1: HTML ESTRUCTURA - INICIO -->
+    
+    <!-- Menú Principal -->
+    <div id="menuPrincipal" class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-center mb-6 text-blue-800">Sistema de Indicadores de Aviación</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+                <button onclick="showCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-3xl mb-2">📊</div>
+                    <div class="text-xl font-semibold">Módulo de Captura</div>
+                    <div class="text-sm opacity-90">Capturar indicadores y metas</div>
+                </button>
+                <button onclick="showVisualizacion()" class="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-3xl mb-2">📈</div>
+                    <div class="text-xl font-semibold">Visualización</div>
+                    <div class="text-sm opacity-90">Consultar y comparar datos</div>
+                </button>
             </div>
-            <div class="col-span-2 flex gap-2 mt-2">
-              <button class="px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors" type="submit">Guardar</button>
-              <button id="btnLimpiar" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 transition-colors" type="button">Limpiar</button>
-              <button id="btnCargarEjemplo" class="px-4 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors" type="button">Cargar Datos Ejemplo</button>
+        </div>
+    </div>
+
+    <!-- Módulo de Captura -->
+    <div id="moduloCaptura" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-blue-800">Módulo de Captura</h2>
+                <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
             </div>
-            <p id="msg" class="col-span-2 text-sm mt-2"></p>
-          </form>
+            
+            <!-- Filtros -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Área</label>
+                    <select id="fArea" class="w-full border rounded px-3 py-2">
+                        <option value="">Seleccionar...</option>
+                        <option value="comercial">Aviación Comercial</option>
+                        <option value="general">Aviación General</option>
+                        <option value="carga">Aviación de Carga</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Indicador</label>
+                    <select id="fIndicador" class="w-full border rounded px-3 py-2">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Año</label>
+                    <select id="fAnio" class="w-full border rounded px-3 py-2"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Mes</label>
+                    <select id="fMes" class="w-full border rounded px-3 py-2"></select>
+                </div>
+            </div>
+            
+            <!-- Formulario de captura -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Valor</label>
+                    <input type="number" id="fValor" class="w-full border rounded px-3 py-2" step="0.01">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Meta</label>
+                    <input type="number" id="fMeta" class="w-full border rounded px-3 py-2" step="0.01">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="guardarMedicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full">
+                        Guardar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Gráfica de líneas -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4">Comparativo por Años</h3>
+                <canvas id="chartCaptura" width="400" height="200"></canvas>
+            </div>
+            
+            <!-- Tabla de datos -->
+            <div id="tablaContainer">
+                <h3 class="text-lg font-semibold mb-4">Datos Actuales</h3>
+                <div class="overflow-x-auto">
+                    <table id="tablaCaptura" class="min-w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="border border-gray-300 px-4 py-2">Mes</th>
+                                <th class="border border-gray-300 px-4 py-2">Valor</th>
+                                <th class="border border-gray-300 px-4 py-2">Meta</th>
+                                <th class="border border-gray-300 px-4 py-2">% Cumplimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyCaptura">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+    </div>
 
-        <div class="bg-white rounded-2xl shadow p-4 md:p-6">
-          <h3 class="text-lg font-semibold mb-4">Comparativa anual (líneas)</h3>
-          <div class="grid grid-cols-2 gap-3 mb-3">
-            <label>Área
-              <select id="fArea" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
-                <option value="comercial">Aviación Comercial</option>
-                <option value="general">Aviación General</option>
-                <option value="carga">Aviación de Carga</option>
-              </select>
-            </label>
-            <label>Indicador
-              <select id="fIndicador" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
-            </label>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-4">
-            <canvas id="lineChart" height="140"></canvas>
-          </div>
-          <p id="notice" class="text-sm text-slate-500 mt-2 text-center"></p>
+    <!-- Módulo de Visualización - Menú -->
+    <div id="menuVisualizacion" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-green-800">Módulo de Visualización</h2>
+                <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <button onclick="showVisualizacionDetalle('pasajeros')" class="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-4xl mb-2">👥</div>
+                    <div class="text-xl font-semibold">Pasajeros</div>
+                    <div class="text-sm opacity-90">Comercial y General</div>
+                </button>
+                <button onclick="showVisualizacionDetalle('operaciones')" class="bg-orange-600 hover:bg-orange-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-4xl mb-2">✈️</div>
+                    <div class="text-xl font-semibold">Operaciones</div>
+                    <div class="text-sm opacity-90">Comercial y General</div>
+                </button>
+                <button onclick="showVisualizacionDetalle('carga')" class="bg-red-600 hover:bg-red-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-4xl mb-2">📦</div>
+                    <div class="text-xl font-semibold">Carga</div>
+                    <div class="text-sm opacity-90">Operaciones y Toneladas</div>
+                </button>
+            </div>
         </div>
-      </div>
-    </section>
+    </div>
 
-    <!-- CONSULTA -->
-    <section id="secVisual" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Consulta</h2>
-        <button id="btnBackHome2" class="px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300">← Inicio</button>
-      </div>
-
-      <!-- Menú de Consulta (3 íconos) -->
-      <div id="menuVisual" class="grid sm:grid-cols-3 gap-4 mb-6">
-        <button data-vmenu="pasajeros" class="bg-white rounded-2xl shadow p-6 hover:ring-2 hover:ring-indigo-300 text-left transition-all">
-          <div class="text-3xl">🧍‍➡️🧍‍⬅️</div>
-          <div class="mt-2 font-semibold">Pasajeros</div>
-          <p class="text-sm text-slate-600">(Comercial / General)</p>
-        </button>
-        <button data-vmenu="operaciones" class="bg-white rounded-2xl shadow p-6 hover:ring-2 hover:ring-indigo-300 text-left transition-all">
-          <div class="text-3xl">🛫🛬</div>
-          <div class="mt-2 font-semibold">Operaciones</div>
-          <p class="text-sm text-slate-600">(Comercial / General)</p>
-        </button>
-        <button data-vmenu="carga" class="bg-white rounded-2xl shadow p-6 hover:ring-2 hover:ring-indigo-300 text-left transition-all">
-          <div class="text-3xl">📦✈️</div>
-          <div class="mt-2 font-semibold">Carga</div>
-          <p class="text-sm text-slate-600">(Operaciones / Toneladas)</p>
-        </button>
-      </div>
-
-      <button id="btnRegresar" class="hidden mb-4 px-3 py-2 rounded-xl bg-slate-200 hover:bg-slate-300">← Menú de consulta</button>
-
-      <div id="visualPanel" class="hidden bg-white rounded-2xl shadow p-4 md:p-6">
-        <div class="grid md:grid-cols-3 gap-3 mb-4">
-          <label>Año(s) - Mantén Ctrl para seleccionar múltiples
-            <select id="vAnios" multiple size="6" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
-          </label>
-          <label>Tipo
-            <select id="vTipo" class="w-full mt-1 px-3 py-2 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></select>
-          </label>
-          <div class="flex items-end">
-            <button id="btnAplicar" class="w-full px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">Aplicar filtros</button>
-          </div>
+    <!-- Módulo de Visualización - Detalle -->
+    <div id="visualizacionDetalle" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-green-800" id="tituloDetalle">Visualización</h2>
+                <button onclick="showVisualizacion()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Años (selección múltiple)</label>
+                    <select id="vAnios" multiple class="w-full border rounded px-3 py-2 h-32"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Tipo</label>
+                    <select id="vTipo" class="w-full border rounded px-3 py-2"></select>
+                </div>
+                <div class="flex items-end">
+                    <button id="btnAplicar" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded w-full">
+                        Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tabla de resultados -->
+            <div class="overflow-x-auto mb-6">
+                <table id="vTabla" class="min-w-full border-collapse border border-gray-300">
+                </table>
+            </div>
+            
+            <!-- Gráfica -->
+            <div>
+                <canvas id="vChart" width="400" height="200"></canvas>
+            </div>
         </div>
-        <div class="overflow-x-auto mb-4">
-          <table id="vTabla" class="min-w-full border border-gray-300 text-sm bg-white"></table>
-        </div>
-        <div class="bg-gray-50 rounded-xl p-4">
-          <canvas id="vChart" height="120"></canvas>
-        </div>
-      </div>
-    </section>
-  </div>
+    </div>
 
-<script>
-/* ====== CONFIG SUPABASE ====== */
-const SUPABASE_URL = "https://zmzdqfonlykuhjjovloa.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptemRxZm9ubHlrdWhqam92bG9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTUwNTMsImV4cCI6MjA3MjMzMTA1M30.mqIhVKOK_6-XPu1o0oFW29wRMQieFp7eRg7shHnyv40";
+    <!-- PARTE 1: HTML ESTRUCTURA - FIN -->
 
-let sb;
+    <script>
+        // PARTE 2: CONFIGURACIÓN Y CONSTANTES - INICIO
+        
+        // Configuración de Supabase
+        const SUPABASE_URL = 'https://zmzdqfonlykuhjjovloa.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptemRxZm9ubHlrdWhqam92bG9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTUwNTMsImV4cCI6MjA3MjMzMTA1M30.mqIhVKOK_6-XPu1o0oFW29wRMQieFp7eRg7shHnyv40';
+        
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* Inicializar Supabase y diagnosticar conexión */
-(async () => {
-  const statusEl = document.getElementById('connectionStatus');
-  
-  try {
-    console.log('Inicializando Supabase...');
-    console.log('supabase global:', typeof supabase, !!supabase?.createClient);
-    
-    if (typeof supabase === 'undefined') {
-      throw new Error('Supabase no está disponible');
-    }
-    
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('Cliente Supabase creado:', !!sb);
-    
-    // Probar conexión
-    const { count, error } = await sb.from('medicion').select('*', { head: true, count: 'exact' });
-    console.log('Prueba de conexión - filas:', count, 'error:', error);
-    
-    if (error) {
-      statusEl.textContent = `Error de conexión: ${error.message}`;
-      statusEl.className = 'text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-red-200 text-red-800';
-    } else {
-      statusEl.textContent = `Conectado - ${count || 0} registros disponibles`;
-      statusEl.className = 'text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-green-200 text-green-800';
-      
-      // Si no hay datos, mostrar botón para cargar ejemplos
-      if (count === 0) {
-        const ejemploBtn = document.getElementById('btnCargarEjemplo');
-        ejemploBtn.style.display = 'inline-block';
-      }
-    }
-  } catch (e) {
-    console.error('Error inicializando Supabase:', e);
-    statusEl.textContent = `Error: ${e.message}`;
-    statusEl.className = 'text-sm mt-2 px-3 py-1 rounded-lg inline-block bg-red-200 text-red-800';
-  }
-})();
+        // Constantes
+        const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-/* ====== CONSTANTES ====== */
-const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-const INDICADORES_POR_AREA = {
-  comercial: ["operaciones","pasajeros"],
-  general:   ["operaciones","pasajeros"],
-  carga:     ["operaciones","toneladas"]
-};
+        const AREAS = {
+            'comercial': 'Aviación Comercial',
+            'general': 'Aviación General',
+            'carga': 'Aviación de Carga'
+        };
 
-// Colores para las gráficas
-const CHART_COLORS = [
-  'rgb(99, 102, 241)',   // indigo
-  'rgb(239, 68, 68)',    // red
-  'rgb(34, 197, 94)',    // green
-  'rgb(251, 191, 36)',   // yellow
-  'rgb(168, 85, 247)',   // purple
-  'rgb(59, 130, 246)',   // blue
-  'rgb(236, 72, 153)',   // pink
-  'rgb(20, 184, 166)',   // teal
-];
+        const INDICADORES = {
+            'operaciones': 'Operaciones',
+            'pasajeros': 'Pasajeros',
+            'toneladas': 'Toneladas Transportadas'
+        };
 
-/* ====== UTIL ====== */
-const $ = (sel) => document.querySelector(sel);
-function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
-</script>
+        // Variables globales
+        let currentChart = null;
+        let vContext = { modo: null };
+
+        // Funciones auxiliares
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => document.querySelectorAll(selector);
+
+        // PARTE 2: CONFIGURACIÓN Y CONSTANTES - FIN
+
+        // PARTE 3: FUNCIONES DE NAVEGACIÓN Y UI - INICIO
+
+        // Funciones de navegación
+        function showMenu() {
+            $('.hidden')?.classList.remove('hidden');
+            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $('#menuPrincipal').classList.remove('hidden');
+        }
+
+        function showCaptura() {
+            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $('#moduloCaptura').classList.remove('hidden');
+            initCaptura();
+        }
+
+        function showVisualizacion() {
+            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $('#menuVisualizacion').classList.remove('hidden');
+        }
+
+        function showVisualizacionDetalle(modo) {
+            vContext.modo = modo;
+            $$('.container > div').forEach(div => div.parentElement.classList.add('hidden'));
+            $('#visualizacionDetalle').classList.remove('hidden');
+            
+            let titulo = '';
+            switch(modo) {
+                case 'pasajeros': titulo = 'Visualización - Pasajeros'; break;
+                case 'operaciones': titulo = 'Visualización - Operaciones'; break;
+                case 'carga': titulo = 'Visualización - Carga'; break;
+            }
+            $('#tituloDetalle').textContent = titulo;
+            
+            setupVisualFilters();
+        }
+
+        // Inicialización del módulo de captura
+        function initCaptura() {
+            fillYears();
+            fillMonths();
+            fillAreas();
+            setupAreaChange();
+        }
+
+        function fillYears() {
+            const select = $('#fAnio');
+            select.innerHTML = '';
+            const currentYear = new Date().getFullYear();
+            for (let year = 2022; year <= currentYear; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                if (year === currentYear) option.selected = true;
+                select.appendChild(option);
+            }
+        }
+
+        function fillMonths() {
+            const select = $('#fMes');
+            select.innerHTML = '';
+            const currentMonth = new Date().getMonth() + 1;
+            MESES.forEach((mes, index) => {
+                const option = document.createElement('option');
+                option.value = index + 1;
+                option.textContent = mes;
+                if (index + 1 === currentMonth) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        function fillAreas() {
+            const areaSelect = $('#fArea');
+            areaSelect.innerHTML = '<option value="">Seleccionar...</option>';
+            Object.entries(AREAS).forEach(([key, value]) => {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = value;
+                areaSelect.appendChild(option);
+            });
+        }
+
+        function setupAreaChange() {
+            $('#fArea').addEventListener('change', function() {
+                const area = this.value;
+                const indicadorSelect = $('#fIndicador');
+                indicadorSelect.innerHTML = '<option value="">Seleccionar...</option>';
+                
+                if (area === 'comercial' || area === 'general') {
+                    ['operaciones', 'pasajeros'].forEach(ind => {
+                        const option = document.createElement('option');
+                        option.value = ind;
+                        option.textContent = INDICADORES[ind];
+                        indicadorSelect.appendChild(option);
+                    });
+                } else if (area === 'carga') {
+                    ['operaciones', 'toneladas'].forEach(ind => {
+                        const option = document.createElement('option');
+                        option.value = ind;
+                        option.textContent = INDICADORES[ind];
+                        indicadorSelect.appendChild(option);
+                    });
+                }
+                
+                // Cargar datos cuando cambien área e indicador
+                indicadorSelect.addEventListener('change', loadCapturaData);
+                loadCapturaData();
+            });
+        }
+
+        // PARTE 3: FUNCIONES DE NAVEGACIÓN Y UI - FIN
+
+        // PARTE 4: FUNCIONES DE DATOS Y VISUALIZACIÓN - INICIO
+
+        // Funciones de datos para captura
+        async function loadCapturaData() {
+            const area = $('#fArea').value;
+            const indicador = $('#fIndicador').value;
+            const anio = parseInt($('#fAnio').value);
+            
+            if (!area || !indicador || !anio) return;
+            
+            // Cargar datos del año actual
+            const { data, error } = await sb
+                .from('v_medicion')
+                .select('*')
+                .eq('area', area)
+                .eq('indicador', indicador)
+                .eq('anio', anio)
+                .order('mes');
+                
+            if (error) {
+                console.error('Error cargando datos:', error);
+                return;
+            }
+            
+            updateCapturaTable(data);
+            await loadCapturaChart(area, indicador);
+        }
+
+        function updateCapturaTable(data) {
+            const tbody = $('#tbodyCaptura');
+            tbody.innerHTML = '';
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const mesData = data.find(d => d.mes === mes) || {};
+                const tr = document.createElement('tr');
+                
+                const cumplimiento = mesData.cumplimiento ? `${mesData.cumplimiento}%` : '-';
+                const cumplimientoClass = mesData.cumplimiento >= 100 ? 'text-green-600 font-semibold' : 
+                                        mesData.cumplimiento >= 80 ? 'text-yellow-600' : 'text-red-600';
+                
+                tr.innerHTML = `
+                    <td class="border border-gray-300 px-4 py-2">${MESES[mes-1]}</td>
+                    <td class="border border-gray-300 px-4 py-2 text-right">${mesData.valor || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2 text-right">${mesData.meta || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2 text-right ${mesData.cumplimiento ? cumplimientoClass : ''}">${cumplimiento}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        async function loadCapturaChart(area, indicador) {
+            const anio = parseInt($('#fAnio').value);
+            
+            // Obtener datos de los últimos 4 años
+            const years = [];
+            for (let i = 3; i >= 0; i--) {
+                years.push(anio - i);
+            }
+            
+            const { data, error } = await sb
+                .from('v_medicion')
+                .select('anio, mes, valor')
+                .eq('area', area)
+                .eq('indicador', indicador)
+                .in('anio', years)
+                .order('anio')
+                .order('mes');
+                
+            if (error) {
+                console.error('Error cargando datos del gráfico:', error);
+                return;
+            }
+            
+            // Preparar datasets
+            const datasets = years.map(year => {
+                const yearData = Array(12).fill(null);
+                data.filter(d => d.anio === year).forEach(d => {
+                    yearData[d.mes - 1] = d.valor;
+                });
+                
+                return {
+                    label: year.toString(),
+                    data: yearData,
+                    borderColor: getColorForYear(year),
+                    backgroundColor: getColorForYear(year) + '20',
+                    fill: false,
+                    tension: 0.1
+                };
+            });
+            
+            // Actualizar gráfico
+            const ctx = $('#chartCaptura').getContext('2d');
+            if (currentChart) currentChart.destroy();
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: MESES,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${AREAS[area]} - ${INDICADORES[indicador]}`
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        function getColorForYear(year) {
+            const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
+            return colors[year % colors.length];
+        }
+
+        async function guardarMedicion() {
+            const area = $('#fArea').value;
+            const indicador = $('#fIndicador').value;
+            const anio = parseInt($('#fAnio').value);
+            const mes = parseInt($('#fMes').value);
+            const valor = parseFloat($('#fValor').value) || 0;
+            const meta = parseFloat($('#fMeta').value) || 0;
+            
+            if (!area || !indicador || !anio || !mes) {
+                alert('Por favor complete todos los campos obligatorios');
+                return;
+            }
+            
+            const { data, error } = await sb
+                .from('medicion')
+                .upsert({
+                    area,
+                    indicador,
+                    anio,
+                    mes,
+                    valor,
+                    meta
+                });
+                
+            if (error) {
+                alert('Error al guardar: ' + error.message);
+            } else {
+                alert('Datos guardados correctamente');
+                $('#fValor').value = '';
+                $('#fMeta').value = '';
+                loadCapturaData();
+            }
+        }
+
+        // Funciones de visualización
+        function setupVisualFilters() {
+            // Años
+            const selY = $('#vAnios');
+            selY.innerHTML = '';
+            const yNow = new Date().getFullYear();
+            for (let y = 2022; y <= yNow; y++) {
+                const o = document.createElement('option');
+                o.value = y;
+                o.textContent = y;
+                selY.appendChild(o);
+            }
+
+            // Tipo
+            const selT = $('#vTipo');
+            selT.innerHTML = '';
+            if (vContext.modo === 'pasajeros') {
+                [['comercial', 'Comercial'], ['general', 'General']].forEach(([v, t]) => {
+                    const o = document.createElement('option');
+                    o.value = v;
+                    o.textContent = t;
+                    selT.appendChild(o);
+                });
+            } else if (vContext.modo === 'operaciones') {
+                [['comercial', 'Comercial'], ['general', 'General']].forEach(([v, t]) => {
+                    const o = document.createElement('option');
+                    o.value = v;
+                    o.textContent = t;
+                    selT.appendChild(o);
+                });
+            } else { // carga
+                [['operaciones', 'Operaciones'], ['toneladas', 'Toneladas']].forEach(([v, t]) => {
+                    const o = document.createElement('option');
+                    o.value = v;
+                    o.textContent = t;
+                    selT.appendChild(o);
+                });
+            }
+        }
+
+        $('#btnAplicar')?.addEventListener('click', async () => {
+            const years = Array.from($('#vAnios').selectedOptions).map(o => parseInt(o.value));
+            const tipo = $('#vTipo').value;
+            
+            // Mapear a (area, indicador) según modo
+            let area, indicador;
+            if (vContext.modo === 'pasajeros') {
+                area = tipo;
+                indicador = 'pasajeros';
+            } else if (vContext.modo === 'operaciones') {
+                area = tipo;
+                indicador = 'operaciones';
+            } else { // carga
+                area = 'carga';
+                indicador = tipo;
+            }
+            
+            const { data, error } = await sb.from('medicion')
+                .select('anio,mes,valor')
+                .eq('area', area).eq('indicador', indicador)
+                .in('anio', years.length ? years : [new Date().getFullYear()])
+                .order('anio', { ascending: true }).order('mes', { ascending: true });
+                
+            if (error) {
+                alert(error.message);
+                return;
+            }
+            
+            // Pivot: filas = meses, columnas = años
+            const uYears = Array.from(new Set(data.map(r => r.anio))).sort();
+            const pivot = MESES.map((m, idx) => {
+                const row = { mes: m };
+                uYears.forEach(y => { row[y] = null; });
+                data.filter(r => r.mes === idx + 1).forEach(r => { row[r.anio] = r.valor; });
+                return row;
+            });
+            
+            // Render tabla
+            const tbl = $('#vTabla');
+            tbl.innerHTML = '';
+            const thead = document.createElement('thead');
+            const trh = document.createElement('tr');
+            trh.innerHTML = '<th class="border border-gray-300 px-4 py-2">Mes</th>' + 
+                           uYears.map(y => `<th class="border border-gray-300 px-4 py-2 text-right">${y}</th>`).join('');
+            thead.appendChild(trh);
+            tbl.appendChild(thead);
+            
+            const tbody = document.createElement('tbody');
+            pivot.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td class="border border-gray-300 px-4 py-2">${row.mes}</td>` + 
+                              uYears.map(y => `<td class="border border-gray-300 px-4 py-2 text-right">${row[y] ?? ''}</td>`).join('');
+                tbody.appendChild(tr);
+            });
+            tbl.appendChild(tbody);
+            
+            // Gráfica a partir de la tabla (una serie por año)
+            const ds = uYears.map(y => ({
+                label: y.toString(),
+                data: pivot.map(r => r[y]),
+                borderColor: getColorForYear(y),
+                backgroundColor: getColorForYear(y) + '20',
+                fill: false,
+                tension: 0.1
+            }));
+            
+            const ctx = document.getElementById('vChart').getContext('2d');
+            if (window.vChart) window.vChart.destroy();
+            window.vChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: MESES, datasets: ds },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        });
+
+        // PARTE 4: FUNCIONES DE DATOS Y VISUALIZACIÓN - FIN
+
+        // Inicialización cuando carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            showMenu();
+        });
+    </script>
 </body>
 </html>
-
-/* ====== NAVEGACIÓN ====== */
-const secHome    = $('#secHome');
-const secCaptura = $('#secCaptura');
-const secVisual  = $('#secVisual');
-const btnGoCaptura = $('#btnGoCaptura');
-const btnGoConsulta = $('#btnGoConsulta');
-const btnBackHome1 = $('#btnBackHome1');
-const btnBackHome2 = $('#btnBackHome2');
-
-function show(section){
-  [secHome, secCaptura, secVisual].forEach(s => s.classList.add('hidden'));
-  section.classList.remove('hidden');
-}
-
-btnGoCaptura.onclick = () => { 
-  show(secCaptura); 
-  fillIndicadores($('#fArea'), $('#fIndicador')); 
-  loadLine(); 
-};
-btnGoConsulta.onclick = () => { 
-  show(secVisual); 
-  setupVisualFilters(); 
-};
-btnBackHome1.onclick = () => show(secHome);
-btnBackHome2.onclick = () => show(secHome);
-
-/* ====== CAPTURA ====== */
-/* Rellenar meses */
-(function initMeses(){
-  const sel = $('#mes');
-  MESES.forEach((m,i)=>{ 
-    const o=document.createElement('option'); 
-    o.value=i+1; 
-    o.textContent=m; 
-    sel.appendChild(o); 
-  });
-  // Seleccionar mes actual
-  sel.value = new Date().getMonth() + 1;
-})();
-
-/* Rellenar indicadores según área */
-function fillIndicadores(areaSel, indSel){
-  const currentValue = indSel.value;
-  indSel.innerHTML = '';
-  (INDICADORES_POR_AREA[areaSel.value] || []).forEach(v=>{
-    const o=document.createElement('option');
-    o.value=v; 
-    o.textContent = v === 'toneladas' ? 'Toneladas Transportadas' : 
-                   v.charAt(0).toUpperCase()+v.slice(1);
-    indSel.appendChild(o);
-  });
-  
-  // Mantener selección si es posible
-  if (currentValue && indSel.querySelector(`option[value="${currentValue}"]`)) {
-    indSel.value = currentValue;
-  } else if (indSel.options.length) {
-    indSel.selectedIndex = 0;
-  }
-}
-
-// Inicializar indicadores
-fillIndicadores($('#area'), $('#indicador'));
-fillIndicadores($('#fArea'), $('#fIndicador'));
-
-$('#area').onchange = () => fillIndicadores($('#area'), $('#indicador'));
-$('#fArea').onchange = () => { 
-  fillIndicadores($('#fArea'), $('#fIndicador')); 
-  loadLine(); 
-};
-$('#fIndicador').onchange = () => loadLine();
-
-/* Año por defecto */
-(function initAnios(){ 
-  $('#anio').value = new Date().getFullYear(); 
-})();
-
-/* % cumplimiento en vivo */
-function updatePct(){
-  const v = parseFloat($('#valor').value || '0');
-  const m = parseFloat($('#meta').value || '0');
-  const pctEl = $('#pct');
-  
-  if (m > 0 && v >= 0) {
-    const pct = (v / m * 100);
-    pctEl.textContent = pct.toFixed(1) + "%";
-    
-    // Colores según cumplimiento
-    if (pct >= 100) {
-      pctEl.className = 'font-semibold text-green-600';
-    } else if (pct >= 80) {
-      pctEl.className = 'font-semibold text-yellow-600';
-    } else {
-      pctEl.className = 'font-semibold text-red-600';
-    }
-  } else {
-    pctEl.textContent = '—';
-    pctEl.className = 'font-semibold text-slate-600';
-  }
-}
-['valor','meta'].forEach(id=> $('#'+id).addEventListener('input', updatePct));
-
-/* Guardar (upsert por llave única) */
-$('#formCaptura').addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  
-  if (!sb) {
-    $('#msg').textContent = 'Error: No hay conexión a la base de datos';
-    $('#msg').className = 'col-span-2 text-sm mt-2 text-red-600';
-    return;
-  }
-  
-  const payload = {
-    area: $('#area').value,
-    indicador: $('#indicador').value,
-    anio: clamp(parseInt($('#anio').value||0), 2022, 2100),
-    mes:  clamp(parseInt($('#mes').value||1), 1, 12),
-    valor: parseFloat($('#valor').value||0),
-    meta:  parseFloat($('#meta').value||0)
-  };
-  
-  console.log('Guardando:', payload);
-  
-  const { error } = await sb.from('medicion').upsert(payload, { onConflict: 'area,indicador,anio,mes' });
-  const msg = $('#msg');
-  
-  if(error){ 
-    console.error('Error al guardar:', error);
-    msg.textContent = 'Error: '+error.message; 
-    msg.className='col-span-2 text-sm mt-2 text-red-600'; 
-  } else { 
-    msg.textContent = 'Guardado ✔'; 
-    msg.className='col-span-2 text-sm mt-2 text-green-600'; 
-    loadLine();
-    
-    // Actualizar contador de conexión
-    const { count } = await sb.from('medicion').select('*', { head: true, count: 'exact' });
-    const statusEl = document.getElementById('connectionStatus');
-    statusEl.textContent = `Conectado - ${count || 0} registros disponibles`;
-  }
-});
-
-$('#btnLimpiar').onclick = ()=>{
-  ['valor','meta'].forEach(id=> $('#'+id).value=''); 
-  updatePct(); 
-  $('#msg').textContent='';
-};
-
-/* Botón para cargar datos de ejemplo */
-$('#btnCargarEjemplo').onclick = async () => {
-  if (!sb) return;
-  
-  const btn = $('#btnCargarEjemplo');
-  const originalText = btn.textContent;
-  btn.textContent = 'Cargando...';
-  btn.disabled = true;
-  
-  try {
-    // Datos de ejemplo para 2023 y 2024
-    const datosEjemplo = [];
-    
-    // Aviación Comercial - Operaciones y Pasajeros
-    for (let año = 2023; año <= 2024; año++) {
-      for (let mes = 1; mes <= 12; mes++) {
-        // Operaciones comerciales (variación estacional)
-        const baseOp = 150;
-        const variacion = Math.sin((mes - 1) * Math.PI / 6) * 30;
-        const operaciones = Math.round(baseOp + variacion + (Math.random() * 20 - 10));
-        const metaOp = Math.round(operaciones * (0.9 + Math.random() * 0.2));
-        
-        datosEjemplo.push({
-          area: 'comercial',
-          indicador: 'operaciones',
-          anio: año,
-          mes: mes,
-          valor: operaciones,
-          meta: metaOp
-        });
-        
-        // Pasajeros comerciales
-        const basePax = 12000;
-        const variacionPax = Math.sin((mes - 1) * Math.PI / 6) * 3000;
-        const pasajeros = Math.round(basePax + variacionPax + (Math.random() * 1000 - 500));
-        const metaPax = Math.round(pasajeros * (0.85 + Math.random() * 0.3));
-        
-        datosEjemplo.push({
-          area: 'comercial',
-          indicador: 'pasajeros',
-          anio: año,
-          mes: mes,
-          valor: pasajeros,
-          meta: metaPax
-        });
-      }
-    }
-    
-    // Aviación General
-    for (let año = 2023; año <= 2024; año++) {
-      for (let mes = 1; mes <= 12; mes++) {
-        // Operaciones generales
-        const opGen = Math.round(80 + Math.random() * 40);
-        const metaOpGen = Math.round(opGen * (0.8 + Math.random() * 0.4));
-        
-        datosEjemplo.push({
-          area: 'general',
-          indicador: 'operaciones',
-          anio: año,
-          mes: mes,
-          valor: opGen,
-          meta: metaOpGen
-        });
-        
-        // Pasajeros generales
-        const paxGen = Math.round(500 + Math.random() * 300);
-        const metaPaxGen = Math.round(paxGen * (0.8 + Math.random() * 0.4));
-        
-        datosEjemplo.push({
-          area: 'general',
-          indicador: 'pasajeros',
-          anio: año,
-          mes: mes,
-          valor: paxGen,
-          meta: metaPaxGen
-        });
-      }
-    }
-    
-    // Aviación de Carga
-    for (let año = 2023; año <= 2024; año++) {
-      for (let mes = 1; mes <= 12; mes++) {
-        // Operaciones de carga
-        const opCarga = Math.round(25 + Math.random() * 15);
-        const metaOpCarga = Math.round(opCarga * (0.9 + Math.random() * 0.2));
-        
-        datosEjemplo.push({
-          area: 'carga',
-          indicador: 'operaciones',
-          anio: año,
-          mes: mes,
-          valor: opCarga,
-          meta: metaOpCarga
-        });
-        
-        // Toneladas
-        const toneladas = Math.round(450 + Math.random() * 200);
-        const metaTon = Math.round(toneladas * (0.85 + Math.random() * 0.3));
-        
-        datosEjemplo.push({
-          area: 'carga',
-          indicador: 'toneladas',
-          anio: año,
-          mes: mes,
-          valor: toneladas,
-          meta: metaTon
-        });
-      }
-    }
-    
-    console.log('Cargando', datosEjemplo.length, 'registros de ejemplo');
-    const { error } = await sb.from('medicion').upsert(datosEjemplo);
-    
-    if (error) {
-      throw error;
-    }
-    
-    $('#msg').textContent = `Cargados ${datosEjemplo.length} registros de ejemplo ✔`;
-    $('#msg').className = 'col-span-2 text-sm mt-2 text-green-600';
-    
-    // Actualizar gráfica y contador
-    loadLine();
-    const { count } = await sb.from('medicion').select('*', { head: true, count: 'exact' });
-    const statusEl = document.getElementById('connectionStatus');
-    statusEl.textContent = `Conectado - ${count || 0} registros disponibles`;
-    
-    // Ocultar botón
-    btn.style.display = 'none';
-    
-  } catch (error) {
-    console.error('Error cargando datos:', error);
-    $('#msg').textContent = 'Error cargando datos: ' + error.message;
-    $('#msg').className = 'col-span-2 text-sm mt-2 text-red-600';
-    
-    btn.textContent = originalText;
-    btn.disabled = false;
-  }
-};
-
-/* Gráfica de líneas */
-let lineChart;
-async function loadLine() {
-  if (!sb) return;
-  
-  const area = ($('#fArea')?.value) || 'comercial';
-  const indSel = $('#fIndicador');
-  const indicador = (indSel && indSel.value) ? indSel.value : 'operaciones';
-  const notice = $('#notice');
-  
-  try {
-    const { data, error } = await sb
-      .from('medicion')
-      .select('anio,mes,valor')
-      .eq('area', area)
-      .eq('indicador', indicador)
-      .order('anio', { ascending: true })
-      .order('mes', { ascending: true });
-
-    if (error) { 
-      console.error('Error cargando datos para gráfica:', error); 
-      notice.textContent = 'Error cargando datos: ' + error.message;
-      notice.className = 'text-sm text-red-500 mt-2 text-center';
-      return; 
-    }
-
-    if (!data || data.length === 0) {
-      notice.textContent = 'Sin datos para los filtros seleccionados.';
-      notice.className = 'text-sm text-slate-500 mt-2 text-center';
-      
-      if (lineChart) lineChart.destroy();
-      const ctx = document.getElementById('lineChart').getContext('2d');
-      lineChart = new Chart(ctx, { 
-        type:'line', 
-        data:{ labels: MESES, datasets: [] },
-        options:{ 
-          responsive: true,
-          plugins:{ 
-            legend:{ display:false },
-            title: { 
-              display: true, 
-              text: `${area.charAt(0).toUpperCase() + area.slice(1)} - ${indicador.charAt(0).toUpperCase() + indicador.slice(1)}`
-            }
-          },
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
-      return;
-    } else {
-      notice.textContent = `Mostrando ${data.length} registros`;
-      notice.className = 'text-sm text-slate-500 mt-2 text-center';
-    }
-
-    // Agrupar por año
-    const byYear = {};
-    data.forEach(r => { 
-      (byYear[r.anio] ||= Array(12).fill(null))[r.mes - 1] = r.valor; 
-    });
-    
-    const years = Object.keys(byYear).sort();
-    const ds = years.map((y, idx) => ({ 
-      label: y, 
-      data: byYear[y],
-      borderColor: CHART_COLORS[idx % CHART_COLORS.length],
-      backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] + '20',
-      fill: false,
-      tension: 0.1
-    }));
-
-    const ctx = document.getElementById('lineChart').getContext('2d');
-    if (lineChart) lineChart.destroy();
-    
-    lineChart = new Chart(ctx, {
-      type: 'line',
-      data: { labels: MESES, datasets: ds },
-      options: { 
-        responsive: true, 
-        plugins: { 
-          legend: { 
-            position: 'bottom',
-            display: years.length > 1
-          },
-          title: { 
-            display: true, 
-            text: `${area.charAt(0).toUpperCase() + area.slice(1)} - ${indicador.charAt(0).toUpperCase() + indicador.slice(1)}`
-          }
-        },
-        scales: {
-          y: { 
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: indicador === 'pasajeros' ? 'Pasajeros' : 
-                   indicador === 'toneladas' ? 'Toneladas' : 'Operaciones'
-            }
-          },
-          x: {
-            title: {
-              display: true,
-              text: 'Meses'
-            }
-          }
-        }
-      }
-    });
-  } catch (e) {
-    console.error('loadLine exception:', e);
-    notice.textContent = 'Error: ' + e.message;
-    notice.className = 'text-sm text-red-500 mt-2 text-center';
-  }
-}
