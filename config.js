@@ -1,5 +1,5 @@
-// ====================================
-// ARCHIVO 2: config.js
+javascript// ====================================
+// ARCHIVO 2: config.js (ACTUALIZADO)
 // Configuración de Supabase y constantes
 // ====================================
 
@@ -40,6 +40,20 @@ const OPCIONES_COMPARACION = {
     '2022': 'Mismo periodo 2022'
 };
 
+// NUEVO: Escenarios de metas
+const ESCENARIOS_META = {
+    'bajo': 'Escenario Bajo',
+    'mediano': 'Escenario Mediano',
+    'alto': 'Escenario Alto'
+};
+
+// NUEVO: Descripción de escenarios
+const DESCRIPCION_ESCENARIOS = {
+    'bajo': 'Proyección conservadora con crecimiento mínimo esperado',
+    'mediano': 'Proyección realista con crecimiento moderado esperado',
+    'alto': 'Proyección optimista con crecimiento máximo esperado'
+};
+
 // Colores para las gráficas
 const COLORES_GRAFICAS = [
     '#3B82F6', // Azul
@@ -53,6 +67,13 @@ const COLORES_GRAFICAS = [
     '#EC4899', // Rosa
     '#6B7280'  // Gris
 ];
+
+// NUEVO: Colores específicos para escenarios
+const COLORES_ESCENARIOS = {
+    'bajo': '#EF4444',      // Rojo para escenario bajo
+    'mediano': '#F59E0B',   // Amarillo para escenario mediano
+    'alto': '#10B981'       // Verde para escenario alto
+};
 
 // Configuración de años
 const ANO_INICIAL = 2022;
@@ -91,20 +112,28 @@ const MENSAJES = {
     ERROR_CAMPOS_VACIOS: 'Por favor complete todos los campos obligatorios',
     ERROR_SELECCIONAR_TIPO: 'Por favor seleccione un tipo',
     ERROR_SELECCIONAR_ANO: 'Por favor seleccione un año',
+    ERROR_SELECCIONAR_ESCENARIO: 'Por favor seleccione un escenario de meta',
     ERROR_CARGA_DATOS: 'Error al cargar los datos',
     ERROR_GUARDAR: 'Error al guardar',
     EXITO_GUARDAR: 'Datos guardados correctamente',
     ERROR_RED: 'Error de conexión. Verifique su conexión a internet',
     SIN_DATOS: 'No se encontraron datos para los filtros seleccionados',
+    SIN_DATOS_ESCENARIO: 'No se encontraron metas para el escenario seleccionado',
     DESCARGA_INICIADA: 'Iniciando descarga...',
-    DESCARGA_ERROR: 'Error al descargar los datos'
+    DESCARGA_ERROR: 'Error al descargar los datos',
+    ESCENARIO_CAMBIADO: 'Escenario de meta actualizado',
+    FILTROS_APLICADOS: 'Filtros aplicados correctamente'
 };
 
 // Validaciones
 const VALIDACIONES = {
     VALOR_MINIMO: 0,
     VALOR_MAXIMO: 999999999,
-    DECIMALES_PERMITIDOS: 2
+    DECIMALES_PERMITIDOS: 2,
+    ANO_MINIMO: ANO_INICIAL,
+    ANO_MAXIMO: ANO_ACTUAL + 5, // Permitir planificación a futuro
+    MES_MINIMO: 1,
+    MES_MAXIMO: 12
 };
 
 // Configuración de formato de números
@@ -116,6 +145,123 @@ const FORMATO_NUMEROS = {
     }
 };
 
+// NUEVO: Configuración específica para cada tipo de indicador
+const CONFIGURACION_INDICADORES = {
+    'pasajeros': {
+        unidad: 'pasajeros',
+        formato: 'numero',
+        decimales: 0,
+        sufijo: '',
+        color: '#3B82F6'
+    },
+    'operaciones': {
+        unidad: 'operaciones',
+        formato: 'numero',
+        decimales: 0,
+        sufijo: '',
+        color: '#10B981'
+    },
+    'toneladas': {
+        unidad: 'toneladas',
+        formato: 'numero',
+        decimales: 2,
+        sufijo: ' t',
+        color: '#F59E0B'
+    }
+};
+
+// NUEVO: Configuración de tablas
+const TABLA_CONFIG = {
+    colores: {
+        cumplimiento_alto: 'text-green-600 font-semibold',    // >= 100%
+        cumplimiento_medio: 'text-yellow-600 font-medium',   // >= 80%
+        cumplimiento_bajo: 'text-red-600',                    // < 80%
+        variacion_positiva: 'text-green-600 font-medium',    // > 0%
+        variacion_negativa: 'text-red-600',                  // < 0%
+        variacion_neutra: 'text-gray-600'                    // = 0%
+    },
+    umbrales: {
+        cumplimiento_alto: 100,
+        cumplimiento_medio: 80,
+        variacion_significativa: 5 // ±5%
+    }
+};
+
+// NUEVO: URLs y endpoints útiles
+const ENDPOINTS = {
+    mediciones: 'v_medicion',
+    metas_escenarios: 'metas_escenarios',
+    usuarios: 'usuarios'
+};
+
+// NUEVO: Configuración de cache
+const CACHE_CONFIG = {
+    duracion_defecto: 5 * 60 * 1000,        // 5 minutos
+    duracion_datos_historicos: 60 * 60 * 1000,  // 1 hora
+    duracion_metas: 24 * 60 * 60 * 1000,    // 24 horas
+    prefijo: 'aviacion_cache_'
+};
+
+// NUEVO: Configuración de logging
+const LOG_CONFIG = {
+    nivel: 'info', // 'debug', 'info', 'warn', 'error'
+    mostrar_timestamps: true,
+    mostrar_contexto: true,
+    max_logs_consola: 100
+};
+
+// NUEVO: Configuración de notificaciones
+const NOTIFICACION_CONFIG = {
+    duracion_defecto: 3000,     // 3 segundos
+    duracion_error: 5000,       // 5 segundos para errores
+    duracion_exito: 2000,       // 2 segundos para éxito
+    posicion: 'top-right',
+    max_notificaciones: 3
+};
+
+// NUEVO: Metadatos del sistema
+const SISTEMA_INFO = {
+    nombre: 'Sistema de Indicadores de Aviación',
+    version: '2.0.0',
+    autor: 'Equipo de Desarrollo',
+    fecha_actualizacion: '2025-09-02',
+    descripcion: 'Sistema para captura y visualización de indicadores de aviación comercial, general y de carga'
+};
+
+// NUEVO: Configuración de exportación
+const EXPORT_CONFIG = {
+    formatos_soportados: ['csv', 'xlsx', 'pdf'],
+    separadores_csv: {
+        ',' : 'Coma (,)',
+        ';' : 'Punto y coma (;)',
+        '\t': 'Tabulación'
+    },
+    encoding_csv: 'utf-8-bom',
+    incluir_headers: true,
+    incluir_metadata: true
+};
+
+// Funciones de utilidad para configuración
+function obtenerConfiguracionIndicador(indicador) {
+    return CONFIGURACION_INDICADORES[indicador] || CONFIGURACION_INDICADORES['operaciones'];
+}
+
+function obtenerColorEscenario(escenario) {
+    return COLORES_ESCENARIOS[escenario] || COLORES_ESCENARIOS['mediano'];
+}
+
+function obtenerDescripcionEscenario(escenario) {
+    return DESCRIPCION_ESCENARIOS[escenario] || '';
+}
+
+function esAnioValido(anio) {
+    return anio >= VALIDACIONES.ANO_MINIMO && anio <= VALIDACIONES.ANO_MAXIMO;
+}
+
+function esMesValido(mes) {
+    return mes >= VALIDACIONES.MES_MINIMO && mes <= VALIDACIONES.MES_MAXIMO;
+}
+
 // Exportar configuración si se necesita en otros módulos
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -124,12 +270,21 @@ if (typeof module !== 'undefined' && module.exports) {
         AREAS,
         INDICADORES,
         OPCIONES_COMPARACION,
+        ESCENARIOS_META,
         COLORES_GRAFICAS,
+        COLORES_ESCENARIOS,
         ANO_INICIAL,
         ANO_ACTUAL,
         vContext,
         MENSAJES,
         VALIDACIONES,
-        FORMATO_NUMEROS
+        FORMATO_NUMEROS,
+        CONFIGURACION_INDICADORES,
+        TABLA_CONFIG,
+        obtenerConfiguracionIndicador,
+        obtenerColorEscenario,
+        obtenerDescripcionEscenario,
+        esAnioValido,
+        esMesValido
     };
 }
