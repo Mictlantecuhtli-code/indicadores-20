@@ -4,9 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicadores Aviación 2.0</title>
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Estilos para controlar el tamaño de las gráficas */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            max-height: 400px;
+        }
+        
+        #chartCaptura, #vChart {
+            max-height: 400px !important;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     
@@ -84,7 +97,9 @@
             <!-- Gráfica de líneas -->
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-4">Comparativo por Años</h3>
-                <canvas id="chartCaptura" width="400" height="200"></canvas>
+                <div class="chart-container">
+                    <canvas id="chartCaptura"></canvas>
+                </div>
             </div>
             
             <!-- Tabla de datos -->
@@ -143,8 +158,8 @@
                 <button onclick="showVisualizacion()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
             </div>
             
-            <!-- Filtros MODIFICADOS -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <!-- Filtros ACTUALIZADOS CON ESCENARIO -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 <div>
                     <label class="block text-sm font-medium mb-1">Año Actual</label>
                     <select id="vAnio" class="w-full border rounded px-3 py-2"></select>
@@ -152,6 +167,14 @@
                 <div>
                     <label class="block text-sm font-medium mb-1">Tipo</label>
                     <select id="vTipo" class="w-full border rounded px-3 py-2"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Escenario Meta</label>
+                    <select id="vEscenario" class="w-full border rounded px-3 py-2">
+                        <option value="mediano">Mediano</option>
+                        <option value="bajo">Bajo</option>
+                        <option value="alto">Alto</option>
+                    </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Comparar Contra</label>
@@ -168,7 +191,7 @@
                 </div>
             </div>
             
-            <!-- Tabla de resultados SIMPLIFICADA -->
+            <!-- Tabla de resultados -->
             <div class="overflow-x-auto mb-6">
                 <div id="tablaVisualizacion"></div>
             </div>
@@ -176,7 +199,9 @@
             <!-- Gráfica -->
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-4">Gráfica Comparativa Histórica</h3>
-                <canvas id="vChart" width="400" height="200"></canvas>
+                <div class="chart-container">
+                    <canvas id="vChart"></canvas>
+                </div>
             </div>
             
             <!-- Botón de descarga -->
