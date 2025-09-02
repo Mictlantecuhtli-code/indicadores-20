@@ -443,7 +443,6 @@ window.showMenu = showMenu;
 window.showCaptura = showCaptura;
 window.showVisualizacion = showVisualizacion;
 window.showVisualizacionDetalle = showVisualizacionDetalle;
-window.showVisualizacionDetalle = function(modo) { navegarConValidacion(() => showVisualizacionDetalle(modo)); };
 
 // Inicializar cuando se carga el documento
 document.addEventListener('DOMContentLoaded', function() {
