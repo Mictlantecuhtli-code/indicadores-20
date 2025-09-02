@@ -1,5 +1,5 @@
 // ====================================
-// ARCHIVO 4: charts.js (BIEN ARREGLADO)
+// ARCHIVO 4: charts.js (CON FUNCIÓN COMPARATIVA)
 // Funciones específicas para gráficas
 // ====================================
 
@@ -213,11 +213,11 @@ async function crearGraficaCaptura(area, indicador) {
 }
 
 /**
- * Crear gráfica histórica completa
+ * Crear gráfica histórica completa (para el checkbox)
  */
 async function crearGraficaVisualizacion(area, indicador, tipo) {
     try {
-        log('Cargando datos históricos completos para gráfica', { area, indicador });
+        log('Cargando datos históricos COMPLETOS', { area, indicador });
 
         const { data, error } = await sb
             .from('v_medicion')
@@ -283,7 +283,7 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
 
         config.plugins.title = {
             display: true,
-            text: `${chartTitle} (Histórico ${ANO_INICIAL}-${ANO_ACTUAL})`,
+            text: `${chartTitle} - HISTÓRICO COMPLETO (${ANO_INICIAL}-${ANO_ACTUAL})`,
             font: {
                 size: 16,
                 weight: 'bold'
@@ -307,16 +307,16 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
             options: config
         });
 
-        log('Gráfica de visualización creada exitosamente', { aniosIncluidos: aniosUnicos });
+        log('Gráfica histórica COMPLETA creada exitosamente', { aniosIncluidos: aniosUnicos });
 
     } catch (error) {
-        logError('Error al crear gráfica de visualización', error);
+        logError('Error al crear gráfica histórica', error);
         mostrarNotificacion('Error al crear la gráfica histórica', 'error');
     }
 }
 
 /**
- * Crear gráfica comparativa (solo 2 años)
+ * NUEVA: Crear gráfica comparativa (SOLO 2 AÑOS)
  */
 async function crearGraficaComparativa(area, indicador, tipo) {
     const anioActual = visualizacionData.anioSeleccionado;
@@ -328,15 +328,17 @@ async function crearGraficaComparativa(area, indicador, tipo) {
         anioComparacion = parseInt(visualizacionData.comparacionSeleccionada);
     }
     
+    // Verificar si mostrar histórico
     const mostrarHistorico = $('#chkMostrarHistorico')?.checked || false;
     
     if (mostrarHistorico) {
+        log('Mostrando gráfica histórica completa por checkbox');
         await crearGraficaVisualizacion(area, indicador, tipo);
         return;
     }
     
     try {
-        log('Cargando datos comparativos', { anioActual, anioComparacion, area, indicador });
+        log('Creando gráfica comparativa SOLO 2 AÑOS', { anioActual, anioComparacion, area, indicador });
 
         const { data, error } = await sb
             .from('v_medicion')
@@ -353,6 +355,7 @@ async function crearGraficaComparativa(area, indicador, tipo) {
             return;
         }
 
+        // CREAR SOLO 2 DATASETS
         const datasets = [anioComparacion, anioActual].map(anio => {
             const yearData = crearArrayMeses(null);
             data.filter(d => d.anio === anio).forEach(d => {
@@ -367,7 +370,8 @@ async function crearGraficaComparativa(area, indicador, tipo) {
                 fill: false,
                 tension: 0.1,
                 pointBackgroundColor: obtenerColorPorAnio(anio),
-                pointBorderColor: obtenerColorPorAnio(anio)
+                pointBorderColor: obtenerColorPorAnio(anio),
+                borderWidth: 3
             };
         });
 
@@ -395,7 +399,7 @@ async function crearGraficaComparativa(area, indicador, tipo) {
 
         config.plugins.title = {
             display: true,
-            text: `${chartTitle} - Comparativo ${anioActual} vs ${anioComparacion}`,
+            text: `${chartTitle} - COMPARATIVO ${anioActual} vs ${anioComparacion}`,
             font: { size: 16, weight: 'bold' }
         };
 
@@ -409,11 +413,14 @@ async function crearGraficaComparativa(area, indicador, tipo) {
 
         visualChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
-            data: { labels: MESES, datasets: datasets },
+            data: { 
+                labels: MESES, 
+                datasets: datasets 
+            },
             options: config
         });
 
-        log('Gráfica comparativa creada exitosamente', { años: [anioComparacion, anioActual] });
+        log('Gráfica comparativa SOLO 2 AÑOS creada exitosamente', { años: [anioComparacion, anioActual] });
 
     } catch (error) {
         logError('Error en gráfica comparativa', error);
@@ -422,7 +429,7 @@ async function crearGraficaComparativa(area, indicador, tipo) {
 }
 
 /**
- * Destruir gráficas existentes - ARREGLADO
+ * Destruir gráficas existentes
  */
 function destruirGraficas() {
     try {
@@ -431,7 +438,7 @@ function destruirGraficas() {
             currentChart = null;
         }
     } catch (e) {
-        // Silenciar errores de gráficas no inicializadas
+        // Silenciar errores
     }
     
     try {
@@ -440,12 +447,12 @@ function destruirGraficas() {
             visualChart = null;
         }
     } catch (e) {
-        // Silenciar errores de gráficas no inicializadas
+        // Silenciar errores
     }
 }
 
 /**
- * Redimensionar gráficas - ARREGLADO
+ * Redimensionar gráficas
  */
 function redimensionarGraficas() {
     try {
@@ -453,7 +460,7 @@ function redimensionarGraficas() {
             currentChart.resize();
         }
     } catch (e) {
-        // Silenciar errores de gráficas no inicializadas
+        // Silenciar errores
     }
     
     try {
@@ -461,7 +468,7 @@ function redimensionarGraficas() {
             visualChart.resize();
         }
     } catch (e) {
-        // Silenciar errores de gráficas no inicializadas
+        // Silenciar errores
     }
 }
 
