@@ -1,5 +1,5 @@
 // ====================================
-// ARCHIVO 5: navigation.js
+// ARCHIVO 5: navigation.js (REESCRITO)
 // Funciones de navegación entre módulos
 // ====================================
 
@@ -23,7 +23,7 @@ function showMenu() {
     log('Navegando a menú principal');
     
     // Limpiar gráficas al salir de otros módulos
-    limpiarGraficasAlCambiarModulo();
+    destruirGraficas();
     
     // Ocultar todos los contenedores
     ocultarTodosLosModulos();
@@ -49,7 +49,7 @@ function showCaptura() {
     log('Navegando a módulo de captura');
     
     // Limpiar gráficas anteriores
-    limpiarGraficasAlCambiarModulo();
+    destruirGraficas();
     
     // Ocultar todos los módulos
     ocultarTodosLosModulos();
@@ -66,7 +66,9 @@ function showCaptura() {
     
     // Inicializar módulo de captura
     try {
-        inicializarModuloCaptura();
+        if (typeof inicializarModuloCaptura === 'function') {
+            inicializarModuloCaptura();
+        }
     } catch (error) {
         logError('Error al inicializar módulo de captura', error);
         mostrarNotificacion('Error al cargar el módulo de captura', 'error');
@@ -80,7 +82,7 @@ function showVisualizacion() {
     log('Navegando a menú de visualización');
     
     // Limpiar gráficas anteriores
-    limpiarGraficasAlCambiarModulo();
+    destruirGraficas();
     
     // Ocultar todos los módulos
     ocultarTodosLosModulos();
@@ -112,7 +114,7 @@ function showVisualizacionDetalle(modo) {
     }
     
     // Limpiar gráficas anteriores
-    limpiarGraficasAlCambiarModulo();
+    destruirGraficas();
     
     // Actualizar contexto
     vContext.modo = modo;
@@ -135,7 +137,9 @@ function showVisualizacionDetalle(modo) {
     
     // Inicializar filtros de visualización
     try {
-        inicializarFiltrosVisualizacion();
+        if (typeof inicializarFiltrosVisualizacion === 'function') {
+            inicializarFiltrosVisualizacion();
+        }
     } catch (error) {
         logError('Error al inicializar filtros de visualización', error);
         mostrarNotificacion('Error al cargar los filtros', 'error');
@@ -264,17 +268,6 @@ function confirmarCambioModulo() {
 }
 
 /**
- * Navegación con validaciones
- */
-function navegarConValidacion(funcionNavegacion) {
-    if (!puedeNavegar()) return;
-    
-    if (!confirmarCambioModulo()) return;
-    
-    funcionNavegacion();
-}
-
-/**
  * Configurar eventos de navegación
  */
 function configurarEventosNavegacion() {
@@ -283,25 +276,33 @@ function configurarEventosNavegacion() {
         // Alt + M = Menú principal
         if (event.altKey && event.key === 'm') {
             event.preventDefault();
-            navegarConValidacion(showMenu);
+            if (puedeNavegar() && confirmarCambioModulo()) {
+                showMenu();
+            }
         }
         
         // Alt + C = Captura
         if (event.altKey && event.key === 'c') {
             event.preventDefault();
-            navegarConValidacion(showCaptura);
+            if (puedeNavegar() && confirmarCambioModulo()) {
+                showCaptura();
+            }
         }
         
         // Alt + V = Visualización
         if (event.altKey && event.key === 'v') {
             event.preventDefault();
-            navegarConValidacion(showVisualizacion);
+            if (puedeNavegar() && confirmarCambioModulo()) {
+                showVisualizacion();
+            }
         }
         
         // Escape = Atrás
         if (event.key === 'Escape') {
             event.preventDefault();
-            navegarConValidacion(navegarAtras);
+            if (puedeNavegar() && confirmarCambioModulo()) {
+                navegarAtras();
+            }
         }
     });
     
@@ -322,97 +323,6 @@ function configurarEventosNavegacion() {
             showMenu();
         }
     });
-}
-
-/**
- * Actualizar URL (opcional, para compatibilidad con navegador)
- */
-function actualizarURL(modulo) {
-    if (typeof history !== 'undefined' && history.pushState) {
-        const nuevaURL = `${window.location.pathname}?modulo=${modulo}`;
-        history.pushState({ modulo: modulo }, '', nuevaURL);
-    }
-}
-
-/**
- * Inicializar navegación desde URL
- */
-function inicializarDesdeURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const modulo = urlParams.get('modulo');
-    
-    switch(modulo) {
-        case 'captura':
-            showCaptura();
-            break;
-        case 'visualizacion':
-            showVisualizacion();
-            break;
-        default:
-            showMenu();
-    }
-}
-
-/**
- * Funciones de breadcrumb (migas de pan)
- */
-function actualizarBreadcrumb() {
-    const breadcrumb = $('#breadcrumb');
-    if (!breadcrumb) return;
-    
-    let ruta = '';
-    switch(estadoActual) {
-        case NAVEGACION_ESTADOS.MENU_PRINCIPAL:
-            ruta = 'Inicio';
-            break;
-        case NAVEGACION_ESTADOS.MODULO_CAPTURA:
-            ruta = 'Inicio > Captura';
-            break;
-        case NAVEGACION_ESTADOS.MENU_VISUALIZACION:
-            ruta = 'Inicio > Visualización';
-            break;
-        case NAVEGACION_ESTADOS.DETALLE_VISUALIZACION:
-            const modoTexto = vContext.modo ? 
-                vContext.modo.charAt(0).toUpperCase() + vContext.modo.slice(1) : '';
-            ruta = `Inicio > Visualización > ${modoTexto}`;
-            break;
-        default:
-            ruta = 'Inicio';
-    }
-    
-    breadcrumb.textContent = ruta;
-}
-
-/**
- * Funciones de estado de carga
- */
-function mostrarEstadoCargaModulo(mostrar = true, mensaje = 'Cargando...') {
-    const overlay = $('#loadingOverlay');
-    if (!overlay) return;
-    
-    if (mostrar) {
-        overlay.classList.remove('hidden');
-        const mensajeElement = $('#loadingMessage');
-        if (mensajeElement) {
-            mensajeElement.textContent = mensaje;
-        }
-    } else {
-        overlay.classList.add('hidden');
-    }
-}
-
-/**
- * Inicialización del módulo de navegación
- */
-function inicializarNavegacion() {
-    log('Inicializando módulo de navegación');
-    
-    configurarEventosNavegacion();
-    
-    // Inicializar desde URL si es necesario
-    // inicializarDesdeURL();
-    
-    log('Módulo de navegación inicializado');
 }
 
 /**
@@ -438,7 +348,16 @@ function debugNavegacion() {
     });
 }
 
-// Exponer funciones globales necesarias
+/**
+ * Inicialización del módulo de navegación
+ */
+function inicializarNavegacion() {
+    log('Inicializando módulo de navegación');
+    configurarEventosNavegacion();
+    log('Módulo de navegación inicializado');
+}
+
+// Exponer funciones globales necesarias - SIN BUCLES
 window.showMenu = showMenu;
 window.showCaptura = showCaptura;
 window.showVisualizacion = showVisualizacion;
