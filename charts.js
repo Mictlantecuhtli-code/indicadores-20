@@ -1,5 +1,5 @@
 // ====================================
-// ARCHIVO 4: charts.js (CORREGIDO)
+// ARCHIVO 4: charts.js (BIEN ARREGLADO)
 // Funciones específicas para gráficas
 // ====================================
 
@@ -422,30 +422,46 @@ async function crearGraficaComparativa(area, indicador, tipo) {
 }
 
 /**
- * Destruir gráficas existentes
+ * Destruir gráficas existentes - ARREGLADO
  */
 function destruirGraficas() {
-    if (currentChart) {
-        currentChart.destroy();
-        currentChart = null;
+    try {
+        if (typeof currentChart !== 'undefined' && currentChart !== null) {
+            currentChart.destroy();
+            currentChart = null;
+        }
+    } catch (e) {
+        // Silenciar errores de gráficas no inicializadas
     }
     
-    if (visualChart) {
-        visualChart.destroy();
-        visualChart = null;
+    try {
+        if (typeof visualChart !== 'undefined' && visualChart !== null) {
+            visualChart.destroy();
+            visualChart = null;
+        }
+    } catch (e) {
+        // Silenciar errores de gráficas no inicializadas
     }
 }
 
 /**
- * Redimensionar gráficas
+ * Redimensionar gráficas - ARREGLADO
  */
 function redimensionarGraficas() {
-    if (currentChart) {
-        currentChart.resize();
+    try {
+        if (typeof currentChart !== 'undefined' && currentChart !== null) {
+            currentChart.resize();
+        }
+    } catch (e) {
+        // Silenciar errores de gráficas no inicializadas
     }
     
-    if (visualChart) {
-        visualChart.resize();
+    try {
+        if (typeof visualChart !== 'undefined' && visualChart !== null) {
+            visualChart.resize();
+        }
+    } catch (e) {
+        // Silenciar errores de gráficas no inicializadas
     }
 }
 
