@@ -1,5 +1,5 @@
 // ====================================
-// ARCHIVO 7: visualizacion.js
+// ARCHIVO 7: visualizacion.js (ACTUALIZADO)
 // Lógica del módulo de visualización
 // ====================================
 
@@ -9,6 +9,7 @@
 let visualizacionData = {
     anioSeleccionado: obtenerAnioActual(),
     tipoSeleccionado: null,
+    escenarioSeleccionado: 'mediano', // NUEVO
     comparacionSeleccionada: 'anterior',
     datosComparacion: [],
     datosHistoricos: []
@@ -23,6 +24,7 @@ function inicializarFiltrosVisualizacion() {
     try {
         llenarSelectorAnioVisualizacion();
         llenarSelectorTipoVisualizacion();
+        llenarSelectorEscenario(); // NUEVO
         llenarSelectorComparacion();
         configurarEventosVisualizacion();
         
@@ -80,6 +82,17 @@ function llenarSelectorTipoVisualizacion() {
     });
 }
 
+function llenarSelectorEscenario() {
+    const opcionesEscenario = [
+        { valor: 'mediano', texto: 'Escenario Mediano' },
+        { valor: 'bajo', texto: 'Escenario Bajo' },
+        { valor: 'alto', texto: 'Escenario Alto' }
+    ];
+    
+    llenarSelect('#vEscenario', opcionesEscenario, 'mediano');
+    visualizacionData.escenarioSeleccionado = 'mediano';
+}
+
 function llenarSelectorComparacion() {
     const opcionesComparacion = [
         { valor: 'anterior', texto: 'Mismo periodo año anterior' },
@@ -122,6 +135,15 @@ function configurarEventosVisualizacion() {
         });
     }
     
+    // NUEVO: Evento del selector de escenario
+    const escenarioSelect = $('#vEscenario');
+    if (escenarioSelect) {
+        escenarioSelect.addEventListener('change', function() {
+            visualizacionData.escenarioSeleccionado = this.value;
+            log('Escenario cambiado a:', this.value);
+        });
+    }
+    
     const comparacionSelect = $('#vComparar');
     if (comparacionSelect) {
         comparacionSelect.addEventListener('change', function() {
@@ -143,6 +165,7 @@ async function aplicarFiltrosVisualizacion() {
     
     const anio = visualizacionData.anioSeleccionado;
     const tipo = visualizacionData.tipoSeleccionado;
+    const escenario = visualizacionData.escenarioSeleccionado;
     const comparacion = visualizacionData.comparacionSeleccionada;
     
     try {
@@ -164,7 +187,7 @@ async function aplicarFiltrosVisualizacion() {
             indicador = tipo; // 'operaciones' o 'toneladas'
         }
         
-        log('Parámetros de consulta', { area, indicador, anio, comparacion });
+        log('Parámetros de consulta', { area, indicador, anio, escenario, comparacion });
         
         // Cargar datos de comparación
         await cargarDatosComparacion(area, indicador, anio, comparacion);
@@ -251,6 +274,7 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
             
             if (!errorEscenarios && escenarios) {
                 metasEscenarios = escenarios;
+                log('Metas de escenarios cargadas', { cantidad: escenarios.length });
             }
         }
         
@@ -299,7 +323,7 @@ function crearTablaComparacion() {
     const headerRow = document.createElement('tr');
     headerRow.innerHTML = `
         <th class="border border-gray-300 px-4 py-2">Mes</th>
-        <th class="border border-gray-300 px-4 py-2">${datos.anioActual} - Meta</th>
+        <th class="border border-gray-300 px-4 py-2">${datos.anioActual} - Meta (${visualizacionData.escenarioSeleccionado})</th>
         <th class="border border-gray-300 px-4 py-2">% Avance vs Meta</th>
         <th class="border border-gray-300 px-4 py-2">${datos.anioComparacion} - Referencia</th>
         <th class="border border-gray-300 px-4 py-2">Variación</th>
@@ -317,12 +341,13 @@ function crearTablaComparacion() {
         
         const tr = document.createElement('tr');
         
-        // Meta (actual o de escenarios)
+        // Meta (actual o de escenarios según selección) - ACTUALIZADO
         let meta = datosActualesMes?.meta || '';
         if (datos.metasEscenarios.length > 0) {
-            const metaEscenario = datos.metasEscenarios.find(m => m.mes === mes && m.escenario === 'mediano');
+            const metaEscenario = datos.metasEscenarios.find(m => m.mes === mes && m.escenario === visualizacionData.escenarioSeleccionado);
             if (metaEscenario) {
                 meta = metaEscenario.meta;
+                log(`Usando meta ${visualizacionData.escenarioSeleccionado} para ${MESES[mes-1]}: ${meta}`);
             }
         }
         
@@ -511,6 +536,7 @@ function debugVisualizacion() {
         'Modo': vContext.modo || 'N/A',
         'Año Seleccionado': visualizacionData.anioSeleccionado,
         'Tipo Seleccionado': visualizacionData.tipoSeleccionado || 'N/A',
+        'Escenario Seleccionado': visualizacionData.escenarioSeleccionado || 'N/A',
         'Comparación': OPCIONES_COMPARACION[visualizacionData.comparacionSeleccionada] || 'N/A'
     });
     
@@ -520,6 +546,10 @@ function debugVisualizacion() {
     
     if (visualizacionData.datosComparacion.comparacion) {
         console.log('📉 Datos comparación:', visualizacionData.datosComparacion.comparacion);
+    }
+    
+    if (visualizacionData.datosComparacion.metasEscenarios) {
+        console.log('🎯 Metas escenarios:', visualizacionData.datosComparacion.metasEscenarios);
     }
     
     console.groupEnd();
