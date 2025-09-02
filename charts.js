@@ -1,15 +1,16 @@
 // ====================================
-// ARCHIVO 4: charts.js
+// ARCHIVO 4: charts.js (CORREGIDO)
 // Funciones específicas para gráficas
 // ====================================
 
 /**
- * Configuraciones base para diferentes tipos de gráficas
+ * Configuraciones base para diferentes tipos de gráficas - CORREGIDAS
  */
 const CHART_CONFIGS = {
     captura: {
         responsive: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,
+        aspectRatio: 2.5, // Proporción controlada 2.5:1
         plugins: {
             legend: {
                 position: 'bottom',
@@ -54,7 +55,8 @@ const CHART_CONFIGS = {
     },
     visualizacion: {
         responsive: true,
-        maintainAspectRatio: false,
+        maintainAspectRatio: true,
+        aspectRatio: 2.2, // Proporción controlada 2.2:1
         plugins: {
             legend: {
                 position: 'bottom',
@@ -398,21 +400,6 @@ function configurarEventosGraficas() {
     window.addEventListener('resize', function() {
         setTimeout(redimensionarGraficas, 300);
     });
-    
-    // Configurar eventos de exportación si existen los botones
-    const btnExportCaptura = $('#btnExportCaptura');
-    if (btnExportCaptura) {
-        btnExportCaptura.addEventListener('click', function() {
-            exportarGraficaComoImagen(currentChart, 'grafica_captura');
-        });
-    }
-    
-    const btnExportVisualizacion = $('#btnExportVisualizacion');
-    if (btnExportVisualizacion) {
-        btnExportVisualizacion.addEventListener('click', function() {
-            exportarGraficaComoImagen(visualChart, 'grafica_visualizacion');
-        });
-    }
 }
 
 /**
