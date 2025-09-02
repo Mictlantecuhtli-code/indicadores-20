@@ -1,22 +1,16 @@
 // ====================================
-// ARCHIVO 4: charts.js (NUEVA VERSIÓN CORREGIDA)
+// ARCHIVO 4: charts.js (CORREGIDO)
 // Funciones específicas para gráficas
 // ====================================
 
 /**
- * Variables globales de gráficas - DECLARADAS AQUÍ
- */
-let currentChart = null;      // Gráfica del módulo de captura
-let visualChart = null;       // Gráfica del módulo de visualización
-
-/**
- * Configuraciones base para diferentes tipos de gráficas - CORREGIDAS
+ * Configuraciones base para diferentes tipos de gráficas
  */
 const CHART_CONFIGS = {
     captura: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 2.5, // Proporción controlada 2.5:1
+        aspectRatio: 2.5,
         plugins: {
             legend: {
                 position: 'bottom',
@@ -62,7 +56,7 @@ const CHART_CONFIGS = {
     visualizacion: {
         responsive: true,
         maintainAspectRatio: true,
-        aspectRatio: 2.2, // Proporción controlada 2.2:1
+        aspectRatio: 2.2,
         plugins: {
             legend: {
                 position: 'bottom',
@@ -125,7 +119,6 @@ async function crearGraficaCaptura(area, indicador) {
     if (!area || !indicador || !anio) return;
 
     try {
-        // Obtener datos de los últimos 4 años incluyendo el año actual
         const years = [];
         for (let i = 3; i >= 0; i--) {
             years.push(anio - i);
@@ -148,7 +141,6 @@ async function crearGraficaCaptura(area, indicador) {
             return;
         }
 
-        // Preparar datasets por año
         const datasets = years.map(year => {
             const yearData = crearArrayMeses(null);
             data.filter(d => d.anio === year).forEach(d => {
@@ -165,20 +157,17 @@ async function crearGraficaCaptura(area, indicador) {
             };
         });
 
-        // Crear o actualizar gráfica
         const ctx = $('#chartCaptura');
         if (!ctx) {
             logError('Canvas de captura no encontrado');
             return;
         }
 
-        // Destruir gráfica anterior
         if (currentChart) {
             currentChart.destroy();
             currentChart = null;
         }
 
-        // Configuración específica para la gráfica
         const config = { ...CHART_CONFIGS.captura };
         config.plugins.title = {
             display: true,
@@ -189,7 +178,6 @@ async function crearGraficaCaptura(area, indicador) {
             }
         };
 
-        // Actualizar etiqueta del eje Y según el indicador
         if (indicador === 'toneladas') {
             config.scales.y.title = {
                 display: true,
@@ -225,19 +213,18 @@ async function crearGraficaCaptura(area, indicador) {
 }
 
 /**
- * Crear gráfica para el módulo de visualización (histórica completa)
+ * Crear gráfica histórica completa
  */
 async function crearGraficaVisualizacion(area, indicador, tipo) {
     try {
         log('Cargando datos históricos completos para gráfica', { area, indicador });
 
-        // Obtener TODOS los datos históricos para la gráfica
         const { data, error } = await sb
             .from('v_medicion')
             .select('anio, mes, valor')
             .eq('area', area)
             .eq('indicador', indicador)
-            .gte('anio', ANO_INICIAL) // Desde 2022
+            .gte('anio', ANO_INICIAL)
             .order('anio')
             .order('mes');
 
@@ -252,10 +239,8 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
             return;
         }
 
-        // Obtener todos los años únicos
         const aniosUnicos = obtenerAniosUnicos(data);
         
-        // Crear datasets para cada año
         const datasets = aniosUnicos.map(anio => {
             const yearData = crearArrayMeses(null);
             data.filter(d => d.anio === anio).forEach(d => {
@@ -274,23 +259,19 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
             };
         });
 
-        // Crear o actualizar gráfica
         const ctx = $('#vChart');
         if (!ctx) {
             logError('Canvas de visualización no encontrado');
             return;
         }
 
-        // Destruir gráfica anterior
         if (visualChart) {
             visualChart.destroy();
             visualChart = null;
         }
 
-        // Configuración específica para la gráfica
         const config = { ...CHART_CONFIGS.visualizacion };
         
-        // Título dinámico
         let chartTitle = '';
         if (vContext.modo === 'pasajeros') {
             chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Pasajeros`;
@@ -309,7 +290,6 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
             }
         };
 
-        // Actualizar etiqueta del eje Y según el contexto
         if (vContext.modo === 'carga' && tipo === 'toneladas') {
             config.scales.y.title.text = 'Toneladas';
         } else if (vContext.modo === 'pasajeros') {
@@ -336,7 +316,7 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
 }
 
 /**
- * NUEVA: Crear gráfica comparativa (solo 2 años)
+ * Crear gráfica comparativa (solo 2 años)
  */
 async function crearGraficaComparativa(area, indicador, tipo) {
     const anioActual = visualizacionData.anioSeleccionado;
@@ -348,16 +328,13 @@ async function crearGraficaComparativa(area, indicador, tipo) {
         anioComparacion = parseInt(visualizacionData.comparacionSeleccionada);
     }
     
-    // Verificar si mostrar histórico
     const mostrarHistorico = $('#chkMostrarHistorico')?.checked || false;
     
     if (mostrarHistorico) {
-        // Usar la función existente para mostrar todo el histórico
         await crearGraficaVisualizacion(area, indicador, tipo);
         return;
     }
     
-    // Crear gráfica solo con 2 años
     try {
         log('Cargando datos comparativos', { anioActual, anioComparacion, area, indicador });
 
@@ -400,7 +377,6 @@ async function crearGraficaComparativa(area, indicador, tipo) {
             return;
         }
 
-        // Destruir gráfica anterior
         if (visualChart) {
             visualChart.destroy();
             visualChart = null;
@@ -408,7 +384,6 @@ async function crearGraficaComparativa(area, indicador, tipo) {
 
         const config = { ...CHART_CONFIGS.visualizacion };
         
-        // Título para comparativa
         let chartTitle = '';
         if (vContext.modo === 'pasajeros') {
             chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Pasajeros`;
@@ -424,7 +399,6 @@ async function crearGraficaComparativa(area, indicador, tipo) {
             font: { size: 16, weight: 'bold' }
         };
 
-        // Actualizar etiqueta del eje Y según el contexto
         if (vContext.modo === 'carga' && tipo === 'toneladas') {
             config.scales.y.title.text = 'Toneladas';
         } else if (vContext.modo === 'pasajeros') {
@@ -448,65 +422,30 @@ async function crearGraficaComparativa(area, indicador, tipo) {
 }
 
 /**
- * Destruir gráficas existentes - CORREGIDO
+ * Destruir gráficas existentes
  */
 function destruirGraficas() {
-    if (typeof currentChart !== 'undefined' && currentChart !== null) {
+    if (currentChart) {
         currentChart.destroy();
         currentChart = null;
     }
     
-    if (typeof visualChart !== 'undefined' && visualChart !== null) {
+    if (visualChart) {
         visualChart.destroy();
         visualChart = null;
     }
 }
 
 /**
- * Redimensionar gráficas - CORREGIDO
+ * Redimensionar gráficas
  */
 function redimensionarGraficas() {
-    if (typeof currentChart !== 'undefined' && currentChart !== null) {
+    if (currentChart) {
         currentChart.resize();
     }
     
-    if (typeof visualChart !== 'undefined' && visualChart !== null) {
+    if (visualChart) {
         visualChart.resize();
-    }
-}
-
-/**
- * Actualizar datos de una gráfica existente
- */
-function actualizarDatosGrafica(grafica, nuevosDatasets) {
-    if (!grafica) return;
-    
-    grafica.data.datasets = nuevosDatasets;
-    grafica.update();
-}
-
-/**
- * Exportar gráfica como imagen
- */
-function exportarGraficaComoImagen(grafica, nombreArchivo) {
-    if (!grafica) return;
-    
-    try {
-        const canvas = grafica.canvas;
-        const url = canvas.toDataURL('image/png');
-        
-        const link = document.createElement('a');
-        link.download = `${nombreArchivo}_${obtenerFechaFormateada()}.png`;
-        link.href = url;
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        mostrarNotificacion('Gráfica exportada correctamente', 'success');
-    } catch (error) {
-        logError('Error al exportar gráfica', error);
-        mostrarNotificacion('Error al exportar la gráfica', 'error');
     }
 }
 
@@ -514,7 +453,6 @@ function exportarGraficaComoImagen(grafica, nombreArchivo) {
  * Configurar eventos de redimensionamiento
  */
 function configurarEventosGraficas() {
-    // Redimensionar gráficas cuando cambie el tamaño de la ventana
     window.addEventListener('resize', function() {
         setTimeout(redimensionarGraficas, 300);
     });
@@ -540,11 +478,6 @@ function inicializarGraficas() {
     
     log('Inicializando módulo de gráficas');
     configurarEventosGraficas();
-    
-    // Configurar Chart.js globalmente
-    Chart.defaults.font.family = "'Inter', 'system-ui', 'sans-serif'";
-    Chart.defaults.color = '#374151';
-    Chart.defaults.plugins.legend.labels.usePointStyle = true;
 }
 
 /**
