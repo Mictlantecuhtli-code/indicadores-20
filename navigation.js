@@ -439,9 +439,10 @@ function debugNavegacion() {
 }
 
 // Exponer funciones globales necesarias
-window.showMenu = function() { navegarConValidacion(showMenu); };
-window.showCaptura = function() { navegarConValidacion(showCaptura); };
-window.showVisualizacion = function() { navegarConValidacion(showVisualizacion); };
+window.showMenu = showMenu;
+window.showCaptura = showCaptura;
+window.showVisualizacion = showVisualizacion;
+window.showVisualizacionDetalle = showVisualizacionDetalle;
 window.showVisualizacionDetalle = function(modo) { navegarConValidacion(() => showVisualizacionDetalle(modo)); };
 
 // Inicializar cuando se carga el documento
