@@ -1,5 +1,5 @@
 // ====================================
-// ARCHIVO 2: config.js (CORREGIDO)
+// ARCHIVO 2: config.js (BIEN ARREGLADO)
 // Configuración de Supabase y constantes
 // ====================================
 
@@ -79,7 +79,7 @@ const COLORES_ESCENARIOS = {
 const ANO_INICIAL = 2022;
 const ANO_ACTUAL = new Date().getFullYear();
 
-// Variables globales del estado de la aplicación - CORREGIDAS
+// Variables globales del estado de la aplicación
 var currentChart = null;      // Gráfica del módulo de captura
 var visualChart = null;       // Gráfica del módulo de visualización
 var vContext = { 
@@ -87,19 +87,6 @@ var vContext = {
     currentData: null,       // Datos actuales cargados
     currentFilters: null     // Filtros aplicados
 };
-
-// Configuración de Chart.js por defecto
-if (typeof Chart !== 'undefined') {
-    Chart.defaults.font.family = "'Inter', 'system-ui', 'sans-serif'";
-    Chart.defaults.font.size = 12;
-    Chart.defaults.color = '#374151';
-    Chart.defaults.plugins.legend.labels.usePointStyle = true;
-    Chart.defaults.plugins.legend.labels.padding = 15;
-    Chart.defaults.elements.point.radius = 4;
-    Chart.defaults.elements.point.hoverRadius = 6;
-    Chart.defaults.elements.line.borderWidth = 2;
-    Chart.defaults.elements.line.tension = 0.1;
-}
 
 // Configuración de descarga de archivos
 const DOWNLOAD_CONFIG = {
