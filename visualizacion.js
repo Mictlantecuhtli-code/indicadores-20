@@ -1,5 +1,5 @@
 // ====================================
-// ARCHIVO 7: visualizacion.js (CORREGIDO)
+// ARCHIVO 7: visualizacion.js (TABLA HORIZONTAL CORRECTA)
 // Lógica del módulo de visualización
 // ====================================
 
@@ -146,12 +146,15 @@ function configurarEventosVisualizacion() {
         });
     }
 
-    // Evento del checkbox histórico
+    // Evento del checkbox histórico - CORREGIDO
     const chkHistorico = $('#chkMostrarHistorico');
     if (chkHistorico) {
         chkHistorico.addEventListener('change', function() {
             if (visualizacionData.tipoSeleccionado) {
-                aplicarFiltrosVisualizacion();
+                // Re-crear gráfica cuando cambie el checkbox
+                const area = vContext.modo === 'carga' ? 'carga' : visualizacionData.tipoSeleccionado;
+                const indicador = vContext.modo === 'carga' ? visualizacionData.tipoSeleccionado : vContext.modo;
+                crearGraficaComparativa(area, indicador, visualizacionData.tipoSeleccionado);
             }
         });
     }
@@ -191,7 +194,7 @@ async function aplicarFiltrosVisualizacion() {
         log('Parámetros de consulta', { area, indicador, anio, escenario, comparacion });
         
         await cargarDatosComparacion(area, indicador, anio, comparacion);
-        crearTablaHorizontal();
+        crearTablaHorizontalCorrecta();
         await crearGraficaComparativa(area, indicador, tipo);
         
         log('Filtros aplicados correctamente');
@@ -288,9 +291,9 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
 }
 
 /**
- * Crear tabla horizontal NUEVA
+ * CREAR TABLA HORIZONTAL CORRECTA - LA PUTA TABLA QUE QUIERES
  */
-function crearTablaHorizontal() {
+function crearTablaHorizontalCorrecta() {
     const container = $('#tablaVisualizacion');
     if (!container) return;
     
@@ -300,23 +303,23 @@ function crearTablaHorizontal() {
         return;
     }
     
-    // Crear tabla horizontal
+    // CREAR LA TABLA EXACTAMENTE COMO LA QUIERES
     const table = document.createElement('table');
     table.className = 'min-w-full border-collapse border border-gray-300';
     
     const tbody = document.createElement('tbody');
     
-    // FILA 1: Headers de meses
+    // FILA 1: HEADERS - |ENERO|FEBRERO|MARZO|...|DICIEMBRE|
     const headerRow = document.createElement('tr');
-    headerRow.innerHTML = `<th class="border border-gray-300 px-3 py-2 bg-gray-50 font-semibold">Año</th>`;
+    headerRow.innerHTML = `<th class="border border-gray-300 px-3 py-2 bg-gray-100 font-bold text-center w-20"></th>`;
     for (let mes = 1; mes <= 12; mes++) {
-        headerRow.innerHTML += `<th class="border border-gray-300 px-2 py-2 bg-gray-50 text-xs">${MESES[mes-1]}</th>`;
+        headerRow.innerHTML += `<th class="border border-gray-300 px-2 py-2 bg-gray-100 text-center text-sm font-bold">${MESES[mes-1]}</th>`;
     }
     tbody.appendChild(headerRow);
     
-    // FILA 2: Año actual - Valores
+    // FILA 2: AÑO ACTUAL - 2025 | VALOR1 | VALOR2 |....| VALOR N|
     const valorRow = document.createElement('tr');
-    valorRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-medium bg-blue-50">${datos.anioActual}</td>`;
+    valorRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-blue-100 text-center">${datos.anioActual}</td>`;
     for (let mes = 1; mes <= 12; mes++) {
         const datoMes = datos.actuales.find(d => d.mes === mes);
         const valor = datoMes?.valor ? formatearNumero(datoMes.valor) : '-';
@@ -324,14 +327,14 @@ function crearTablaHorizontal() {
     }
     tbody.appendChild(valorRow);
     
-    // FILA 3: Meta (según escenario seleccionado)
+    // FILA 3: META - META | VALORX | VALORY|.....|VALOR H|
     const metaRow = document.createElement('tr');
-    metaRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-medium bg-yellow-50">Meta (${visualizacionData.escenarioSeleccionado})</td>`;
+    metaRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-100 text-center">META</td>`;
     for (let mes = 1; mes <= 12; mes++) {
         const datoMes = datos.actuales.find(d => d.mes === mes);
         let meta = datoMes?.meta || '';
         
-        // Usar meta de escenarios si está disponible
+        // USAR METAS DE ESCENARIOS SI ESTÁN DISPONIBLES
         if (datos.metasEscenarios.length > 0) {
             const metaEscenario = datos.metasEscenarios.find(m => m.mes === mes && m.escenario === visualizacionData.escenarioSeleccionado);
             if (metaEscenario) {
@@ -344,9 +347,9 @@ function crearTablaHorizontal() {
     }
     tbody.appendChild(metaRow);
     
-    // FILA 4: % de avance vs meta
-    const avanceRow = document.createElement('tr');
-    avanceRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-medium bg-green-50">% Avance</td>`;
+    // FILA 4: %META - %META | PORCENTAJE | PORCENTAJE | ... |
+    const porcentajeRow = document.createElement('tr');
+    porcentajeRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-green-100 text-center">%META</td>`;
     for (let mes = 1; mes <= 12; mes++) {
         const datoMes = datos.actuales.find(d => d.mes === mes);
         const valor = datoMes?.valor || 0;
@@ -360,28 +363,30 @@ function crearTablaHorizontal() {
         }
         
         let porcentaje = '-';
-        let clase = '';
+        let clase = 'bg-gray-50';
         
         if (meta && valor) {
             const avance = (valor / meta * 100).toFixed(1);
             porcentaje = `${avance}%`;
             
             if (avance >= 100) {
-                clase = 'text-green-600 font-semibold';
+                clase = 'text-green-700 font-bold bg-green-100';
             } else if (avance >= 80) {
-                clase = 'text-yellow-600 font-medium';
+                clase = 'text-yellow-700 font-semibold bg-yellow-100';
             } else {
-                clase = 'text-red-600';
+                clase = 'text-red-700 font-medium bg-red-100';
             }
         }
         
-        avanceRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${clase}">${porcentaje}</td>`;
+        porcentajeRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${clase}">${porcentaje}</td>`;
     }
-    tbody.appendChild(avanceRow);
+    tbody.appendChild(porcentajeRow);
     
     table.appendChild(tbody);
     container.innerHTML = '';
     container.appendChild(table);
+    
+    log('Tabla horizontal correcta creada');
 }
 
 /**
@@ -495,10 +500,6 @@ function debugVisualizacion() {
     
     if (visualizacionData.datosComparacion.comparacion) {
         console.log('📉 Datos comparación:', visualizacionData.datosComparacion.comparacion);
-    }
-    
-    if (visualizacionData.datosComparacion.metasEscenarios) {
-        console.log('🎯 Metas escenarios:', visualizacionData.datosComparacion.metasEscenarios);
     }
     
     console.groupEnd();
