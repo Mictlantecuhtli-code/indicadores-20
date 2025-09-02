@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indicadores Aviación 2.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- Menú Principal -->
+    <div id="menuPrincipal" class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-center mb-6 text-blue-800">Sistema de Indicadores de Aviación</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+                <button onclick="showCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-3xl mb-2">📊</div>
+                    <div class="text-xl font-semibold">Módulo de Captura</div>
+                    <div class="text-sm opacity-90">Capturar indicadores y metas</div>
+                </button>
+                <button onclick="showVisualizacion()" class="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-3xl mb-2">📈</div>
+                    <div class="text-xl font-semibold">Visualización</div>
+                    <div class="text-sm opacity-90">Consultar y comparar datos</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Módulo de Captura -->
+    <div id="moduloCaptura" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-blue-800">Módulo de Captura</h2>
+                <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Área</label>
+                    <select id="fArea" class="w-full border rounded px-3 py-2">
+                        <option value="">Seleccionar...</option>
+                        <option value="comercial">Aviación Comercial</option>
+                        <option value="general">Aviación General</option>
+                        <option value="carga">Aviación de Carga</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Indicador</label>
+                    <select id="fIndicador" class="w-full border rounded px-3 py-2">
+                        <option value="">Seleccionar...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Año</label>
+                    <select id="fAnio" class="w-full border rounded px-3 py-2"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Mes</label>
+                    <select id="fMes" class="w-full border rounded px-3 py-2"></select>
+                </div>
+            </div>
+            
+            <!-- Formulario de captura -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Valor</label>
+                    <input type="number" id="fValor" class="w-full border rounded px-3 py-2" step="0.01">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Meta</label>
+                    <input type="number" id="fMeta" class="w-full border rounded px-3 py-2" step="0.01">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="guardarMedicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full">
+                        Guardar
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Gráfica de líneas -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4">Comparativo por Años</h3>
+                <canvas id="chartCaptura" width="400" height="200"></canvas>
+            </div>
+            
+            <!-- Tabla de datos -->
+            <div id="tablaContainer">
+                <h3 class="text-lg font-semibold mb-4">Datos Actuales</h3>
+                <div class="overflow-x-auto">
+                    <table id="tablaCaptura" class="min-w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="border border-gray-300 px-4 py-2">Mes</th>
+                                <th class="border border-gray-300 px-4 py-2">Valor</th>
+                                <th class="border border-gray-300 px-4 py-2">Meta</th>
+                                <th class="border border-gray-300 px-4 py-2">% Cumplimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyCaptura">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Módulo de Visualización - Menú -->
+    <div id="menuVisualizacion" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-green-800">Módulo de Visualización</h2>
+                <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <button onclick="showVisualizacionDetalle('pasajeros')" class="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-4xl mb-2">👥</div>
+                    <div class="text-xl font-semibold">Pasajeros</div>
+                    <div class="text-sm opacity-90">Comercial y General</div>
+                </button>
+                <button onclick="showVisualizacionDetalle('operaciones')" class="bg-orange-600 hover:bg-orange-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-4xl mb-2">✈️</div>
+                    <div class="text-xl font-semibold">Operaciones</div>
+                    <div class="text-sm opacity-90">Comercial y General</div>
+                </button>
+                <button onclick="showVisualizacionDetalle('carga')" class="bg-red-600 hover:bg-red-700 text-white p-6 rounded-lg transition-colors">
+                    <div class="text-4xl mb-2">📦</div>
+                    <div class="text-xl font-semibold">Carga</div>
+                    <div class="text-sm opacity-90">Operaciones y Toneladas</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Módulo de Visualización - Detalle -->
+    <div id="visualizacionDetalle" class="container mx-auto p-4 hidden">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-green-800" id="tituloDetalle">Visualización</h2>
+                <button onclick="showVisualizacion()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
+            </div>
+            
+            <!-- Filtros MODIFICADOS -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Año Actual</label>
+                    <select id="vAnio" class="w-full border rounded px-3 py-2"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Tipo</label>
+                    <select id="vTipo" class="w-full border rounded px-3 py-2"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Comparar Contra</label>
+                    <select id="vComparar" class="w-full border rounded px-3 py-2">
+                        <option value="anterior">Mismo periodo año anterior</option>
+                        <option value="2023">Mismo periodo 2023</option>
+                        <option value="2022">Mismo periodo 2022</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button id="btnAplicar" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded w-full">
+                        Aplicar Filtros
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Tabla de resultados SIMPLIFICADA -->
+            <div class="overflow-x-auto mb-6">
+                <div id="tablaVisualizacion"></div>
+            </div>
+            
+            <!-- Gráfica -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4">Gráfica Comparativa Histórica</h3>
+                <canvas id="vChart" width="400" height="200"></canvas>
+            </div>
+            
+            <!-- Botón de descarga -->
+            <div class="text-center">
+                <button id="btnDescargar" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold">
+                    📥 Descargar Información
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts en orden específico -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="charts.js"></script>
+    <script src="navigation.js"></script>
+    <script src="captura.js"></script>
+    <script src="visualizacion.js"></script>
+    
+    <script>
+        // Inicialización cuando carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            showMenu();
+        });
+    </script>
+</body>
+</html>
