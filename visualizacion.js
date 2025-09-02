@@ -1,5 +1,5 @@
 // ====================================
-// ARCHIVO 7: visualizacion.js (ACTUALIZADO)
+// ARCHIVO 7: visualizacion.js (CORREGIDO)
 // Lógica del módulo de visualización
 // ====================================
 
@@ -9,7 +9,7 @@
 let visualizacionData = {
     anioSeleccionado: obtenerAnioActual(),
     tipoSeleccionado: null,
-    escenarioSeleccionado: 'mediano', // NUEVO
+    escenarioSeleccionado: 'mediano',
     comparacionSeleccionada: 'anterior',
     datosComparacion: [],
     datosHistoricos: []
@@ -24,11 +24,10 @@ function inicializarFiltrosVisualizacion() {
     try {
         llenarSelectorAnioVisualizacion();
         llenarSelectorTipoVisualizacion();
-        llenarSelectorEscenario(); // NUEVO
+        llenarSelectorEscenario();
         llenarSelectorComparacion();
         configurarEventosVisualizacion();
         
-        // Limpiar datos anteriores
         limpiarDatosVisualizacion();
         
         log('Filtros de visualización inicializados correctamente');
@@ -108,19 +107,16 @@ function llenarSelectorComparacion() {
  * Configurar eventos del módulo de visualización
  */
 function configurarEventosVisualizacion() {
-    // Botón aplicar filtros
     const btnAplicar = $('#btnAplicar');
     if (btnAplicar) {
         btnAplicar.onclick = aplicarFiltrosVisualizacion;
     }
     
-    // Botón descargar
     const btnDescargar = $('#btnDescargar');
     if (btnDescargar) {
         btnDescargar.onclick = descargarInformacionVisualizacion;
     }
     
-    // Eventos de cambio en selectores
     const anioSelect = $('#vAnio');
     if (anioSelect) {
         anioSelect.addEventListener('change', function() {
@@ -135,7 +131,6 @@ function configurarEventosVisualizacion() {
         });
     }
     
-    // NUEVO: Evento del selector de escenario
     const escenarioSelect = $('#vEscenario');
     if (escenarioSelect) {
         escenarioSelect.addEventListener('change', function() {
@@ -150,6 +145,16 @@ function configurarEventosVisualizacion() {
             visualizacionData.comparacionSeleccionada = this.value;
         });
     }
+
+    // Evento del checkbox histórico
+    const chkHistorico = $('#chkMostrarHistorico');
+    if (chkHistorico) {
+        chkHistorico.addEventListener('change', function() {
+            if (visualizacionData.tipoSeleccionado) {
+                aplicarFiltrosVisualizacion();
+            }
+        });
+    }
 }
 
 /**
@@ -158,7 +163,6 @@ function configurarEventosVisualizacion() {
 async function aplicarFiltrosVisualizacion() {
     log('Aplicando filtros de visualización');
     
-    // Validar filtros
     if (!validarFiltrosVisualizacion()) {
         return;
     }
@@ -169,34 +173,26 @@ async function aplicarFiltrosVisualizacion() {
     const comparacion = visualizacionData.comparacionSeleccionada;
     
     try {
-        // Mostrar estado de carga
         const btnAplicar = $('#btnAplicar');
-        const textoOriginal = btnAplicar.innerHTML;
         mostrarCargando(btnAplicar, true);
         
-        // Determinar área e indicador según el modo
         let area, indicador;
         if (vContext.modo === 'pasajeros') {
-            area = tipo; // 'comercial' o 'general'
+            area = tipo;
             indicador = 'pasajeros';
         } else if (vContext.modo === 'operaciones') {
-            area = tipo; // 'comercial' o 'general'
+            area = tipo;
             indicador = 'operaciones';
-        } else { // carga
+        } else {
             area = 'carga';
-            indicador = tipo; // 'operaciones' o 'toneladas'
+            indicador = tipo;
         }
         
         log('Parámetros de consulta', { area, indicador, anio, escenario, comparacion });
         
-        // Cargar datos de comparación
         await cargarDatosComparacion(area, indicador, anio, comparacion);
-        
-        // Crear tabla de comparación
-        crearTablaComparacion();
-        
-        // Crear gráfica histórica
-        await crearGraficaVisualizacion(area, indicador, tipo);
+        crearTablaHorizontal();
+        await crearGraficaComparativa(area, indicador, tipo);
         
         log('Filtros aplicados correctamente');
         mostrarNotificacion('Datos cargados correctamente', 'success');
@@ -205,7 +201,6 @@ async function aplicarFiltrosVisualizacion() {
         logError('Error al aplicar filtros', error);
         mostrarNotificacion('Error al cargar los datos', 'error');
     } finally {
-        // Restaurar botón
         const btnAplicar = $('#btnAplicar');
         if (btnAplicar) {
             btnAplicar.disabled = false;
@@ -218,7 +213,6 @@ async function aplicarFiltrosVisualizacion() {
  * Cargar datos para comparación
  */
 async function cargarDatosComparacion(area, indicador, anioActual, tipoComparacion) {
-    // Determinar año de comparación
     let anioComparacion;
     if (tipoComparacion === 'anterior') {
         anioComparacion = anioActual - 1;
@@ -226,12 +220,7 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
         anioComparacion = parseInt(tipoComparacion);
     }
     
-    log('Cargando datos de comparación', { 
-        anioActual, 
-        anioComparacion, 
-        area, 
-        indicador 
-    });
+    log('Cargando datos de comparación', { anioActual, anioComparacion, area, indicador });
     
     try {
         // Cargar datos del año actual
@@ -278,7 +267,6 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
             }
         }
         
-        // Guardar datos
         visualizacionData.datosComparacion = {
             actuales: datosActuales || [],
             comparacion: datosComparacion || [],
@@ -300,9 +288,9 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
 }
 
 /**
- * Crear tabla de comparación simplificada
+ * Crear tabla horizontal NUEVA
  */
-function crearTablaComparacion() {
+function crearTablaHorizontal() {
     const container = $('#tablaVisualizacion');
     if (!container) return;
     
@@ -312,91 +300,84 @@ function crearTablaComparacion() {
         return;
     }
     
-    // Crear tabla
+    // Crear tabla horizontal
     const table = document.createElement('table');
     table.className = 'min-w-full border-collapse border border-gray-300';
     
-    // Header simplificado
-    const thead = document.createElement('thead');
-    thead.className = 'bg-gray-50';
-    
-    const headerRow = document.createElement('tr');
-    headerRow.innerHTML = `
-        <th class="border border-gray-300 px-4 py-2">Mes</th>
-        <th class="border border-gray-300 px-4 py-2">${datos.anioActual} - Meta (${visualizacionData.escenarioSeleccionado})</th>
-        <th class="border border-gray-300 px-4 py-2">% Avance vs Meta</th>
-        <th class="border border-gray-300 px-4 py-2">${datos.anioComparacion} - Referencia</th>
-        <th class="border border-gray-300 px-4 py-2">Variación</th>
-    `;
-    
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    
-    // Body
     const tbody = document.createElement('tbody');
     
+    // FILA 1: Headers de meses
+    const headerRow = document.createElement('tr');
+    headerRow.innerHTML = `<th class="border border-gray-300 px-3 py-2 bg-gray-50 font-semibold">Año</th>`;
     for (let mes = 1; mes <= 12; mes++) {
-        const datosActualesMes = datos.actuales.find(d => d.mes === mes);
-        const datosComparacionMes = datos.comparacion.find(d => d.mes === mes);
+        headerRow.innerHTML += `<th class="border border-gray-300 px-2 py-2 bg-gray-50 text-xs">${MESES[mes-1]}</th>`;
+    }
+    tbody.appendChild(headerRow);
+    
+    // FILA 2: Año actual - Valores
+    const valorRow = document.createElement('tr');
+    valorRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-medium bg-blue-50">${datos.anioActual}</td>`;
+    for (let mes = 1; mes <= 12; mes++) {
+        const datoMes = datos.actuales.find(d => d.mes === mes);
+        const valor = datoMes?.valor ? formatearNumero(datoMes.valor) : '-';
+        valorRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${valor}</td>`;
+    }
+    tbody.appendChild(valorRow);
+    
+    // FILA 3: Meta (según escenario seleccionado)
+    const metaRow = document.createElement('tr');
+    metaRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-medium bg-yellow-50">Meta (${visualizacionData.escenarioSeleccionado})</td>`;
+    for (let mes = 1; mes <= 12; mes++) {
+        const datoMes = datos.actuales.find(d => d.mes === mes);
+        let meta = datoMes?.meta || '';
         
-        const tr = document.createElement('tr');
-        
-        // Meta (actual o de escenarios según selección) - ACTUALIZADO
-        let meta = datosActualesMes?.meta || '';
+        // Usar meta de escenarios si está disponible
         if (datos.metasEscenarios.length > 0) {
             const metaEscenario = datos.metasEscenarios.find(m => m.mes === mes && m.escenario === visualizacionData.escenarioSeleccionado);
             if (metaEscenario) {
                 meta = metaEscenario.meta;
-                log(`Usando meta ${visualizacionData.escenarioSeleccionado} para ${MESES[mes-1]}: ${meta}`);
             }
         }
         
-        // % Avance
-        const valorActual = datosActualesMes?.valor || 0;
-        let porcentajeAvance = '-';
-        let claseAvance = '';
+        const metaFormateada = meta ? formatearNumero(meta) : '-';
+        metaRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm bg-yellow-50">${metaFormateada}</td>`;
+    }
+    tbody.appendChild(metaRow);
+    
+    // FILA 4: % de avance vs meta
+    const avanceRow = document.createElement('tr');
+    avanceRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-medium bg-green-50">% Avance</td>`;
+    for (let mes = 1; mes <= 12; mes++) {
+        const datoMes = datos.actuales.find(d => d.mes === mes);
+        const valor = datoMes?.valor || 0;
         
-        if (meta && valorActual) {
-            const avance = (valorActual / meta * 100).toFixed(1);
-            porcentajeAvance = `${avance}%`;
+        let meta = datoMes?.meta || 0;
+        if (datos.metasEscenarios.length > 0) {
+            const metaEscenario = datos.metasEscenarios.find(m => m.mes === mes && m.escenario === visualizacionData.escenarioSeleccionado);
+            if (metaEscenario) {
+                meta = metaEscenario.meta;
+            }
+        }
+        
+        let porcentaje = '-';
+        let clase = '';
+        
+        if (meta && valor) {
+            const avance = (valor / meta * 100).toFixed(1);
+            porcentaje = `${avance}%`;
             
             if (avance >= 100) {
-                claseAvance = 'text-green-600 font-semibold';
+                clase = 'text-green-600 font-semibold';
             } else if (avance >= 80) {
-                claseAvance = 'text-yellow-600 font-medium';
+                clase = 'text-yellow-600 font-medium';
             } else {
-                claseAvance = 'text-red-600';
+                clase = 'text-red-600';
             }
         }
         
-        // Variación
-        const valorComparacion = datosComparacionMes?.valor || 0;
-        let variacion = '-';
-        let claseVariacion = '';
-        
-        if (valorActual && valorComparacion) {
-            const cambio = ((valorActual - valorComparacion) / valorComparacion * 100).toFixed(1);
-            variacion = `${cambio > 0 ? '+' : ''}${cambio}%`;
-            
-            if (cambio > 0) {
-                claseVariacion = 'text-green-600 font-medium';
-            } else if (cambio < 0) {
-                claseVariacion = 'text-red-600';
-            } else {
-                claseVariacion = 'text-gray-600';
-            }
-        }
-        
-        tr.innerHTML = `
-            <td class="border border-gray-300 px-4 py-2 font-medium">${MESES[mes-1]}</td>
-            <td class="border border-gray-300 px-4 py-2 text-right">${meta ? formatearNumero(meta) : '-'}</td>
-            <td class="border border-gray-300 px-4 py-2 text-right ${claseAvance}">${porcentajeAvance}</td>
-            <td class="border border-gray-300 px-4 py-2 text-right">${valorComparacion ? formatearNumero(valorComparacion) : '-'}</td>
-            <td class="border border-gray-300 px-4 py-2 text-right ${claseVariacion}">${variacion}</td>
-        `;
-        
-        tbody.appendChild(tr);
+        avanceRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${clase}">${porcentaje}</td>`;
     }
+    tbody.appendChild(avanceRow);
     
     table.appendChild(tbody);
     container.innerHTML = '';
@@ -416,10 +397,8 @@ async function descargarInformacionVisualizacion() {
     
     try {
         const btnDescargar = $('#btnDescargar');
-        const textoOriginal = btnDescargar.innerHTML;
         mostrarCargando(btnDescargar, true);
         
-        // Determinar área e indicador
         let area, indicador;
         if (vContext.modo === 'pasajeros') {
             area = visualizacionData.tipoSeleccionado;
@@ -432,7 +411,6 @@ async function descargarInformacionVisualizacion() {
             indicador = visualizacionData.tipoSeleccionado;
         }
         
-        // Cargar TODOS los datos históricos para descarga
         const { data: datosCompletos, error } = await sb
             .from('v_medicion')
             .select('*')
@@ -453,7 +431,6 @@ async function descargarInformacionVisualizacion() {
             return;
         }
         
-        // Formatear datos para exportación
         const datosExportar = datosCompletos.map(d => ({
             Area: AREAS[d.area],
             Indicador: INDICADORES[d.indicador],
@@ -467,10 +444,7 @@ async function descargarInformacionVisualizacion() {
             Creado_Por: d.created_by
         }));
         
-        // Generar nombre de archivo
         const nombreArchivo = `indicadores_${area}_${indicador}_historico_completo`;
-        
-        // Descargar
         descargarCSV(datosExportar, nombreArchivo);
         
         log('Descarga completada', { registros: datosExportar.length });
@@ -494,42 +468,17 @@ function limpiarDatosVisualizacion() {
     visualizacionData.datosComparacion = [];
     visualizacionData.datosHistoricos = [];
     
-    // Limpiar tabla
     const container = $('#tablaVisualizacion');
     if (container) {
         container.innerHTML = '';
     }
     
-    // Limpiar gráfica
     if (visualChart) {
         visualChart.destroy();
         visualChart = null;
     }
 }
 
-function obtenerTituloDescarga() {
-    if (!vContext.modo || !visualizacionData.tipoSeleccionado) {
-        return 'indicadores_aviacion';
-    }
-    
-    let titulo = 'indicadores';
-    
-    if (vContext.modo === 'pasajeros') {
-        titulo += `_pasajeros_${visualizacionData.tipoSeleccionado}`;
-    } else if (vContext.modo === 'operaciones') {
-        titulo += `_operaciones_${visualizacionData.tipoSeleccionado}`;
-    } else {
-        titulo += `_carga_${visualizacionData.tipoSeleccionado}`;
-    }
-    
-    titulo += `_${visualizacionData.anioSeleccionado}`;
-    
-    return titulo;
-}
-
-/**
- * Funciones de debug del módulo
- */
 function debugVisualizacion() {
     console.group('📊 DEBUG MÓDULO VISUALIZACIÓN');
     console.table({
@@ -555,9 +504,6 @@ function debugVisualizacion() {
     console.groupEnd();
 }
 
-/**
- * Validación específica de visualización
- */
 function validarEstadoVisualizacion() {
     if (!vContext.modo) {
         logError('Modo de visualización no definido');
