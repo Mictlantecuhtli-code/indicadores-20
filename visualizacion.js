@@ -255,7 +255,8 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
         
         // Cargar metas de escenarios si es para pasajeros comerciales
         let metasEscenarios = [];
-        if (area === 'comercial' && indicador === 'pasajeros' && anioActual === 2025) {
+        //if (area === 'comercial' && indicador === 'pasajeros' && anioActual === 2025) {
+        if (anioActual === 2025) {
             const { data: escenarios, error: errorEscenarios } = await sb
                 .from('metas_escenarios')
                 .select('mes, escenario, meta')
