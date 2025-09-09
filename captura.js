@@ -1,11 +1,31 @@
 // ====================================
 // ARCHIVO: captura.js
-// Módulo de Captura (endurecido: solo mes vigente del año actual)
+// Módulo de Captura (robusto y restringido a mes vigente del año actual)
 // ====================================
 
-/**
- * Estado del módulo de captura
- */
+// --------- Arranque DEFENSIVO (defaults si faltan) ---------
+if (typeof window.MESES === 'undefined' || !Array.isArray(MESES) || MESES.length !== 12) {
+  window.MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+}
+if (typeof window.INDICADORES === 'undefined') {
+  window.INDICADORES = { operaciones: "Operaciones", pasajeros: "Pasajeros", toneladas: "Toneladas" };
+}
+if (typeof window.ANO_ACTUAL === 'undefined' || !Number.isInteger(ANO_ACTUAL)) {
+  window.ANO_ACTUAL = new Date().getFullYear();
+}
+if (typeof window.AREAS === 'undefined') {
+  // Ajusta a tu catálogo real si difiere
+  window.AREAS = { comercial: "Aviación Comercial", general: "Aviación General", carga: "Aviación de Carga" };
+}
+if (typeof window.ROLES === 'undefined') {
+  window.ROLES = { ADMIN: 'administrador', SUBDIRECTOR: 'subdirector', CAPTURISTA: 'capturista' };
+}
+console.log("[CAPTURA] bootstrap", {
+  ANO_ACTUAL, HAVE_MESES: Array.isArray(MESES)&&MESES.length, AREAS_KEYS: Object.keys(AREAS||{}),
+  INDICADORES_KEYS: Object.keys(INDICADORES||{}), USER: window.currentUser
+});
+
+// --------- Estado del módulo ---------
 let capturaData = {
   currentYear:
     typeof ANO_ACTUAL !== "undefined" && Number.isInteger(ANO_ACTUAL)
@@ -20,10 +40,18 @@ let capturaData = {
   datosActuales: []
 };
 
-/**
- * Inicializar módulo de captura
- */
+let _capturaInitDone = false; // idempotencia
+
+// ====================================
+// Inicialización
+// ====================================
 function inicializarModuloCaptura() {
+  if (_capturaInitDone) {
+    // idempotente: permite re-entrar sin duplicar listeners/estado
+    actualizarEstadoBotonGuardar();
+    return;
+  }
+
   log("Inicializando módulo de captura");
 
   try {
@@ -31,18 +59,18 @@ function inicializarModuloCaptura() {
     configurarEventosCaptura();
     limpiarFormularioCaptura();
 
-    // Si ya quedó un área válida seleccionada, dispara el flujo como si el usuario la hubiera elegido
+    // Dispara flujo como si usuario hubiera elegido valores
     const areaSel = $("#fArea");
     if (areaSel && areaSel.value) {
       try { manejarCambioArea(); } catch (e) { console.warn("manejarCambioArea init:", e); }
     }
-
     const indSel = $("#fIndicador");
     if (indSel && indSel.value) {
       try { manejarCambioIndicador(); } catch (e) { console.warn("manejarCambioIndicador init:", e); }
     }
 
     actualizarEstadoBotonGuardar();
+    _capturaInitDone = true;
     log("Módulo de captura inicializado correctamente");
   } catch (error) {
     logError("Error al inicializar módulo de captura", error);
@@ -50,19 +78,16 @@ function inicializarModuloCaptura() {
   }
 }
 
-/**
- * Llenar selectores del módulo de captura
- */
 function llenarSelectoresCaptura() {
   llenarSelectorAnios();   // Año actual
   llenarSelectorMeses();   // Mes vigente
-  llenarSelectorAreas();   // Áreas (capturista: solo su área)
-  // Indicadores se llenan al seleccionar área
+  llenarSelectorAreas();   // Áreas (capturista: solo su área válida)
+  // Indicadores se llenan cuando se elige área
 }
 
-/**
- * AÑO: solo el actual (siempre), deshabilitado para capturista
- */
+// ====================================
+// Selects: Año / Mes / Área / Indicador
+// ====================================
 function llenarSelectorAnios() {
   const anioActual =
     typeof ANO_ACTUAL !== "undefined" && Number.isInteger(ANO_ACTUAL)
@@ -80,9 +105,6 @@ function llenarSelectorAnios() {
   }
 }
 
-/**
- * MES: lista 1–12 pero fuerza y bloquea el vigente para capturista
- */
 function llenarSelectorMeses() {
   const mesActual =
     typeof obtenerMesActual === "function"
@@ -102,69 +124,60 @@ function llenarSelectorMeses() {
   }
 }
 
-/**
- * ÁREAS: según catálogo global AREAS; capturista sólo su área (si es válida)
- */
 function llenarSelectorAreas() {
   const opciones = [
     { valor: "", texto: "Seleccionar..." },
-    ...Object.entries(AREAS).map(([clave, nombre]) => ({
-      valor: clave,
-      texto: nombre
-    }))
+    ...Object.entries(AREAS).map(([clave, nombre]) => ({ valor: clave, texto: nombre }))
   ];
   llenarSelect("#fArea", opciones);
 
   const areaSel = $("#fArea");
   const areaUsuario = currentUser?.area;
-  const areaValida =
-    areaUsuario &&
-    Object.prototype.hasOwnProperty.call(AREAS, areaUsuario);
+  const areaValida = areaUsuario && Object.prototype.hasOwnProperty.call(AREAS, areaUsuario);
 
+  // Capturista: si su área existe en catálogo, la fijamos; si no, dejamos elegir
   if (currentUser?.rol === ROLES.CAPTURISTA && areaSel) {
     if (areaValida) {
       areaSel.value = areaUsuario;
       capturaData.selectedArea = areaUsuario;
-      // Prellenar indicadores de su área
       llenarSelectorIndicadores(areaUsuario);
     } else {
-      // Fallback elegante si el área del usuario no existe en catálogo
       areaSel.value = "";
       capturaData.selectedArea = null;
-      console.warn("[CAPTURA] El área del usuario no coincide con AREAS:", areaUsuario);
+      console.warn("[CAPTURA] área de usuario no coincide con AREAS:", areaUsuario, "→ dejar elegir");
     }
   }
 }
 
-/**
- * INDICADORES: por área (mapa explícito)
- */
 function llenarSelectorIndicadores(area) {
-  const indicadorSelect = $("#fIndicador");
-  if (!indicadorSelect) return;
+  const sel = $("#fIndicador");
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Seleccionar...</option>';
 
-  indicadorSelect.innerHTML = '<option value="">Seleccionar...</option>';
-
-  const INDICADORES_POR_AREA = {
+  // Mapa explícito por área (ajústalo si tu lógica real difiere)
+  const POR_AREA = {
     comercial: ["operaciones", "pasajeros"],
     general:   ["operaciones", "pasajeros"],
     carga:     ["operaciones", "toneladas"],
-    // Soporte opcional si currentUser.area fuese "operaciones"
+    // fallback si llegara 'operaciones' como "área"
     operaciones: ["operaciones", "pasajeros"]
   };
 
-  const lista = INDICADORES_POR_AREA[area] || [];
-  lista.forEach((key) => {
+  const lista = POR_AREA[area] || [];
+  if (lista.length === 0) {
+    console.warn("[CAPTURA] sin indicadores para área:", area, "→ revisa AREAS/área usuario");
+  }
+  lista.forEach(k => {
     const opt = document.createElement("option");
-    opt.value = key;
-    opt.textContent = INDICADORES[key] || key;
-    indicadorSelect.appendChild(opt);
+    opt.value = k;
+    opt.textContent = INDICADORES[k] || k;
+    sel.appendChild(opt);
   });
 }
 
-/**
- * Eventos del módulo
- */
+// ====================================
+// Eventos y Handlers
+// ====================================
 function configurarEventosCaptura() {
   const areaSelect = $("#fArea");
   if (areaSelect) areaSelect.addEventListener("change", manejarCambioArea);
@@ -194,13 +207,10 @@ function configurarEventosCaptura() {
   }
 }
 
-/**
- * Handlers
- */
 function manejarCambioArea() {
   let area = $("#fArea").value;
 
-  // Capturista: forzar su área si es válida
+  // Capturista: si su área es válida en catálogo, forzarla
   const areaUsuario = currentUser?.area;
   const areaValidaUsuario =
     currentUser?.rol === ROLES.CAPTURISTA &&
@@ -243,7 +253,7 @@ function manejarCambioIndicador() {
 
 function manejarCambioAnio() {
   // Forzar año actual siempre en estado interno / UI
-  const anio = typeof ANO_ACTUAL !== "undefined" ? ANO_ACTUAL : new Date().getFullYear();
+  const anio = Number.isInteger(ANO_ACTUAL) ? ANO_ACTUAL : new Date().getFullYear();
   if ($("#fAnio")) $("#fAnio").value = anio;
 
   capturaData.currentYear = anio;
@@ -256,9 +266,9 @@ function manejarCambioAnio() {
   actualizarEstadoBotonGuardar();
 }
 
-/**
- * Validaciones de entrada
- */
+// ====================================
+// Validaciones de valor
+// ====================================
 function validarEntradaNumerica(event) {
   const input = event.target;
   const valor = input.value;
@@ -289,9 +299,9 @@ function formatearEntradaNumerica(event) {
   }
 }
 
-/**
- * Cargar datos (endurecido para capturista: año actual y su área)
- */
+// ====================================
+// Carga de datos (hardening capturista)
+// ====================================
 async function cargarDatosCaptura() {
   let area = capturaData.selectedArea;
   let indicador = capturaData.selectedIndicador;
@@ -304,8 +314,7 @@ async function cargarDatosCaptura() {
 
   // Hardening: capturista => año actual y su área (si válida)
   if (currentUser?.rol === ROLES.CAPTURISTA) {
-    anio =
-      typeof ANO_ACTUAL !== "undefined" ? ANO_ACTUAL : new Date().getFullYear();
+    anio = Number.isInteger(ANO_ACTUAL) ? ANO_ACTUAL : new Date().getFullYear();
 
     if (
       currentUser.area &&
@@ -323,9 +332,7 @@ async function cargarDatosCaptura() {
   try {
     log("Cargando datos de captura", { area, indicador, anio });
 
-    const botonGuardar = document.querySelector(
-      'button[onclick="guardarMedicion()"]'
-    );
+    const botonGuardar = document.querySelector('button[onclick="guardarMedicion()"]');
     if (botonGuardar) mostrarCargando(botonGuardar, true);
 
     const { data, error } = await sb
@@ -353,17 +360,15 @@ async function cargarDatosCaptura() {
     logError("Error en cargarDatosCaptura", error);
     mostrarNotificacion("Error al cargar los datos", "error");
   } finally {
-    const botonGuardar = document.querySelector(
-      'button[onclick="guardarMedicion()"]'
-    );
+    const botonGuardar = document.querySelector('button[onclick="guardarMedicion()"]');
     if (botonGuardar) mostrarCargando(botonGuardar, false);
     actualizarEstadoBotonGuardar();
   }
 }
 
-/**
- * Tabla
- */
+// ====================================
+// Tabla
+// ====================================
 function actualizarTablaCaptura(datos) {
   const tbody = $("#tbodyCaptura");
   if (!tbody) return;
@@ -404,7 +409,8 @@ function actualizarTablaCaptura(datos) {
     `;
 
     // Destacar mes vigente del año actual
-    if (mes === capturaData.currentMonth && capturaData.currentYear === (typeof ANO_ACTUAL !== "undefined" ? ANO_ACTUAL : new Date().getFullYear())) {
+    const anioActual = Number.isInteger(ANO_ACTUAL) ? ANO_ACTUAL : new Date().getFullYear();
+    if (mes === capturaData.currentMonth && capturaData.currentYear === anioActual) {
       tr.classList.add("bg-blue-50");
     }
 
@@ -412,304 +418,7 @@ function actualizarTablaCaptura(datos) {
   }
 }
 
-/**
- * VALIDACIÓN FUERTE del formulario de captura
- * - Solo año actual
- * - Solo mes vigente
- * - Capturista: solo su área (si definida y válida)
- */
-function validarFormularioCaptura() {
-  const area = $("#fArea")?.value;
-  const indicador = $("#fIndicador")?.value;
-  const anio = parseInt($("#fAnio")?.value);
-  const mes = parseInt($("#fMes")?.value);
-
-  if (!area || !indicador || !anio || !mes) {
-    mostrarNotificacion("Seleccione área, indicador, año y mes", "error");
-    return false;
-  }
-
-  const anioActual =
-    typeof ANO_ACTUAL !== "undefined" ? ANO_ACTUAL : new Date().getFullYear();
-
-  if (anio !== anioActual) {
-    mostrarNotificacion(`Solo puede capturarse el año ${anioActual}`, "error");
-    return false;
-  }
-
-  if (mes !== capturaData.currentMonth) {
-    const mesTxt = MESES[capturaData.currentMonth - 1];
-    mostrarNotificacion(
-      `Solo puede capturarse el mes vigente (${mesTxt})`,
-      "error"
-    );
-    return false;
-  }
-
-  // Capturista: solo su área si es válida
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
-    if (
-      currentUser.area &&
-      Object.prototype.hasOwnProperty.call(AREAS, currentUser.area) &&
-      area !== currentUser.area
-    ) {
-      mostrarNotificacion(
-        "No está autorizado para capturar en esta área",
-        "error"
-      );
-      return false;
-    }
-  }
-
-  // Validar valores numéricos
-  const valor = limpiarNumero($("#fValor")?.value) ?? null;
-  const meta = limpiarNumero($("#fMeta")?.value) ?? null;
-
-  if (valor === null || isNaN(valor)) {
-    mostrarNotificacion("Ingrese un valor numérico válido", "error");
-    return false;
-  }
-  if (meta === null || isNaN(meta)) {
-    mostrarNotificacion("Ingrese una meta numérica válida", "error");
-    return false;
-  }
-
-  if (
-    valor < VALIDACIONES.VALOR_MINIMO ||
-    valor > VALIDACIONES.VALOR_MAXIMO
-  ) {
-    mostrarNotificacion("El valor está fuera de rango permitido", "error");
-    return false;
-  }
-  if (meta < VALIDACIONES.VALOR_MINIMO || meta > VALIDACIONES.VALOR_MAXIMO) {
-    mostrarNotificacion("La meta está fuera de rango permitido", "error");
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Guardar medición (upsert) con validación de permisos
- */
-async function guardarMedicion() {
-  log("Iniciando proceso de guardado de medición");
-
-  // Validación UI
-  if (!validarFormularioCaptura()) {
-    actualizarEstadoBotonGuardar();
-    return;
-  }
-
-  // Datos (forzando reglas)
-  let area = $("#fArea").value;
-  const indicador = $("#fIndicador").value;
-  const anio = typeof ANO_ACTUAL !== "undefined" ? ANO_ACTUAL : new Date().getFullYear();
-  const mes = capturaData.currentMonth;
-  let valor = limpiarNumero($("#fValor").value) || 0;
-  let meta = limpiarNumero($("#fMeta").value) || 0;
-
-  // Capturista: forzar área del usuario si válida
-  if (
-    currentUser?.rol === ROLES.CAPTURISTA &&
-    currentUser.area &&
-    Object.prototype.hasOwnProperty.call(AREAS, currentUser.area)
-  ) {
-    area = currentUser.area;
-    const areaSel = $("#fArea");
-    if (areaSel) areaSel.value = currentUser.area;
-  }
-
-  const datosGuardar = { area, indicador, anio, mes, valor, meta };
-  log("Datos a guardar", datosGuardar);
-
-  try {
-    // Validación de autorización desde auth.js (si existe)
-    if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function") {
-      const ok = authSystem.validarOperacionEscritura("upsert_medicion", { area, anio, mes });
-      if (!ok) return; // authSystem ya notificó
-    }
-
-    // Mostrar estado en botón
-    const botonGuardar = document.querySelector('button[onclick="guardarMedicion()"]');
-    if (botonGuardar) mostrarCargando(botonGuardar, true);
-
-    // Upsert en tabla 'medicion'
-    const { data, error } = await sb
-      .from("medicion")
-      .upsert(datosGuardar, { onConflict: "area,indicador,anio,mes" });
-
-    if (error) {
-      logError("Error al guardar medición", error);
-      mostrarNotificacion(`${MENSAJES.ERROR_GUARDAR}: ${error.message}`, "error");
-      return;
-    }
-
-    mostrarNotificacion(MENSAJES.EXITO_GUARDAR, "success");
-    log("Medición guardada correctamente", data);
-
-    // Limpiar inputs y recargar datos
-    limpiarCamposEntrada();
-    await cargarDatosCaptura();
-  } catch (error) {
-    logError("Error en guardarMedicion", error);
-    mostrarNotificacion("Error inesperado al guardar", "error");
-  } finally {
-    const botonGuardar = document.querySelector('button[onclick="guardarMedicion()"]');
-    if (botonGuardar) {
-      botonGuardar.disabled = false;
-      botonGuardar.innerHTML = "Guardar";
-    }
-    actualizarEstadoBotonGuardar();
-  }
-}
-
-/**
- * Control del botón Guardar (habilitado solo en condiciones válidas)
- */
-function actualizarEstadoBotonGuardar() {
-  const btn = document.querySelector('button[onclick="guardarMedicion()"]');
-  if (!btn) return;
-
-  const anio = parseInt($("#fAnio")?.value);
-  const mes = parseInt($("#fMes")?.value);
-  const area = $("#fArea")?.value;
-  const indicador = $("#fIndicador")?.value;
-
-  let habilitado = true;
-
-  if (!verificarPermisos || !verificarPermisos("capturar")) habilitado = false;
-  if (!area || !indicador) habilitado = false;
-
-  const anioActual =
-    typeof ANO_ACTUAL !== "undefined" ? ANO_ACTUAL : new Date().getFullYear();
-
-  if (anio !== anioActual) habilitado = false;
-  if (mes !== capturaData.currentMonth) habilitado = false;
-
-  if (
-    currentUser?.rol === ROLES.CAPTURISTA &&
-    currentUser.area &&
-    Object.prototype.hasOwnProperty.call(AREAS, currentUser.area) &&
-    area !== currentUser.area
-  ) {
-    habilitado = false;
-  }
-
-  btn.disabled = !habilitado;
-  btn.classList.toggle("opacity-60", !habilitado);
-  btn.classList.toggle("cursor-not-allowed", !habilitado);
-}
-
-/**
- * Limpiezas / utilidades UI
- */
-function limpiarFormularioCaptura() {
-  const areaSelect = $("#fArea");
-  if (currentUser?.rol === ROLES.CAPTURISTA && currentUser.area && Object.prototype.hasOwnProperty.call(AREAS, currentUser.area)) {
-    if (areaSelect) areaSelect.value = currentUser.area;
-  } else if (areaSelect) {
-    // no fijar nada para otros roles
-    areaSelect.value = areaSelect.value || "";
-  }
-
-  const indicadorSelect = $("#fIndicador");
-  if (indicadorSelect) indicadorSelect.innerHTML = '<option value="">Seleccionar...</option>';
-
-  limpiarCamposEntrada();
-  limpiarDatosCaptura();
-  actualizarEstadoBotonGuardar();
-}
-
-function limpiarCamposEntrada() {
-  const valorInput = $("#fValor");
-  if (valorInput) {
-    valorInput.value = "";
-    valorInput.classList.remove("border-red-500");
-  }
-
-  const metaInput = $("#fMeta");
-  if (metaInput) {
-    metaInput.value = "";
-    metaInput.classList.remove("border-red-500");
-  }
-}
-
-function limpiarDatosCaptura() {
-  capturaData.datosActuales = [];
-
-  const tbody = $("#tbodyCaptura");
-  if (tbody) tbody.innerHTML = "";
-
-  if (typeof currentChart !== "undefined" && currentChart) {
-    currentChart.destroy();
-    currentChart = null;
-  }
-}
-
-/**
- * Prellenar inputs con el mes vigente si existen datos
- */
-function cargarDatosMesPorDefecto() {
-  if (!capturaData.selectedArea || !capturaData.selectedIndicador) return;
-
-  const datoMesActual = capturaData.datosActuales.find(
-    (d) => d.mes === capturaData.currentMonth
-  );
-  if (datoMesActual) {
-    const valorInput = $("#fValor");
-    const metaInput = $("#fMeta");
-
-    if (valorInput) valorInput.value = (datoMesActual.valor ?? "") === "" ? "" : datoMesActual.valor;
-    if (metaInput)  metaInput.value  = (datoMesActual.meta  ?? "") === "" ? "" : datoMesActual.meta;
-  }
-}
-
-/**
- * Exportación CSV (solo lo que está cargado)
- */
-function exportarDatosCaptura() {
-  if (!capturaData.datosActuales || capturaData.datosActuales.length === 0) {
-    mostrarNotificacion("No hay datos para exportar", "warning");
-    return;
-  }
-
-  const datosExportar = capturaData.datosActuales.map((d) => ({
-    Area: AREAS[d.area],
-    Indicador: INDICADORES[d.indicador],
-    Año: d.anio,
-    Mes: MESES[d.mes - 1],
-    Valor: d.valor,
-    Meta: d.meta,
-    Porcentaje_Cumplimiento: d.cumplimiento
-  }));
-
-  const nombreArchivo = `captura_${capturaData.selectedArea}_${capturaData.selectedIndicador}_${capturaData.currentYear}`;
-  descargarCSV(datosExportar, nombreArchivo);
-}
-
-/**
- * Debug
- */
-function debugCaptura() {
-  console.group("🔧 DEBUG MÓDULO CAPTURA");
-  console.table({
-    "Área Seleccionada": capturaData.selectedArea || "N/A",
-    "Indicador Seleccionado": capturaData.selectedIndicador || "N/A",
-    "Año Actual": capturaData.currentYear,
-    "Mes Actual": MESES[capturaData.currentMonth - 1],
-    "Registros Cargados": capturaData.datosActuales.length
-  });
-
-  if (capturaData.datosActuales.length > 0) {
-    console.log("📊 Datos actuales:", capturaData.datosActuales);
-  }
-
-  console.groupEnd();
-}
-
-// Exponer funciones globales
-window.guardarMedicion = guardarMedicion;
-window.inicializarModuloCaptura = inicializarModuloCaptura;
-window.exportarDatosCaptura = exportarDatosCaptura;
-window.debugCaptura = debugCaptura;
+// ====================================
+// Validación de formulario (reglas duras)
+// ====================================
+function validarFormulario
