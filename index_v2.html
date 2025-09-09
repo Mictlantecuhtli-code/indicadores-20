@@ -728,6 +728,19 @@
             }
         }
         
+        /**
+         * Función para ir al menú de áreas
+         */
+        function irAMenuAreas() {
+            if (currentUser.rol === 'subdirector') {
+                window.location.href = 'menu_subdirector.html';
+            } else if (currentUser.rol === 'administrador') {
+                window.location.href = 'menu_administrador.html';
+            } else {
+                alert('No tiene permisos para acceder al menú de áreas');
+            }
+        }
+        
         // Exponer funciones globales necesarias
         window.irAMenuAreas = irAMenuAreas;
         window.cerrarSesion = cerrarSesion;
