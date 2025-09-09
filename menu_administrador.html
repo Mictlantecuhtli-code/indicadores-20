@@ -382,26 +382,51 @@
         }
         
         // Inicialización de la página
-        document.addEventListener('DOMContentLoaded', async function() {
-            log('Inicializando menú de administrador');
-            
-            // Verificar autenticación
-            if (!currentUser.isAuthenticated) {
-                log('Usuario no autenticado, redirigiendo a login');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            // Verificar que sea administrador
-            if (currentUser.rol !== ROLES.ADMINISTRADOR) {
-                log('Usuario sin permisos de administrador');
-                mostrarNotificacion('No tiene permisos de administrador', 'error');
-                setTimeout(() => {
-                    authSystem.redirigirSegunRol(currentUser);
-                }, 2000);
-                return;
-            }
-            
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Inicializando menú subdirector con verificación simple');
+    
+    // Verificación simple sin bucles
+    const token = localStorage.getItem('aifa_auth_token');
+    const userData = localStorage.getItem('aifa_user_data');
+    
+    if (!token || !userData) {
+        console.log('No hay sesión, redirigiendo a login');
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    try {
+        const user = JSON.parse(userData);
+        console.log('Usuario encontrado:', user.username, user.rol);
+        
+        // Verificar rol para este menú
+        if (user.rol !== 'subdirector' && user.rol !== 'administrador') {
+            console.log('Rol no válido para menú subdirector');
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        // Restaurar currentUser global
+        currentUser = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            rol: user.rol,
+            area: user.area,
+            permisos: user.permisos,
+            isAuthenticated: true
+        };
+        
+        // Mostrar información del usuario
+        mostrarInformacionUsuario();
+        
+        console.log('Menú subdirector inicializado correctamente');
+        
+    } catch (error) {
+        console.error('Error procesando datos de usuario:', error);
+        window.location.href = 'login.html';
+    }
+});
             // Mostrar información del usuario
             mostrarInformacionUsuario();
             
