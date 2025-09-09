@@ -4,13 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menú Subdirector - AIFA</title>
-                <script>
-            console.log('=== DEBUG SUBDIRECTOR ===');
-            console.log('CurrentUser al cargar página:', window.currentUser);
-            console.log('¿Está autenticado?:', window.currentUser?.isAuthenticated);
-            console.log('Rol del usuario:', window.currentUser?.rol);
-            console.log('Token presente:', !!localStorage.getItem('aifa_auth_token'));
-            </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -295,137 +288,74 @@
     <script>
         // Funciones específicas del menú de subdirector
         function accederArea(area) {
-            log('Accediendo al área:', area);
+            console.log('Accediendo al área:', area);
             
-            if (!currentUser.isAuthenticated) {
-                mostrarNotificacion('Su sesión ha expirado', 'error');
-                window.location.href = 'login.html';
-                return;
-            }
-            
-            // Verificar permisos de área
-            if (!puedeAccederArea(area)) {
-                mostrarNotificacion('No tiene permisos para acceder a esta área', 'error');
-                return;
-            }
-            
-            // Solo operaciones está disponible por ahora
             if (area === 'operaciones') {
-                mostrarNotificacion('Accediendo al sistema de indicadores...', 'success');
-                setTimeout(() => {
-                    window.location.href = 'index_v2.html';
-                }, 1000);
+                window.location.href = 'index_v2.html';
             } else {
                 accederAreaConstruccion(area);
             }
         }
         
         function accederAreaConstruccion(area) {
-            const nombreArea = AREAS_SUBDIRECTOR[area]?.nombre || area;
-            log('Intentando acceder a área en construcción:', nombreArea);
-            
-            mostrarNotificacion(`El módulo de ${nombreArea} estará disponible próximamente`, 'warning');
-            
-            // Redirigir a página de construcción con parámetro del área
-            setTimeout(() => {
-                window.location.href = `construccion.html?area=${area}`;
-            }, 2000);
+            console.log('Accediendo a área en construcción:', area);
+            window.location.href = `construccion.html?area=${area}`;
         }
         
-        // Inicialización de la página
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Inicializando menú subdirector con verificación simple');
-    
-    // Verificación simple sin bucles
-    const token = localStorage.getItem('aifa_auth_token');
-    const userData = localStorage.getItem('aifa_user_data');
-    
-    if (!token || !userData) {
-        console.log('No hay sesión, redirigiendo a login');
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    try {
-        const user = JSON.parse(userData);
-        console.log('Usuario encontrado:', user.username, user.rol);
-        
-        // Verificar rol para este menú
-        if (user.rol !== 'subdirector' && user.rol !== 'administrador') {
-            console.log('Rol no válido para menú subdirector');
-            window.location.href = 'login.html';
-            return;
-        }
-        
-        // Restaurar currentUser global
-        currentUser = {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            rol: user.rol,
-            area: user.area,
-            permisos: user.permisos,
-            isAuthenticated: true
-        };
-        
-        // Mostrar información del usuario
-        mostrarInformacionUsuario();
-        
-        console.log('Menú subdirector inicializado correctamente');
-        
-    } catch (error) {
-        console.error('Error procesando datos de usuario:', error);
-        window.location.href = 'login.html';
-    }
-});
-            
-            // Mostrar información del usuario
-            mostrarInfoUsuario();
-            
-            // Registrar evento de acceso
-            if (typeof registrarEventoSeguridad === 'function') {
-                registrarEventoSeguridad('ACCESO_MENU_SUBDIRECTOR', {
-                    area: currentUser.area
-                });
-            }
-            
-            log('Menú de subdirector inicializado correctamente');
-        });
-        
-        // Función para mostrar información del usuario
-        function mostrarInfoUsuario() {
+        function mostrarInformacionUsuario() {
             const elementosUsername = document.querySelectorAll('[data-user="username"]');
-            const elementosArea = document.querySelectorAll('[data-user="area"]');
-            
             elementosUsername.forEach(el => {
                 el.textContent = currentUser.username || 'Usuario';
             });
             
+            const elementosArea = document.querySelectorAll('[data-user="area"]');
             elementosArea.forEach(el => {
                 const area = currentUser.area;
-                const nombreArea = AREAS_SUBDIRECTOR[area]?.nombre || area || 'Sin asignar';
+                const nombreArea = area ? (AREAS_SUBDIRECTOR[area]?.nombre || area) : 'Sin asignar';
                 el.textContent = nombreArea;
             });
         }
         
-        // Manejo de teclas de acceso rápido
-        document.addEventListener('keydown', function(event) {
-            // Alt + número para acceso rápido a áreas
-            if (event.altKey && event.key >= '1' && event.key <= '8') {
-                event.preventDefault();
-                const areas = ['operaciones', 'mercadotecnia', 'gerencia_sms', 'calidad', 'recursos_humanos', 'comercial', 'carga', 'sistemas'];
-                const index = parseInt(event.key) - 1;
-                if (areas[index]) {
-                    accederArea(areas[index]);
-                }
+        // Inicialización simplificada SIN bucles
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Inicializando menú subdirector');
+            
+            const token = localStorage.getItem('aifa_auth_token');
+            const userData = localStorage.getItem('aifa_user_data');
+            
+            if (!token || !userData) {
+                console.log('No hay sesión, redirigiendo a login');
+                window.location.href = 'login.html';
+                return;
             }
             
-            // Escape para cerrar sesión
-            if (event.key === 'Escape') {
-                const confirmar = confirm('¿Desea cerrar sesión?');
-                if (confirmar) {
-                    cerrarSesion();
+            try {
+                const user = JSON.parse(userData);
+                console.log('Usuario encontrado:', user.username, user.rol);
+                
+                if (user.rol !== 'subdirector' && user.rol !== 'administrador') {
+                    console.log('Rol no válido para menú subdirector');
+                    window.location.href = 'login.html';
+                    return;
                 }
+                
+                // Restaurar currentUser global
+                currentUser = {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    rol: user.rol,
+                    area: user.area,
+                    permisos: user.permisos,
+                    isAuthenticated: true
+                };
+                
+                mostrarInformacionUsuario();
+                console.log('Menú subdirector inicializado correctamente');
+                
+            } catch (error) {
+                console.error('Error procesando datos de usuario:', error);
+                window.location.href = 'login.html';
             }
         });
     </script>
