@@ -1,5 +1,5 @@
 // ====================================
-// captura.js (completo, con áreas padre/hija)
+// captura.js (abierto para todos; capturista restringido a mes vigente)
 // ====================================
 
 // ---- Defaults defensivos (si faltan en config.js)
@@ -16,7 +16,8 @@ window.INDICADORES = window.INDICADORES || {
 window.AREAS = window.AREAS || {
   comercial:   "Aviación Comercial",
   general:     "Aviación General",
-  carga:       "Aviación de Carga"
+  carga:       "Aviación de Carga",
+  // puedes agregar más claves si las usas en BD
 };
 
 window.ROLES = window.ROLES || {
@@ -41,7 +42,7 @@ window.MENSAJES = window.MENSAJES || {
   EXITO_GUARDAR: "Guardado correctamente"
 };
 
-// ---- Helpers mínimos si no existen (de utils.js)
+// ---- Helpers mínimos (por si utils.js no está)
 function $(sel) { return document.querySelector(sel); }
 function llenarSelect(sel, opciones, valorPorDefecto) {
   const el = $(sel); if (!el) return;
@@ -67,38 +68,6 @@ function formatearPorcentaje(p){ return (p===0 || p) ? `${Number(p).toFixed(1)}%
 function limpiarNumero(v){ if (v===null || v===undefined || v==="") return null; const x = Number(String(v).replace(/,/g,"")); return isNaN(x)? null : x; }
 
 // ====================================
-// ÁREAS PADRE / HIJAS
-// ====================================
-
-// Áreas hijas permitidas cuando el usuario pertenece a un área padre
-const CHILDREN_AREAS = {
-  operaciones: ["comercial", "general", "carga"], // padre → hijas
-  // agrega más padres si aparecen
-};
-
-function getUserAllowedAreas() {
-  // Admin/Subdirector: todas
-  if (currentUser?.rol === ROLES.ADMIN || currentUser?.rol === ROLES.SUBDIRECTOR) {
-    return Object.keys(AREAS);
-  }
-  const userArea = currentUser?.area;
-  if (!userArea) return Object.keys(AREAS);
-
-  // Si su área es padre → hijas
-  if (CHILDREN_AREAS[userArea]) return CHILDREN_AREAS[userArea].filter(k => AREAS[k]);
-
-  // Si su área es hoja (existe en catálogo) → solo esa
-  if (AREAS[userArea]) return [userArea];
-
-  // Fallback
-  return Object.keys(AREAS);
-}
-
-function isAreaAllowedForUser(area) {
-  return getUserAllowedAreas().includes(area);
-}
-
-// ====================================
 // Estado
 // ====================================
 const capturaData = {
@@ -116,10 +85,10 @@ function inicializarModuloCaptura(){
   log("[CAPTURA] init");
   llenarSelectorAnios();
   llenarSelectorMeses();
-  llenarSelectorAreas();
+  llenarSelectorAreas();      // abierto: todas las áreas del catálogo
   configurarEventos();
   limpiarFormulario();
-  // si ya quedó fija un área (caso hoja), dispara flujo
+  // Disparar si ya hay valores prefijados
   if ($("#fArea")?.value) manejarCambioArea();
   if ($("#fIndicador")?.value) manejarCambioIndicador();
   actualizarEstadoBotonGuardar();
@@ -129,7 +98,10 @@ function inicializarModuloCaptura(){
 // Selects
 // ====================================
 function llenarSelectorAnios(){
+  // Por ahora dejamos solo año actual. Si quieres más, agrega aquí más opciones.
   llenarSelect("#fAnio", [{valor: ANO_ACTUAL, texto: String(ANO_ACTUAL)}], ANO_ACTUAL);
+
+  // Capturista no puede cambiar año
   const anioSel = $("#fAnio");
   if (anioSel && currentUser?.rol === ROLES.CAPTURISTA){
     anioSel.disabled = true; anioSel.classList.add("disabled-by-role");
@@ -139,8 +111,11 @@ function llenarSelectorAnios(){
 function llenarSelectorMeses(){
   const mesActual = new Date().getMonth() + 1;
   capturaData.currentMonth = mesActual;
+
   const opciones = MESES.map((m,i)=>({valor:i+1, texto:m}));
   llenarSelect("#fMes", opciones, mesActual);
+
+  // Capturista no puede cambiar mes (vigente)
   const mesSel = $("#fMes");
   if (mesSel && currentUser?.rol === ROLES.CAPTURISTA){
     mesSel.disabled = true; mesSel.classList.add("disabled-by-role");
@@ -148,47 +123,21 @@ function llenarSelectorMeses(){
 }
 
 function llenarSelectorAreas(){
-  const allowed = getUserAllowedAreas(); // clave
-
-  const opciones = [
-    {valor:"", texto:"Seleccionar..."},
-    ...allowed.map(k => ({valor:k, texto:AREAS[k]}))
-  ];
+  // Todos los roles ven TODAS las áreas
+  const opciones = [{valor:"", texto:"Seleccionar..."}, ...Object.entries(AREAS).map(([k,v])=>({valor:k, texto:v}))];
   llenarSelect("#fArea", opciones);
-
-  const areaSel = $("#fArea");
-
-  // Capturista:
-  if (currentUser?.rol === ROLES.CAPTURISTA && areaSel) {
-    const userArea = currentUser.area;
-
-    // Si su área es HOJA (existe en catálogo y no es padre), fijar y bloquear
-    if (!CHILDREN_AREAS[userArea] && AREAS[userArea]) {
-      areaSel.value = userArea;
-      areaSel.disabled = true;
-      areaSel.classList.add("disabled-by-role");
-      capturaData.selectedArea = userArea;
-      llenarSelectorIndicadores(userArea);
-      return;
-    }
-
-    // Si su área es PADRE (p.ej. "operaciones"), NO forzamos:
-    // deberá elegir una de las hijas permitidas
-    areaSel.value = "";
-    capturaData.selectedArea = null;
-  }
 }
 
 function llenarSelectorIndicadores(area){
   const sel = $("#fIndicador"); if (!sel) return;
   sel.innerHTML = '<option value="">Seleccionar...</option>';
 
-  // Mapa por subárea (ajusta si tu lógica difiere)
+  // Mapa por área (ajústalo si tu lógica difiere)
   const MAP = {
     comercial:   ["operaciones", "pasajeros"],
     general:     ["operaciones", "pasajeros"],
     carga:       ["operaciones", "toneladas"],
-    // Si llegase “operaciones” como subárea (no debería en este modelo), fallback:
+    // fallback por si alguna vez usas 'operaciones' como área hoja
     operaciones: ["operaciones", "pasajeros"]
   };
 
@@ -216,47 +165,32 @@ function configurarEventos(){
 }
 
 function manejarCambioArea(){
-  let area = $("#fArea").value;
-
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
-    const userArea = currentUser.area;
-
-    if (!CHILDREN_AREAS[userArea] && AREAS[userArea]) {
-      // Hoja: forzar exactamente su área
-      area = userArea;
-      $("#fArea").value = userArea;
-    } else {
-      // Padre: validar que sea una hija permitida
-      if (!isAreaAllowedForUser(area)) {
-        capturaData.selectedArea = null;
-        mostrarNotificacion("Seleccione un área permitida", "warning");
-        actualizarEstadoBotonGuardar();
-        return;
-      }
-    }
-  }
-
-  capturaData.selectedArea = area;
+  const area = $("#fArea").value;
+  capturaData.selectedArea = area || null;
   log("Cambio de área", { area });
 
   llenarSelectorIndicadores(area);
-  limpiarDatos(); // resetea tabla/graf
+  limpiarDatos();
   const indicador = $("#fIndicador")?.value;
   if (area && indicador) cargarDatos();
   actualizarEstadoBotonGuardar();
 }
 
 function manejarCambioIndicador(){
-  capturaData.selectedIndicador = $("#fIndicador").value;
+  capturaData.selectedIndicador = $("#fIndicador").value || null;
   if (capturaData.selectedIndicador && capturaData.selectedArea) cargarDatos();
   else limpiarDatos();
   actualizarEstadoBotonGuardar();
 }
 
 function manejarCambioAnio(){
-  // año siempre actual
-  $("#fAnio").value = String(ANO_ACTUAL);
-  capturaData.currentYear = ANO_ACTUAL;
+  // Capturista: siempre forzar año actual en UI/estado
+  if (currentUser?.rol === ROLES.CAPTURISTA) {
+    $("#fAnio").value = String(ANO_ACTUAL);
+    capturaData.currentYear = ANO_ACTUAL;
+  } else {
+    capturaData.currentYear = parseInt($("#fAnio").value) || ANO_ACTUAL;
+  }
   if (capturaData.selectedArea && capturaData.selectedIndicador) cargarDatos();
   actualizarEstadoBotonGuardar();
 }
@@ -279,29 +213,19 @@ function formatearEntradaNumerica(e){
 }
 
 // ====================================
-// Carga de datos
+// Carga de datos (consulta a vista v_medicion)
 // ====================================
 async function cargarDatos(){
-  let area = capturaData.selectedArea;
-  let indicador = capturaData.selectedIndicador;
+  const area = capturaData.selectedArea;
+  const indicador = capturaData.selectedIndicador;
   let anio = capturaData.currentYear;
 
   if (!area || !indicador || !anio) return;
 
-  if (currentUser?.rol === ROLES.CAPTURISTA){
-    anio = ANO_ACTUAL; $("#fAnio").value = String(anio);
-
-    const userArea = currentUser.area;
-    if (!CHILDREN_AREAS[userArea] && AREAS[userArea]) {
-      // Hoja → forzar su área
-      area = userArea; if ($("#fArea").value !== area) $("#fArea").value = area;
-    } else {
-      // Padre → validar selección
-      if (!isAreaAllowedForUser(area)) {
-        mostrarNotificacion("Seleccione un área válida para su perfil", "error");
-        return;
-      }
-    }
+  // Capturista: ancla año al actual siempre
+  if (currentUser?.rol === ROLES.CAPTURISTA) {
+    anio = ANO_ACTUAL;
+    const anioSel = $("#fAnio"); if (anioSel) anioSel.value = String(ANO_ACTUAL);
   }
 
   try{
@@ -318,7 +242,7 @@ async function cargarDatos(){
 
     capturaData.datosActuales = data || [];
     actualizarTabla(capturaData.datosActuales);
-    await crearGraficaCaptura(area, indicador); // existente en charts.js
+    await crearGraficaCaptura(area, indicador); // función en charts.js
     prellenarMesVigente();
   } catch(err){
     logError(err);
@@ -373,29 +297,15 @@ function validarFormulario(){
   if (!area || !indicador || !anio || !mes){
     mostrarNotificacion("Seleccione área, indicador, año y mes", "error"); return false;
   }
-  if (anio !== ANO_ACTUAL){
-    mostrarNotificacion(`Solo puede capturarse el año ${ANO_ACTUAL}`, "error"); return false;
-  }
-  if (mes !== capturaData.currentMonth){
-    const mesTxt = MESES[capturaData.currentMonth-1];
-    mostrarNotificacion(`Solo puede capturarse el mes vigente (${mesTxt})`, "error"); return false;
-  }
 
-  // Capturista: reglas padre/hoja
+  // Restricción SOLO para capturista:
   if (currentUser?.rol === ROLES.CAPTURISTA) {
-    const userArea = currentUser.area;
-    if (!CHILDREN_AREAS[userArea] && AREAS[userArea]) {
-      // Hoja: debe coincidir exactamente
-      if (area !== userArea) {
-        mostrarNotificacion("No está autorizado para capturar en esta área", "error");
-        return false;
-      }
-    } else {
-      // Padre: el área elegida debe estar dentro de las hijas permitidas
-      if (!isAreaAllowedForUser(area)) {
-        mostrarNotificacion("Seleccione un área válida para su perfil", "error");
-        return false;
-      }
+    if (anio !== ANO_ACTUAL){
+      mostrarNotificacion(`Solo puede capturarse el año ${ANO_ACTUAL}`, "error"); return false;
+    }
+    if (mes !== capturaData.currentMonth){
+      const mesTxt = MESES[capturaData.currentMonth-1];
+      mostrarNotificacion(`Solo puede capturarse el mes vigente (${mesTxt})`, "error"); return false;
     }
   }
 
@@ -416,26 +326,12 @@ function validarFormulario(){
 async function guardarMedicion(){
   if (!validarFormulario()){ actualizarEstadoBotonGuardar(); return; }
 
-  let area = $("#fArea").value;
+  const area = $("#fArea").value;
   const indicador = $("#fIndicador").value;
-  const anio = ANO_ACTUAL;
-  const mes  = capturaData.currentMonth;
+  const anio = (currentUser?.rol === ROLES.CAPTURISTA) ? ANO_ACTUAL : (parseInt($("#fAnio").value) || ANO_ACTUAL);
+  const mes  = (currentUser?.rol === ROLES.CAPTURISTA) ? capturaData.currentMonth : parseInt($("#fMes").value);
   let valor = limpiarNumero($("#fValor").value) || 0;
   let meta  = limpiarNumero($("#fMeta").value)  || 0;
-
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
-    const userArea = currentUser.area;
-    if (!CHILDREN_AREAS[userArea] && AREAS[userArea]) {
-      // Hoja: forzar su área
-      area = userArea; $("#fArea").value = userArea;
-    } else {
-      // Padre: validar hija permitida
-      if (!isAreaAllowedForUser(area)) {
-        mostrarNotificacion("Seleccione un área válida para su perfil", "error");
-        return;
-      }
-    }
-  }
 
   // Validación extra desde auth.js si existe
   if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function"){
@@ -472,16 +368,11 @@ function actualizarEstadoBotonGuardar(){
   let ok = true;
   if (typeof verificarPermisos === "function" ? !verificarPermisos("capturar") : false) ok = false;
   if (!area || !indicador) ok = false;
-  if (anio !== ANO_ACTUAL) ok = false;
-  if (mes  !== capturaData.currentMonth) ok = false;
 
+  // Solo capturista está restringido por mes/año vigente
   if (currentUser?.rol === ROLES.CAPTURISTA) {
-    const userArea = currentUser.area;
-    if (!CHILDREN_AREAS[userArea] && AREAS[userArea]) {
-      if (area !== userArea) ok = false; // hoja: debe coincidir
-    } else {
-      if (!isAreaAllowedForUser(area)) ok = false; // padre: hija permitida
-    }
+    if (anio !== ANO_ACTUAL) ok = false;
+    if (mes  !== capturaData.currentMonth) ok = false;
   }
 
   btn.disabled = !ok;
@@ -493,12 +384,6 @@ function actualizarEstadoBotonGuardar(){
 // Limpiezas y utilidades
 // ====================================
 function limpiarFormulario(){
-  const areaSel = $("#fArea");
-  if (currentUser?.rol === ROLES.CAPTURISTA &&
-      currentUser.area && AREAS[currentUser.area] && !CHILDREN_AREAS[currentUser.area]) {
-    // Hoja → bloquear a su área
-    if (areaSel) { areaSel.value = currentUser.area; areaSel.disabled = true; areaSel.classList.add("disabled-by-role"); }
-  }
   const indSel = $("#fIndicador"); if (indSel) indSel.innerHTML = '<option value="">Seleccionar...</option>';
   limpiarCampos();
   limpiarDatos();
@@ -549,11 +434,11 @@ function exportarDatosCaptura(){
 // Exponer API y aliases
 // ====================================
 window.inicializarModuloCaptura = inicializarModuloCaptura;
-window.initCaptura = inicializarModuloCaptura;           // alias por compatibilidad
+window.initCaptura = inicializarModuloCaptura;      // alias por compatibilidad
 window.guardarMedicion = guardarMedicion;
 window.exportarDatosCaptura = exportarDatosCaptura;
-window.cargarDatosCaptura = cargarDatos;                  // alias
-window.limpiarDatosCaptura = limpiarDatos;               // alias
+window.cargarDatosCaptura = cargarDatos;            // alias
+window.limpiarDatosCaptura = limpiarDatos;          // alias
 
 // ====================================
 // Safe boot (arranca cuando hay catálogos)
