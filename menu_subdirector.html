@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Subdirector - AIFA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .area-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .area-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+        }
+        
+        .area-card.disponible {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+        
+        .area-card.construccion {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        }
+        
+        .area-card.construccion:hover {
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3);
+        }
+        
+        .area-card.disponible:hover {
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+        }
+        
+        .header-gradient {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
+        }
+        
+        .icon-container {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #EF4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .user-info {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .animate-delay-1 { animation-delay: 0.1s; }
+        .animate-delay-2 { animation-delay: 0.2s; }
+        .animate-delay-3 { animation-delay: 0.3s; }
+        .animate-delay-4 { animation-delay: 0.4s; }
+        .animate-delay-5 { animation-delay: 0.5s; }
+        .animate-delay-6 { animation-delay: 0.6s; }
+        .animate-delay-7 { animation-delay: 0.7s; }
+        .animate-delay-8 { animation-delay: 0.8s; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- Header -->
+    <header class="header-gradient text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="text-4xl">✈️</div>
+                    <div>
+                        <h1 class="text-2xl font-bold">Aeropuerto Internacional Felipe Ángeles</h1>
+                        <p class="text-blue-200">Sistema de Indicadores - Panel de Subdirector</p>
+                    </div>
+                </div>
+                
+                <!-- Información del Usuario -->
+                <div class="user-info rounded-lg px-4 py-3 flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="font-semibold" data-user="username">Cargando...</p>
+                        <p class="text-sm text-blue-200 capitalize" data-user="area">Área no asignada</p>
+                    </div>
+                    <button 
+                        onclick="cerrarSesion()" 
+                        class="logout-btn px-4 py-2 rounded-lg text-white text-sm font-medium"
+                        title="Cerrar Sesión"
+                    >
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Contenido Principal -->
+    <main class="container mx-auto px-4 py-8">
+        
+        <!-- Título de Sección -->
+        <div class="text-center mb-8">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Seleccione un Área</h2>
+            <p class="text-gray-600">Acceda a los indicadores y reportes de cada subdirección</p>
+        </div>
+        
+        <!-- Grid de Áreas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            
+            <!-- Operaciones (Disponible) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-1">
+                <button 
+                    onclick="accederArea('operaciones')" 
+                    class="area-card disponible w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">✈️</span>
+                    <h3 class="text-xl font-bold mb-2">Operaciones</h3>
+                    <p class="text-sm opacity-90">Indicadores de aviación y operaciones aeroportuarias</p>
+                    <div class="badge bg-green-500">✓</div>
+                </button>
+            </div>
+            
+            <!-- Mercadotecnia (En Construcción) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-2">
+                <button 
+                    onclick="accederAreaConstruccion('mercadotecnia')" 
+                    class="area-card construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">📊</span>
+                    <h3 class="text-xl font-bold mb-2">Mercadotecnia</h3>
+                    <p class="text-sm opacity-90">Estrategias comerciales y promoción</p>
+                    <div class="badge">🚧</div>
+                </button>
+            </div>
+            
+            <!-- Gerencia de SMS (En Construcción) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-3">
+                <button 
+                    onclick="accederAreaConstruccion('gerencia_sms')" 
+                    class="area-card construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">🛡️</span>
+                    <h3 class="text-xl font-bold mb-2">Gerencia de SMS</h3>
+                    <p class="text-sm opacity-90">Sistema de Gestión de Seguridad</p>
+                    <div class="badge">🚧</div>
+                </button>
+            </div>
+            
+            <!-- Calidad (En Construcción) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-4">
+                <button 
+                    onclick="accederAreaConstruccion('calidad')" 
+                    class="area-card construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">🏆</span>
+                    <h3 class="text-xl font-bold mb-2">Calidad</h3>
+                    <p class="text-sm opacity-90">Control y aseguramiento de calidad</p>
+                    <div class="badge">🚧</div>
+                </button>
+            </div>
+            
+            <!-- Recursos Humanos (En Construcción) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-5">
+                <button 
+                    onclick="accederAreaConstruccion('recursos_humanos')" 
+                    class="area-card construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">👥</span>
+                    <h3 class="text-xl font-bold mb-2">Recursos Humanos</h3>
+                    <p class="text-sm opacity-90">Gestión del capital humano</p>
+                    <div class="badge">🚧</div>
+                </button>
+            </div>
+            
+            <!-- Comercial (En Construcción) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-6">
+                <button 
+                    onclick="accederAreaConstruccion('comercial')" 
+                    class="area-card construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">💼</span>
+                    <h3 class="text-xl font-bold mb-2">Comercial</h3>
+                    <p class="text-sm opacity-90">Actividades comerciales y ventas</p>
+                    <div class="badge">🚧</div>
+                </button>
+            </div>
+            
+            <!-- Carga (En Construcción) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-7">
+                <button 
+                    onclick="accederAreaConstruccion('carga')" 
+                    class="area-card construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">📦</span>
+                    <h3 class="text-xl font-bold mb-2">Carga</h3>
+                    <p class="text-sm opacity-90">Operaciones de carga y logística</p>
+                    <div class="badge">🚧</div>
+                </button>
+            </div>
+            
+            <!-- Sistemas (En Construcción) -->
+            <div class="relative opacity-0 animate-fadeInUp animate-delay-8">
+                <button 
+                    onclick="accederAreaConstruccion('sistemas')" 
+                    class="area-card construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                >
+                    <span class="icon-container">💻</span>
+                    <h3 class="text-xl font-bold mb-2">Sistemas</h3>
+                    <p class="text-sm opacity-90">Tecnología e infraestructura</p>
+                    <div class="badge">🚧</div>
+                </button>
+            </div>
+            
+        </div>
+        
+        <!-- Información Adicional -->
+        <div class="mt-12 bg-white rounded-xl shadow-lg p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div>
+                    <div class="text-2xl text-green-600 mb-2">✅</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Área Disponible</h4>
+                    <p class="text-sm text-gray-600">Sistema completo de indicadores operativo</p>
+                </div>
+                <div>
+                    <div class="text-2xl text-yellow-600 mb-2">🚧</div>
+                    <h4 class="font-bold text-gray-800 mb-1">En Construcción</h4>
+                    <p class="text-sm text-gray-600">Próximamente disponible</p>
+                </div>
+                <div>
+                    <div class="text-2xl text-blue-600 mb-2">📊</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Acceso Completo</h4>
+                    <p class="text-sm text-gray-600">Visualización y captura de datos</p>
+                </div>
+            </div>
+        </div>
+        
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white text-center py-6 mt-12">
+        <p>&copy; 2025 Aeropuerto Internacional Felipe Ángeles</p>
+        <p class="text-sm text-gray-400 mt-1">Sistema de Indicadores v2.1.0</p>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="auth.js"></script>
+    
+    <script>
+        // Funciones específicas del menú de subdirector
+        function accederArea(area) {
+            log('Accediendo al área:', area);
+            
+            if (!currentUser.isAuthenticated) {
+                mostrarNotificacion('Su sesión ha expirado', 'error');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Verificar permisos de área
+            if (!puedeAccederArea(area)) {
+                mostrarNotificacion('No tiene permisos para acceder a esta área', 'error');
+                return;
+            }
+            
+            // Solo operaciones está disponible por ahora
+            if (area === 'operaciones') {
+                mostrarNotificacion('Accediendo al sistema de indicadores...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index_v2.html';
+                }, 1000);
+            } else {
+                accederAreaConstruccion(area);
+            }
+        }
+        
+        function accederAreaConstruccion(area) {
+            const nombreArea = AREAS_SUBDIRECTOR[area]?.nombre || area;
+            log('Intentando acceder a área en construcción:', nombreArea);
+            
+            mostrarNotificacion(`El módulo de ${nombreArea} estará disponible próximamente`, 'warning');
+            
+            // Redirigir a página de construcción con parámetro del área
+            setTimeout(() => {
+                window.location.href = `construccion.html?area=${area}`;
+            }, 2000);
+        }
+        
+        // Inicialización de la página
+        document.addEventListener('DOMContentLoaded', async function() {
+            log('Inicializando menú de subdirector');
+            
+            // Verificar autenticación
+            if (!currentUser.isAuthenticated) {
+                log('Usuario no autenticado, redirigiendo a login');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Verificar que sea subdirector o administrador
+            if (currentUser.rol !== ROLES.SUBDIRECTOR && currentUser.rol !== ROLES.ADMINISTRADOR) {
+                log('Usuario sin permisos de subdirector');
+                mostrarNotificacion('No tiene permisos para acceder a este menú', 'error');
+                setTimeout(() => {
+                    authSystem.redirigirSegunRol(currentUser);
+                }, 2000);
+                return;
+            }
+            
+            // Mostrar información del usuario
+            mostrarInfoUsuario();
+            
+            // Registrar evento de acceso
+            if (typeof registrarEventoSeguridad === 'function') {
+                registrarEventoSeguridad('ACCESO_MENU_SUBDIRECTOR', {
+                    area: currentUser.area
+                });
+            }
+            
+            log('Menú de subdirector inicializado correctamente');
+        });
+        
+        // Función para mostrar información del usuario
+        function mostrarInfoUsuario() {
+            const elementosUsername = document.querySelectorAll('[data-user="username"]');
+            const elementosArea = document.querySelectorAll('[data-user="area"]');
+            
+            elementosUsername.forEach(el => {
+                el.textContent = currentUser.username || 'Usuario';
+            });
+            
+            elementosArea.forEach(el => {
+                const area = currentUser.area;
+                const nombreArea = AREAS_SUBDIRECTOR[area]?.nombre || area || 'Sin asignar';
+                el.textContent = nombreArea;
+            });
+        }
+        
+        // Manejo de teclas de acceso rápido
+        document.addEventListener('keydown', function(event) {
+            // Alt + número para acceso rápido a áreas
+            if (event.altKey && event.key >= '1' && event.key <= '8') {
+                event.preventDefault();
+                const areas = ['operaciones', 'mercadotecnia', 'gerencia_sms', 'calidad', 'recursos_humanos', 'comercial', 'carga', 'sistemas'];
+                const index = parseInt(event.key) - 1;
+                if (areas[index]) {
+                    accederArea(areas[index]);
+                }
+            }
+            
+            // Escape para cerrar sesión
+            if (event.key === 'Escape') {
+                const confirmar = confirm('¿Desea cerrar sesión?');
+                if (confirmar) {
+                    cerrarSesion();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
