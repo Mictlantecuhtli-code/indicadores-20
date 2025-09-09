@@ -7,6 +7,24 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Estilos para controlar el tamaño de las gráficas */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            max-height: 400px;
+        }
+        
+        #chartCaptura, #vChart {
+            max-height: 400px !important;
+        }
+        
+        /* Estilos para el checkbox */
+        input[type="checkbox"] {
+            accent-color: #10B981;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     
@@ -28,7 +46,8 @@
             </div>
         </div>
     </div>
-        <!-- Módulo de Captura -->
+
+    <!-- Módulo de Captura -->
     <div id="moduloCaptura" class="container mx-auto p-4 hidden">
         <div class="bg-white rounded-lg shadow-lg p-6">
             <div class="flex justify-between items-center mb-6">
@@ -83,7 +102,9 @@
             <!-- Gráfica de líneas -->
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-4">Comparativo por Años</h3>
-                <canvas id="chartCaptura" width="400" height="200"></canvas>
+                <div class="chart-container">
+                    <canvas id="chartCaptura"></canvas>
+                </div>
             </div>
             
             <!-- Tabla de datos -->
@@ -106,7 +127,8 @@
             </div>
         </div>
     </div>
-        <!-- Módulo de Visualización - Menú -->
+
+    <!-- Módulo de Visualización - Menú -->
     <div id="menuVisualizacion" class="container mx-auto p-4 hidden">
         <div class="bg-white rounded-lg shadow-lg p-6">
             <div class="flex justify-between items-center mb-6">
@@ -141,15 +163,31 @@
                 <button onclick="showVisualizacion()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
             </div>
             
-            <!-- Filtros -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- Filtros ACTUALIZADOS CON ESCENARIO -->
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 <div>
-                    <label class="block text-sm font-medium mb-1">Años (selección múltiple)</label>
-                    <select id="vAnios" multiple class="w-full border rounded px-3 py-2 h-32"></select>
+                    <label class="block text-sm font-medium mb-1">Año Actual</label>
+                    <select id="vAnio" class="w-full border rounded px-3 py-2"></select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Tipo</label>
                     <select id="vTipo" class="w-full border rounded px-3 py-2"></select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Escenario Meta</label>
+                    <select id="vEscenario" class="w-full border rounded px-3 py-2">
+                        <option value="mediano">Mediano</option>
+                        <option value="bajo">Bajo</option>
+                        <option value="alto">Alto</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Comparar Contra</label>
+                    <select id="vComparar" class="w-full border rounded px-3 py-2">
+                        <option value="anterior">Mismo periodo año anterior</option>
+                        <option value="2023">Mismo periodo 2023</option>
+                        <option value="2022">Mismo periodo 2022</option>
+                    </select>
                 </div>
                 <div class="flex items-end">
                     <button id="btnAplicar" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded w-full">
@@ -158,560 +196,46 @@
                 </div>
             </div>
             
-            <!-- Tabla de resultados -->
-            <div class="overflow-x-auto mb-6">
-                <div id="tablaVisualizacion"></div>
+            <!-- Tabla simplificada -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-4">Resumen de Avance</h3>
+                <div class="overflow-x-auto">
+                    <div id="tablaVisualizacion"></div>
+                </div>
             </div>
             
-            <!-- Gráfica -->
+            <!-- Controles de gráfica -->
             <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Gráfica Comparativa</h3>
-                <canvas id="vChart" width="400" height="200"></canvas>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Gráfica Comparativa</h3>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="chkMostrarHistorico" class="rounded">
+                        <span class="text-sm text-gray-700">Mostrar gráfica histórica completa</span>
+                    </label>
+                </div>
+                <div class="chart-container">
+                    <canvas id="vChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Botón de descarga -->
+            <div class="text-center">
+                <button id="btnDescargar" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold">
+                    📥 Descargar Información
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Scripts en orden específico -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="charts.js"></script>
+    <script src="navigation.js"></script>
+    <script src="captura.js"></script>
+    <script src="visualizacion.js"></script>
+    
     <script>
-        // CONFIGURACIÓN Y CONSTANTES
-        const SUPABASE_URL = 'https://zmzdqfonlykuhjjovloa.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InptemRxZm9ubHlrdWhqam92bG9hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTUwNTMsImV4cCI6MjA3MjMzMTA1M30.mqIhVKOK_6-XPu1o0oFW29wRMQieFp7eRg7shHnyv40';
-        
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-        const AREAS = {
-            'comercial': 'Aviación Comercial',
-            'general': 'Aviación General',
-            'carga': 'Aviación de Carga'
-        };
-
-        const INDICADORES = {
-            'operaciones': 'Operaciones',
-            'pasajeros': 'Pasajeros',
-            'toneladas': 'Toneladas Transportadas'
-        };
-
-        let currentChart = null;
-        let vContext = { modo: null };
-        let visualChart = null; // Nueva variable para la gráfica de visualización
-
-        const $ = (selector) => document.querySelector(selector);
-        const $$ = (selector) => document.querySelectorAll(selector);
-               // FUNCIONES DE NAVEGACIÓN
-        function showMenu() {
-            $$('.container').forEach(div => div.classList.add('hidden'));
-            $('#menuPrincipal').classList.remove('hidden');
-        }
-
-        function showCaptura() {
-            $$('.container').forEach(div => div.classList.add('hidden'));
-            $('#moduloCaptura').classList.remove('hidden');
-            initCaptura();
-        }
-
-        function showVisualizacion() {
-            $$('.container').forEach(div => div.classList.add('hidden'));
-            $('#menuVisualizacion').classList.remove('hidden');
-        }
-
-        function showVisualizacionDetalle(modo) {
-            vContext.modo = modo;
-            $$('.container').forEach(div => div.classList.add('hidden'));
-            $('#visualizacionDetalle').classList.remove('hidden');
-            
-            let titulo = '';
-            switch(modo) {
-                case 'pasajeros': titulo = 'Visualización - Pasajeros'; break;
-                case 'operaciones': titulo = 'Visualización - Operaciones'; break;
-                case 'carga': titulo = 'Visualización - Carga'; break;
-            }
-            $('#tituloDetalle').textContent = titulo;
-            
-            setupVisualFilters();
-        }
-
-        // FUNCIONES DE CAPTURA
-        function initCaptura() {
-            fillYears();
-            fillMonths();
-            fillAreas();
-            setupAreaChange();
-        }
-
-        function fillYears() {
-            const select = $('#fAnio');
-            select.innerHTML = '';
-            const currentYear = new Date().getFullYear();
-            for (let year = 2022; year <= currentYear; year++) {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                if (year === currentYear) option.selected = true;
-                select.appendChild(option);
-            }
-        }
-
-        function fillMonths() {
-            const select = $('#fMes');
-            select.innerHTML = '';
-            const currentMonth = new Date().getMonth() + 1;
-            MESES.forEach((mes, index) => {
-                const option = document.createElement('option');
-                option.value = index + 1;
-                option.textContent = mes;
-                if (index + 1 === currentMonth) option.selected = true;
-                select.appendChild(option);
-            });
-        }
-
-        function fillAreas() {
-            const areaSelect = $('#fArea');
-            areaSelect.innerHTML = '<option value="">Seleccionar...</option>';
-            Object.entries(AREAS).forEach(([key, value]) => {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = value;
-                areaSelect.appendChild(option);
-            });
-        }
-
-        function setupAreaChange() {
-            $('#fArea').addEventListener('change', function() {
-                const area = this.value;
-                const indicadorSelect = $('#fIndicador');
-                indicadorSelect.innerHTML = '<option value="">Seleccionar...</option>';
-                
-                if (area === 'comercial' || area === 'general') {
-                    ['operaciones', 'pasajeros'].forEach(ind => {
-                        const option = document.createElement('option');
-                        option.value = ind;
-                        option.textContent = INDICADORES[ind];
-                        indicadorSelect.appendChild(option);
-                    });
-                } else if (area === 'carga') {
-                    ['operaciones', 'toneladas'].forEach(ind => {
-                        const option = document.createElement('option');
-                        option.value = ind;
-                        option.textContent = INDICADORES[ind];
-                        indicadorSelect.appendChild(option);
-                    });
-                }
-                
-                indicadorSelect.addEventListener('change', loadCapturaData);
-                loadCapturaData();
-            });
-        }
-
-        async function loadCapturaData() {
-            const area = $('#fArea').value;
-            const indicador = $('#fIndicador').value;
-            const anio = parseInt($('#fAnio').value);
-            
-            if (!area || !indicador || !anio) return;
-            
-            const { data, error } = await sb
-                .from('v_medicion')
-                .select('*')
-                .eq('area', area)
-                .eq('indicador', indicador)
-                .eq('anio', anio)
-                .order('mes');
-                
-            if (error) {
-                console.error('Error cargando datos:', error);
-                return;
-            }
-            
-            updateCapturaTable(data);
-            await loadCapturaChart(area, indicador);
-        }
-
-        function updateCapturaTable(data) {
-            const tbody = $('#tbodyCaptura');
-            tbody.innerHTML = '';
-            
-            for (let mes = 1; mes <= 12; mes++) {
-                const mesData = data.find(d => d.mes === mes) || {};
-                const tr = document.createElement('tr');
-                
-                const cumplimiento = mesData.cumplimiento ? `${mesData.cumplimiento}%` : '-';
-                const cumplimientoClass = mesData.cumplimiento >= 100 ? 'text-green-600 font-semibold' : 
-                                        mesData.cumplimiento >= 80 ? 'text-yellow-600' : 'text-red-600';
-                
-                tr.innerHTML = `
-                    <td class="border border-gray-300 px-4 py-2">${MESES[mes-1]}</td>
-                    <td class="border border-gray-300 px-4 py-2 text-right">${mesData.valor || ''}</td>
-                    <td class="border border-gray-300 px-4 py-2 text-right">${mesData.meta || ''}</td>
-                    <td class="border border-gray-300 px-4 py-2 text-right ${mesData.cumplimiento ? cumplimientoClass : ''}">${cumplimiento}</td>
-                `;
-                tbody.appendChild(tr);
-            }
-        }
-
-        async function loadCapturaChart(area, indicador) {
-            const anio = parseInt($('#fAnio').value);
-            const years = [];
-            for (let i = 3; i >= 0; i--) {
-                years.push(anio - i);
-            }
-            
-            const { data, error } = await sb
-                .from('v_medicion')
-                .select('anio, mes, valor')
-                .eq('area', area)
-                .eq('indicador', indicador)
-                .in('anio', years)
-                .order('anio')
-                .order('mes');
-                
-            if (error) {
-                console.error('Error cargando datos del gráfico:', error);
-                return;
-            }
-            
-            const datasets = years.map(year => {
-                const yearData = Array(12).fill(null);
-                data.filter(d => d.anio === year).forEach(d => {
-                    yearData[d.mes - 1] = d.valor;
-                });
-                
-                return {
-                    label: year.toString(),
-                    data: yearData,
-                    borderColor: getColorForYear(year),
-                    backgroundColor: getColorForYear(year) + '20',
-                    fill: false,
-                    tension: 0.1
-                };
-            });
-            
-            const ctx = $('#chartCaptura').getContext('2d');
-            if (currentChart) currentChart.destroy();
-            
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: MESES,
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: `${AREAS[area]} - ${INDICADORES[indicador]}`
-                        },
-                        legend: {
-                            position: 'bottom'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-
-        function getColorForYear(year) {
-            const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
-            return colors[year % colors.length];
-        }
-
-        async function guardarMedicion() {
-            const area = $('#fArea').value;
-            const indicador = $('#fIndicador').value;
-            const anio = parseInt($('#fAnio').value);
-            const mes = parseInt($('#fMes').value);
-            const valor = parseFloat($('#fValor').value) || 0;
-            const meta = parseFloat($('#fMeta').value) || 0;
-            
-            if (!area || !indicador || !anio || !mes) {
-                alert('Por favor complete todos los campos obligatorios');
-                return;
-            }
-            
-            const { data, error } = await sb
-                .from('medicion')
-                .upsert({
-                    area,
-                    indicador,
-                    anio,
-                    mes,
-                    valor,
-                    meta
-                });
-                
-            if (error) {
-                alert('Error al guardar: ' + error.message);
-            } else {
-                alert('Datos guardados correctamente');
-                $('#fValor').value = '';
-                $('#fMeta').value = '';
-                loadCapturaData();
-            }
-        }
-
-            // FUNCIONES DE VISUALIZACIÓN
-        function setupVisualFilters() {
-            // Años
-            const selY = $('#vAnios');
-            selY.innerHTML = '';
-            const yNow = new Date().getFullYear();
-            for (let y = 2022; y <= yNow; y++) {
-                const o = document.createElement('option');
-                o.value = y;
-                o.textContent = y;
-                selY.appendChild(o);
-            }
-
-            // Tipo
-            const selT = $('#vTipo');
-            selT.innerHTML = '';
-            if (vContext.modo === 'pasajeros') {
-                [['comercial', 'Comercial'], ['general', 'General']].forEach(([v, t]) => {
-                    const o = document.createElement('option');
-                    o.value = v;
-                    o.textContent = t;
-                    selT.appendChild(o);
-                });
-            } else if (vContext.modo === 'operaciones') {
-                [['comercial', 'Comercial'], ['general', 'General']].forEach(([v, t]) => {
-                    const o = document.createElement('option');
-                    o.value = v;
-                    o.textContent = t;
-                    selT.appendChild(o);
-                });
-            } else { // carga
-                [['operaciones', 'Operaciones'], ['toneladas', 'Toneladas']].forEach(([v, t]) => {
-                    const o = document.createElement('option');
-                    o.value = v;
-                    o.textContent = t;
-                    selT.appendChild(o);
-                });
-            }
-
-            // Configurar event listener para el botón aplicar
-            document.getElementById('btnAplicar').onclick = aplicarFiltrosVisualizacion;
-        }
-
-        async function aplicarFiltrosVisualizacion() {
-            const years = Array.from($('#vAnios').selectedOptions).map(o => parseInt(o.value));
-            const tipo = $('#vTipo').value;
-            
-            if (!tipo) {
-                alert('Por favor seleccione un tipo');
-                return;
-            }
-            
-            if (years.length === 0) {
-                alert('Por favor seleccione al menos un año');
-                return;
-            }
-            
-            // Mapear a (area, indicador) según modo
-            let area, indicador;
-            if (vContext.modo === 'pasajeros') {
-                area = tipo;
-                indicador = 'pasajeros';
-            } else if (vContext.modo === 'operaciones') {
-                area = tipo;
-                indicador = 'operaciones';
-            } else { // carga
-                area = 'carga';
-                indicador = tipo;
-            }
-            
-            const { data, error } = await sb.from('v_medicion')
-                .select('anio,mes,valor,meta,cumplimiento')
-                .eq('area', area).eq('indicador', indicador)
-                .in('anio', years)
-                .order('anio', { ascending: true }).order('mes', { ascending: true });
-                
-            if (error) {
-                alert(error.message);
-                return;
-            }
-            
-            // Pivot: filas = meses, columnas = años
-            const uYears = Array.from(new Set(data.map(r => r.anio))).sort();
-            const pivot = MESES.map((m, idx) => {
-                const row = { mes: m };
-                uYears.forEach(y => { 
-                    row[`valor_${y}`] = null; 
-                    row[`meta_${y}`] = null;
-                    row[`cumplimiento_${y}`] = null;
-                });
-                data.filter(r => r.mes === idx + 1).forEach(r => { 
-                    row[`valor_${r.anio}`] = r.valor;
-                    row[`meta_${r.anio}`] = r.meta;
-                    row[`cumplimiento_${r.anio}`] = r.cumplimiento;
-                });
-                return row;
-            });
-            
-            // Render tabla con valor, meta y cumplimiento
-            const container = $('#tablaVisualizacion');
-            container.innerHTML = '';
-            
-            const table = document.createElement('table');
-            table.className = 'min-w-full border-collapse border border-gray-300';
-            
-            // Header
-            const thead = document.createElement('thead');
-            thead.className = 'bg-gray-50';
-            const trh = document.createElement('tr');
-            trh.innerHTML = '<th class="border border-gray-300 px-4 py-2">Mes</th>';
-            
-            uYears.forEach(y => {
-                trh.innerHTML += `
-                    <th class="border border-gray-300 px-2 py-2 text-center" colspan="3">${y}</th>
-                `;
-            });
-            thead.appendChild(trh);
-            
-            // Subheader
-            const trSub = document.createElement('tr');
-            trSub.innerHTML = '<th class="border border-gray-300 px-4 py-2"></th>';
-            uYears.forEach(y => {
-                trSub.innerHTML += `
-                    <th class="border border-gray-300 px-2 py-1 text-xs">Valor</th>
-                    <th class="border border-gray-300 px-2 py-1 text-xs">Meta</th>
-                    <th class="border border-gray-300 px-2 py-1 text-xs">%</th>
-                `;
-            });
-            thead.appendChild(trSub);
-            table.appendChild(thead);
-            
-            // Body
-            const tbody = document.createElement('tbody');
-            pivot.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="border border-gray-300 px-4 py-2 font-medium">${row.mes}</td>`;
-                
-                uYears.forEach(y => {
-                    const valor = row[`valor_${y}`] !== null ? row[`valor_${y}`] : '';
-                    const meta = row[`meta_${y}`] !== null ? row[`meta_${y}`] : '';
-                    const cumplimiento = row[`cumplimiento_${y}`];
-                    
-                    let cumplimientoText = '-';
-                    let cumplimientoClass = '';
-                    if (cumplimiento !== null && cumplimiento !== undefined) {
-                        cumplimientoText = `${cumplimiento}%`;
-                        cumplimientoClass = cumplimiento >= 100 ? 'text-green-600 font-semibold' : 
-                                          cumplimiento >= 80 ? 'text-yellow-600' : 'text-red-600';
-                    }
-                    
-                    tr.innerHTML += `
-                        <td class="border border-gray-300 px-2 py-2 text-right">${valor}</td>
-                        <td class="border border-gray-300 px-2 py-2 text-right">${meta}</td>
-                        <td class="border border-gray-300 px-2 py-2 text-right ${cumplimientoClass}">${cumplimientoText}</td>
-                    `;
-                });
-                
-                tbody.appendChild(tr);
-            });
-            table.appendChild(tbody);
-            container.appendChild(table);
-            
-            // GRÁFICA CORREGIDA - Solo graficar valores, no metas
-            const ds = uYears.map(y => {
-                const yearData = pivot.map(r => {
-                    const valor = row[`valor_${y}`];
-                    return valor !== null && valor !== undefined ? valor : null;
-                });
-                
-                return {
-                    label: y.toString(),
-                    data: pivot.map(r => r[`valor_${y}`]), // Solo valores
-                    borderColor: getColorForYear(y),
-                    backgroundColor: getColorForYear(y) + '20',
-                    fill: false,
-                    tension: 0.1,
-                    pointBackgroundColor: getColorForYear(y),
-                    pointBorderColor: getColorForYear(y),
-                    pointRadius: 4
-                };
-            });
-            
-            // Destruir gráfica anterior si existe
-            if (visualChart) {
-                visualChart.destroy();
-                visualChart = null;
-            }
-            
-            // Crear nueva gráfica
-            const ctx = document.getElementById('vChart');
-            if (ctx) {
-                const context = ctx.getContext('2d');
-                
-                // Título dinámico para la gráfica
-                let chartTitle = '';
-                if (vContext.modo === 'pasajeros') {
-                    chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Pasajeros`;
-                } else if (vContext.modo === 'operaciones') {
-                    chartTitle = `${tipo === 'comercial' ? 'Aviación Comercial' : 'Aviación General'} - Operaciones`;
-                } else {
-                    chartTitle = `Aviación de Carga - ${tipo === 'operaciones' ? 'Operaciones' : 'Toneladas'}`;
-                }
-
-                visualChart = new Chart(context, {
-                    type: 'line',
-                    data: { 
-                        labels: MESES, 
-                        datasets: ds 
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: chartTitle,
-                                font: {
-                                    size: 16
-                                }
-                            },
-                            legend: { 
-                                position: 'bottom',
-                                labels: {
-                                    usePointStyle: true
-                                }
-                            }
-                        },
-                        scales: {
-                            y: { 
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: vContext.modo === 'carga' && tipo === 'toneladas' ? 'Toneladas' : 
-                                          vContext.modo === 'pasajeros' ? 'Número de Pasajeros' : 'Número de Operaciones'
-                                }
-                            },
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Meses'
-                                }
-                            }
-                        },
-                        elements: {
-                            line: {
-                                borderWidth: 2
-                            },
-                            point: {
-                                radius: 4,
-                                hoverRadius: 6
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
         // Inicialización cuando carga la página
         document.addEventListener('DOMContentLoaded', function() {
             showMenu();
