@@ -706,27 +706,39 @@
          * Función showVisualizacionDetalle (si no existe en navigation.js)
          */
         if (typeof showVisualizacionDetalle === 'undefined') {
-            window.showVisualizacionDetalle = function(tipo) {
-                // Ocultar otros módulos
-                document.getElementById('menuVisualizacion').classList.add('hidden');
-                
-                // Mostrar detalle de visualización
-                document.getElementById('visualizacionDetalle').classList.remove('hidden');
-                
-                // Actualizar título
-                const titulo = document.getElementById('tituloDetalle');
-                if (titulo) {
-                    const titulos = {
-                        'pasajeros': 'Visualización - Pasajeros',
-                        'operaciones': 'Visualización - Operaciones',
-                        'carga': 'Visualización - Carga'
-                    };
-                    titulo.textContent = titulos[tipo] || 'Visualización';
-                }
-                
-                console.log('Mostrando detalle de visualización:', tipo);
-            }
-        }
+  window.showVisualizacionDetalle = function(tipo) {
+    // Ocultar/mostrar secciones
+    document.getElementById('menuVisualizacion').classList.add('hidden');
+    document.getElementById('visualizacionDetalle').classList.remove('hidden');
+
+    // 1) Establecer el modo antes de inicializar filtros
+    if (typeof window.vContext === 'undefined') window.vContext = {};
+    vContext.modo = tipo; // 'pasajeros' | 'operaciones' | 'carga'
+
+    // (opcional) limpiar estado previo si existe
+    if (typeof limpiarDatosVisualizacion === 'function') {
+      try { limpiarDatosVisualizacion(); } catch (_) {}
+    }
+
+    // 2) Re-inicializar filtros: llena Año/Tipo/Escenario/Comparar
+    if (typeof inicializarFiltrosVisualizacion === 'function') {
+      try { inicializarFiltrosVisualizacion(); } catch (e) { console.warn('init vis:', e); }
+    }
+
+    // Título
+    const titulo = document.getElementById('tituloDetalle');
+    if (titulo) {
+      const titulos = {
+        pasajeros: 'Visualización - Pasajeros',
+        operaciones: 'Visualización - Operaciones',
+        carga: 'Visualización - Carga'
+      };
+      titulo.textContent = titulos[tipo] || 'Visualización';
+    }
+
+    console.log('Mostrando detalle de visualización:', tipo);
+  }
+}
         
         /**
          * Función para ir al menú de áreas
