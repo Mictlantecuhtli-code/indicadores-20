@@ -43,7 +43,7 @@ window.MENSAJES = window.MENSAJES || {
 };
 
 // ---- Helpers mínimos (por si utils.js no está)
-function $(sel) { return document.querySelector(sel); }
+//function $(sel) { return document.querySelector(sel); }
 function llenarSelect(sel, opciones, valorPorDefecto) {
   const el = $(sel); if (!el) return;
   el.innerHTML = "";
