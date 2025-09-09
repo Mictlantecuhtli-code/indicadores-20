@@ -1,6 +1,6 @@
 // ====================================
-// ARCHIVO 2: config.js (BIEN ARREGLADO)
-// Configuración de Supabase y constantes
+// ARCHIVO 2: config.js (CON AUTENTICACIÓN)
+// Configuración de Supabase, constantes y autenticación
 // ====================================
 
 // Configuración de Supabase
@@ -10,7 +10,111 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Inicializar cliente de Supabase
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Constantes del sistema
+// ====================================
+// CONFIGURACIÓN DE AUTENTICACIÓN
+// ====================================
+
+// Roles del sistema
+const ROLES = {
+    CAPTURISTA: 'capturista',
+    SUBDIRECTOR: 'subdirector',
+    ADMINISTRADOR: 'administrador'
+};
+
+// Permisos por rol
+const PERMISOS = {
+    [ROLES.CAPTURISTA]: {
+        puede_capturar: true,
+        puede_ver_historico: false,
+        puede_editar: false,
+        puede_administrar_usuarios: false,
+        anos_permitidos: [new Date().getFullYear()], // Solo año actual
+        areas_permitidas: ['operaciones'] // Solo su área asignada
+    },
+    [ROLES.SUBDIRECTOR]: {
+        puede_capturar: true,
+        puede_ver_historico: true,
+        puede_editar: true,
+        puede_administrar_usuarios: false,
+        anos_permitidos: 'todos', // Todos los años
+        areas_permitidas: 'segun_asignacion' // Según su área asignada
+    },
+    [ROLES.ADMINISTRADOR]: {
+        puede_capturar: true,
+        puede_ver_historico: true,
+        puede_editar: true,
+        puede_administrar_usuarios: true,
+        anos_permitidos: 'todos',
+        areas_permitidas: 'todas'
+    }
+};
+
+// Áreas del sistema para subdirectores
+const AREAS_SUBDIRECTOR = {
+    'operaciones': {
+        nombre: 'Operaciones',
+        icono: '✈️',
+        descripcion: 'Indicadores de aviación y operaciones aeroportuarias'
+    },
+    'mercadotecnia': {
+        nombre: 'Mercadotecnia',
+        icono: '📊',
+        descripcion: 'Estrategias comerciales y promoción'
+    },
+    'gerencia_sms': {
+        nombre: 'Gerencia de SMS',
+        icono: '🛡️',
+        descripcion: 'Sistema de Gestión de Seguridad'
+    },
+    'calidad': {
+        nombre: 'Calidad',
+        icono: '🏆',
+        descripcion: 'Control y aseguramiento de calidad'
+    },
+    'recursos_humanos': {
+        nombre: 'Recursos Humanos',
+        icono: '👥',
+        descripción: 'Gestión del capital humano'
+    },
+    'comercial': {
+        nombre: 'Comercial',
+        icono: '💼',
+        descripcion: 'Actividades comerciales y ventas'
+    },
+    'carga': {
+        nombre: 'Carga',
+        icono: '📦',
+        descripcion: 'Operaciones de carga y logística'
+    },
+    'sistemas': {
+        nombre: 'Sistemas',
+        icono: '💻',
+        descripcion: 'Tecnología e infraestructura'
+    }
+};
+
+// Variable global de sesión
+var currentUser = {
+    id: null,
+    username: null,
+    email: null,
+    rol: null,
+    area: null,
+    permisos: null,
+    isAuthenticated: false
+};
+
+// Configuración de sesión
+const SESSION_CONFIG = {
+    token_key: 'aifa_auth_token',
+    user_key: 'aifa_user_data',
+    expires_hours: 8, // 8 horas de sesión
+    remember_me_days: 30 // 30 días si marca "recordarme"
+};
+// ====================================
+// CONSTANTES ORIGINALES DEL SISTEMA
+// ====================================
+
 const MESES = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
     'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -90,13 +194,13 @@ var vContext = {
 
 // Configuración de descarga de archivos
 const DOWNLOAD_CONFIG = {
-    filename: 'indicadores_aviacion',
+    filename: 'indicadores_aifa',
     dateFormat: 'YYYY-MM-DD',
     csvSeparator: ',',
     csvEncoding: 'utf-8-bom'
 };
 
-// Mensajes del sistema
+// Mensajes del sistema (actualizados)
 const MENSAJES = {
     ERROR_CAMPOS_VACIOS: 'Por favor complete todos los campos obligatorios',
     ERROR_SELECCIONAR_TIPO: 'Por favor seleccione un tipo',
@@ -111,8 +215,20 @@ const MENSAJES = {
     DESCARGA_INICIADA: 'Iniciando descarga...',
     DESCARGA_ERROR: 'Error al descargar los datos',
     ESCENARIO_CAMBIADO: 'Escenario de meta actualizado',
-    FILTROS_APLICADOS: 'Filtros aplicados correctamente'
+    FILTROS_APLICADOS: 'Filtros aplicados correctamente',
+    
+    // Mensajes de autenticación
+    ERROR_LOGIN: 'Usuario o contraseña incorrectos',
+    ERROR_SESION_EXPIRADA: 'Su sesión ha expirado. Por favor inicie sesión nuevamente',
+    ERROR_PERMISOS: 'No tiene permisos para acceder a esta función',
+    ERROR_AREA_NO_AUTORIZADA: 'No tiene acceso a esta área',
+    LOGIN_EXITOSO: 'Bienvenido al sistema',
+    LOGOUT_EXITOSO: 'Sesión cerrada correctamente',
+    ERROR_AUTENTICACION: 'Error en la autenticación'
 };
+// ====================================
+// VALIDACIONES Y CONFIGURACIONES
+// ====================================
 
 // Validaciones
 const VALIDACIONES = {
@@ -122,7 +238,13 @@ const VALIDACIONES = {
     ANO_MINIMO: ANO_INICIAL,
     ANO_MAXIMO: ANO_ACTUAL + 5,
     MES_MINIMO: 1,
-    MES_MAXIMO: 12
+    MES_MAXIMO: 12,
+    
+    // Validaciones de autenticación
+    USERNAME_MIN_LENGTH: 3,
+    USERNAME_MAX_LENGTH: 50,
+    PASSWORD_MIN_LENGTH: 6,
+    EMAIL_PATTERN: /^[^\s@]+@aifa\.aero$/
 };
 
 // Configuración de formato de números
@@ -176,6 +298,10 @@ const TABLA_CONFIG = {
     }
 };
 
+// ====================================
+// FUNCIONES DE UTILIDAD ACTUALIZADAS
+// ====================================
+
 // Funciones de utilidad para configuración
 function obtenerConfiguracionIndicador(indicador) {
     return CONFIGURACION_INDICADORES[indicador] || CONFIGURACION_INDICADORES['operaciones'];
@@ -197,11 +323,68 @@ function esMesValido(mes) {
     return mes >= VALIDACIONES.MES_MINIMO && mes <= VALIDACIONES.MES_MAXIMO;
 }
 
-// Metadatos del sistema
+// ====================================
+// FUNCIONES DE AUTENTICACIÓN
+// ====================================
+
+function verificarPermisos(accion) {
+    if (!currentUser.isAuthenticated) {
+        return false;
+    }
+    
+    const permisos = currentUser.permisos;
+    
+    switch(accion) {
+        case 'capturar':
+            return permisos.puede_capturar;
+        case 'ver_historico':
+            return permisos.puede_ver_historico;
+        case 'editar':
+            return permisos.puede_editar;
+        case 'administrar_usuarios':
+            return permisos.puede_administrar_usuarios;
+        default:
+            return false;
+    }
+}
+
+function puedeAccederArea(area) {
+    if (!currentUser.isAuthenticated) {
+        return false;
+    }
+    
+    const areasPermitidas = currentUser.permisos.areas_permitidas;
+    
+    if (areasPermitidas === 'todas') {
+        return true;
+    }
+    
+    if (areasPermitidas === 'segun_asignacion') {
+        return currentUser.area === area;
+    }
+    
+    return Array.isArray(areasPermitidas) && areasPermitidas.includes(area);
+}
+
+function puedeAccederAnio(anio) {
+    if (!currentUser.isAuthenticated) {
+        return false;
+    }
+    
+    const anosPermitidos = currentUser.permisos.anos_permitidos;
+    
+    if (anosPermitidos === 'todos') {
+        return true;
+    }
+    
+    return Array.isArray(anosPermitidos) && anosPermitidos.includes(anio);
+}
+
+// Metadatos del sistema actualizados
 const SISTEMA_INFO = {
-    nombre: 'Sistema de Indicadores de Aviación',
-    version: '2.0.0',
-    autor: 'Equipo de Desarrollo',
-    fecha_actualizacion: '2025-09-02',
-    descripcion: 'Sistema para captura y visualización de indicadores de aviación comercial, general y de carga'
+    nombre: 'Sistema de Indicadores - Aeropuerto Internacional Felipe Ángeles',
+    version: '2.1.0',
+    autor: 'Equipo de Desarrollo AIFA',
+    fecha_actualizacion: '2025-09-08',
+    descripcion: 'Sistema para captura y visualización de indicadores operacionales del AIFA'
 };
