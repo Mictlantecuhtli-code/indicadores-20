@@ -4,7 +4,7 @@
  */
 
 // Variable global para almacenar datos del usuario actual
-let currentUser = null;
+//let currentUser = null;
 
 /**
  * Inicializar sistema de navegación
