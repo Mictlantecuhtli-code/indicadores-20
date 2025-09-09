@@ -108,8 +108,8 @@ var currentUser = {
 const SESSION_CONFIG = {
     token_key: 'aifa_auth_token',
     user_key: 'aifa_user_data',
-    expires_hours: 8, // 8 horas de sesión
-    remember_me_days: 30 // 30 días si marca "recordarme"
+    expires_hours: 2,
+    remember_me_days: 7
 };
 // ====================================
 // CONSTANTES ORIGINALES DEL SISTEMA
