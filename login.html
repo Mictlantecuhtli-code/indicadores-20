@@ -256,17 +256,63 @@
     <script src="auth.js"></script>
     
     <script>
+        // Variables de control
+        let verificandoSesion = false;
+        
         // Inicialización específica para la página de login
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('=== DEBUG LOGIN INIT ===');
+            
+            // VERIFICAR SESIÓN EXISTENTE PRIMERO
+            if (!verificandoSesion) {
+                verificandoSesion = true;
+                
+                try {
+                    console.log('Verificando sesión existente...');
+                    console.log('Token en localStorage:', localStorage.getItem('aifa_auth_token'));
+                    console.log('User data en localStorage:', localStorage.getItem('aifa_user_data'));
+                    console.log('CurrentUser global inicial:', window.currentUser);
+                    
+                    // Intentar verificar sesión existente
+                    const sesionExistente = await verificarSesionExistente();
+                    console.log('Resultado verificación sesión:', sesionExistente);
+                    
+                    if (sesionExistente.valid && currentUser.isAuthenticated) {
+                        console.log('Sesión válida detectada, redirigiendo...');
+                        console.log('Usuario restaurado:', currentUser);
+                        
+                        // Dar un momento para que se complete la restauración
+                        setTimeout(() => {
+                            redirigirSegunRol(currentUser);
+                        }, 100);
+                        return; // Salir para evitar configurar el login
+                    } else {
+                        console.log('No hay sesión válida, configurando login');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error verificando sesión existente:', error);
+                    // Continuar con login normal
+                }
+                
+                verificandoSesion = false;
+            }
+            
+            // Si llegamos aquí, no hay sesión válida - configurar login
+            configurarPaginaLogin();
+        });
+        
+        function configurarPaginaLogin() {
+            console.log('Configurando página de login');
+            
             // Auto-focus en el campo usuario
             const usernameInput = document.getElementById('username');
             if (usernameInput) {
                 usernameInput.focus();
             }
             
-            // Precargar credenciales en desarrollo (remover en producción)
+            // Precargar credenciales en desarrollo
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                // Permitir autocompletar con credenciales de prueba haciendo clic en los ejemplos
                 const ejemplosUsuarios = document.querySelectorAll('.grid.grid-cols-1 .flex');
                 ejemplosUsuarios.forEach(ejemplo => {
                     ejemplo.style.cursor = 'pointer';
@@ -286,8 +332,8 @@
                 });
             }
             
-            log('Página de login inicializada');
-        });
+            console.log('Página de login configurada correctamente');
+        }
         
         // Manejar errores específicos del login
         window.addEventListener('error', function(event) {
@@ -295,15 +341,12 @@
                 mostrarNotificacion('Error en el sistema de autenticación', 'error');
             }
         });
+        
+        // Debug adicional
+        console.log('=== DEBUG LOGIN CARGA ===');
+        console.log('Scripts cargados correctamente');
+        console.log('AuthSystem disponible:', typeof window.authSystem);
+        console.log('CurrentUser inicial:', window.currentUser);
     </script>
-    <script>
-// Debug temporal
-    window.addEventListener('load', function() {
-    console.log('=== DEBUG LOGIN ===');
-    console.log('Token en localStorage:', localStorage.getItem('aifa_auth_token'));
-    console.log('User data en localStorage:', localStorage.getItem('aifa_user_data'));
-    console.log('CurrentUser global:', window.currentUser);
-});
-</script>
 </body>
 </html>
