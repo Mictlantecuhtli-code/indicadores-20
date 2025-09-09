@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Indicadores - AIFA</title>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -12,30 +16,38 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f5f5;
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
         .header {
             background: white;
             padding: 1rem 2rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
         .logo {
-            height: 50px;
+            height: 40px;
         }
 
         .user-info {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 2rem;
+        }
+
+        .user-details {
+            text-align: right;
         }
 
         .user-name {
@@ -46,102 +58,72 @@
         .user-role {
             font-size: 0.875rem;
             color: #666;
-            background: #f0f0f0;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
         }
 
-        .logout-btn {
+        .btn-logout {
             background: #dc3545;
             color: white;
             border: none;
             padding: 0.5rem 1rem;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background 0.3s;
         }
 
-        .logout-btn:hover {
+        .btn-logout:hover {
             background: #c82333;
         }
 
-        .nav-tabs {
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .tabs {
             background: white;
-            padding: 0 2rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .nav-tabs ul {
-            list-style: none;
+        .tab-list {
             display: flex;
-            gap: 2rem;
+            gap: 1rem;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0.5rem;
         }
 
-        .nav-tabs li {
-            position: relative;
-        }
-
-        .nav-tabs a {
-            display: block;
-            padding: 1rem 0;
-            text-decoration: none;
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
             color: #666;
             font-weight: 500;
-            transition: color 0.3s;
+            transition: all 0.3s;
         }
 
-        .nav-tabs a:hover,
-        .nav-tabs a.active {
-            color: #667eea;
+        .tab-button:hover {
+            color: #333;
         }
 
-        .nav-tabs a.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: #667eea;
-        }
-
-        .container {
-            flex: 1;
-            max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 2rem;
-            width: 100%;
+        .tab-button.active {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+            margin-bottom: -2px;
         }
 
         .module {
             display: none;
-            animation: fadeIn 0.3s ease-in;
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
         .module.active {
             display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-
-        .card-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.75rem;
-            border-bottom: 2px solid #f0f0f0;
         }
 
         .form-group {
@@ -152,22 +134,21 @@
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
-            color: #555;
+            color: #333;
         }
 
         .form-control {
             width: 100%;
-            padding: 0.75rem;
+            padding: 0.5rem;
             border: 1px solid #ddd;
-            border-radius: 5px;
+            border-radius: 4px;
             font-size: 1rem;
-            transition: border-color 0.3s;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
         }
 
         .form-row {
@@ -177,50 +158,35 @@
         }
 
         .btn {
-            padding: 0.75rem 1.5rem;
+            padding: 0.5rem 1rem;
             border: none;
-            border-radius: 5px;
-            font-size: 1rem;
-            font-weight: 500;
+            border-radius: 4px;
             cursor: pointer;
+            font-weight: 500;
             transition: all 0.3s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
         }
 
         .btn-primary {
-            background: #667eea;
+            background: #007bff;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            background: #0056b3;
         }
 
         .btn-success {
-            background: #48bb78;
+            background: #28a745;
             color: white;
         }
 
         .btn-success:hover {
-            background: #38a169;
+            background: #218838;
         }
 
-        .btn-warning {
-            background: #ed8936;
-            color: white;
-        }
-
-        .btn-warning:hover {
-            background: #dd6b20;
-        }
-
-        .table-responsive {
+        .table-container {
             overflow-x: auto;
-            margin-top: 1rem;
+            margin-top: 2rem;
         }
 
         table {
@@ -237,20 +203,17 @@
         th {
             background: #f8f9fa;
             font-weight: 600;
-            color: #555;
-            position: sticky;
-            top: 0;
+            color: #333;
         }
 
-        tbody tr:hover {
+        tr:hover {
             background: #f8f9fa;
         }
 
         .alert {
             padding: 1rem;
-            border-radius: 5px;
+            border-radius: 4px;
             margin-bottom: 1rem;
-            display: none;
         }
 
         .alert-success {
@@ -265,38 +228,6 @@
             border: 1px solid #f5c6cb;
         }
 
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-label {
-            color: #666;
-            margin-top: 0.5rem;
-        }
-
         .chart-container {
             position: relative;
             height: 400px;
@@ -304,18 +235,14 @@
         }
 
         .loading {
-            display: none;
             text-align: center;
             padding: 2rem;
-        }
-
-        .loading.active {
-            display: block;
+            color: #666;
         }
 
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #007bff;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -328,327 +255,214 @@
             100% { transform: rotate(360deg); }
         }
 
-        .empty-state {
-            text-align: center;
-            padding: 3rem;
-            color: #666;
-        }
-
-        .empty-state-icon {
-            font-size: 4rem;
-            color: #ddd;
-            margin-bottom: 1rem;
-        }
-
-        .modal {
+        /* Estilos para control de acceso por rol */
+        [data-rol="administrador"],
+        [data-rol="subdirector"] {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            padding: 2rem;
-            border-radius: 10px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #666;
-        }
-
-        /* Estilos específicos para permisos */
-        .admin-only,
-        .subdirector-only,
-        .capturista-only {
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .nav-tabs ul {
-                flex-direction: column;
-                gap: 0;
-            }
-            
-            .container {
-                padding: 0 1rem;
-            }
         }
     </style>
 </head>
 <body>
     <!-- Header -->
     <div class="header">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-            <img src="https://www.aifa.aero/wp-content/uploads/2021/09/logo-aifa.png" alt="AIFA" class="logo">
-            <h1 style="font-size: 1.5rem; color: #333;">Sistema de Indicadores</h1>
+        <div class="logo-section">
+            <img src="logo-aifa.png" alt="AIFA" class="logo">
+            <h1 style="font-size: 1.25rem; color: #333;">Sistema de Indicadores</h1>
         </div>
         <div class="user-info">
-            <div>
-                <div class="user-name" id="user-name">Cargando...</div>
-                <div class="user-role" id="user-role">...</div>
+            <div class="user-details">
+                <div class="user-name" id="user-name">Usuario</div>
+                <div class="user-role" id="user-role">Rol</div>
             </div>
-            <button class="logout-btn" onclick="logout()">
-                Cerrar Sesión
-            </button>
+            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
         </div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <nav class="nav-tabs">
-        <ul>
-            <li><a href="#dashboard" class="tab-link active" onclick="cambiarModulo('dashboard')">Dashboard</a></li>
-            <li><a href="#captura" class="tab-link" onclick="cambiarModulo('captura')">Captura</a></li>
-            <li><a href="#visualizacion" class="tab-link" onclick="cambiarModulo('visualizacion')">Visualización</a></li>
-            <li class="subdirector-only"><a href="#reportes" class="tab-link" onclick="cambiarModulo('reportes')">Reportes</a></li>
-            <li class="admin-only"><a href="#administracion" class="tab-link" onclick="cambiarModulo('administracion')">Administración</a></li>
-        </ul>
-    </nav>
-
-    <!-- Container -->
+    <!-- Container Principal -->
     <div class="container">
         <!-- Mensaje del sistema -->
         <div id="mensaje-sistema" class="alert" style="display: none;"></div>
 
-        <!-- Dashboard Module -->
-        <div id="dashboard" class="module active">
-            <div class="card">
-                <h2 class="card-title">Dashboard - Resumen de Indicadores</h2>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="total-indicadores">0</div>
-                        <div class="stat-label">Total Indicadores</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="indicadores-actualizados">0</div>
-                        <div class="stat-label">Actualizados este mes</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="indicadores-pendientes">0</div>
-                        <div class="stat-label">Pendientes</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="promedio-cumplimiento">0%</div>
-                        <div class="stat-label">Cumplimiento Promedio</div>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <canvas id="dashboardChart"></canvas>
-                </div>
+        <!-- Tabs de navegación -->
+        <div class="tabs">
+            <div class="tab-list">
+                <button class="tab-button active" onclick="cambiarModulo('captura')">Captura</button>
+                <button class="tab-button" onclick="cambiarModulo('visualizacion')">Visualización</button>
+                <button class="tab-button" data-rol="subdirector" onclick="cambiarModulo('reportes')">Reportes</button>
+                <button class="tab-button" data-rol="administrador" onclick="cambiarModulo('administracion')">Administración</button>
             </div>
         </div>
-
-        <!-- Captura Module -->
-        <div id="captura" class="module">
-            <div class="card">
-                <h2 class="card-title">Captura de Datos</h2>
-                
-                <form id="formCaptura">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="indicador">Indicador</label>
-                            <select class="form-control" id="indicador" required>
-                                <option value="">Seleccione un indicador...</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="periodo">Período</label>
-                            <input type="month" class="form-control" id="periodo" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="valor">Valor</label>
-                            <input type="number" class="form-control" id="valor" step="0.01" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="meta">Meta</label>
-                            <input type="number" class="form-control" id="meta" step="0.01" required>
-                        </div>
-                    </div>
-
+        <!-- Módulo de Captura -->
+        <div id="modulo-captura" class="module active">
+            <h2 style="margin-bottom: 1.5rem; color: #333;">Captura de Indicadores</h2>
+            
+            <form id="formCaptura">
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="observaciones">Observaciones</label>
-                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                        <label for="select-indicador">Indicador</label>
+                        <select class="form-control" id="select-indicador" required>
+                            <option value="">Seleccione un indicador</option>
+                        </select>
                     </div>
+                    <div class="form-group">
+                        <label for="input-mes">Mes</label>
+                        <select class="form-control" id="input-mes" required>
+                            <option value="">Seleccione mes</option>
+                            <option value="1">Enero</option>
+                            <option value="2">Febrero</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Mayo</option>
+                            <option value="6">Junio</option>
+                            <option value="7">Julio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="input-anio">Año</label>
+                        <input type="number" class="form-control" id="input-anio" min="2020" max="2030" required>
+                    </div>
+                </div>
 
-                    <div style="display: flex; gap: 1rem;">
-                        <button type="submit" class="btn btn-primary">
-                            Guardar Datos
-                        </button>
-                        <button type="button" class="btn btn-warning" onclick="limpiarFormulario()">
-                            Limpiar
-                        </button>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="input-valor">Valor Real</label>
+                        <input type="number" class="form-control" id="input-valor" step="0.01" required>
                     </div>
-                </form>
-            </div>
+                    <div class="form-group">
+                        <label for="input-meta">Meta</label>
+                        <input type="number" class="form-control" id="input-meta" step="0.01" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-observaciones">Observaciones</label>
+                    <textarea class="form-control" id="input-observaciones" rows="3"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()">Limpiar</button>
+                </div>
+            </form>
 
             <!-- Tabla de datos capturados -->
-            <div class="card">
-                <h3 class="card-title">Datos Capturados Recientes</h3>
-                <div class="table-responsive">
-                    <table id="tablaDatosCapturados">
-                        <thead>
-                            <tr>
-                                <th>Indicador</th>
-                                <th>Período</th>
-                                <th>Valor</th>
-                                <th>Meta</th>
-                                <th>Cumplimiento</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="6" class="empty-state">
-                                    <div class="empty-state-icon">📊</div>
-                                    <div>No hay datos capturados</div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-container">
+                <h3 style="margin-bottom: 1rem;">Datos Capturados</h3>
+                <table id="tabla-captura">
+                    <thead>
+                        <tr>
+                            <th>Indicador</th>
+                            <th>Período</th>
+                            <th>Valor</th>
+                            <th>Meta</th>
+                            <th>Cumplimiento</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #999;">No hay datos capturados</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Visualización Module -->
-        <div id="visualizacion" class="module">
-            <div class="card">
-                <h2 class="card-title">Visualización de Indicadores</h2>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="filtroArea">Área</label>
-                        <select class="form-control" id="filtroArea" onchange="filtrarIndicadores()">
-                            <option value="">Todas las áreas</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="filtroAnio">Año</label>
-                        <select class="form-control" id="filtroAnio" onchange="actualizarVisualizacion()">
-                            <option value="2024">2024</option>
-                            <option value="2023">2023</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="tipoGrafica">Tipo de Gráfica</label>
-                        <select class="form-control" id="tipoGrafica" onchange="actualizarVisualizacion()">
-                            <option value="line">Líneas</option>
-                            <option value="bar">Barras</option>
-                            <option value="radar">Radar</option>
-                        </select>
-                    </div>
+        <!-- Módulo de Visualización -->
+        <div id="modulo-visualizacion" class="module">
+            <h2 style="margin-bottom: 1.5rem; color: #333;">Visualización de Indicadores</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="filtro-area">Área</label>
+                    <select class="form-control" id="filtro-area">
+                        <option value="">Todas las áreas</option>
+                        <option value="operaciones">Operaciones</option>
+                        <option value="comercial">Comercial</option>
+                        <option value="carga">Carga</option>
+                    </select>
                 </div>
+                <div class="form-group">
+                    <label for="filtro-anio">Año</label>
+                    <select class="form-control" id="filtro-anio">
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                    </select>
+                </div>
+            </div>
 
-                <div class="chart-container">
-                    <canvas id="visualizacionChart"></canvas>
-                </div>
+            <button class="btn btn-primary" onclick="actualizarVisualizacion()">Actualizar</button>
+
+            <div class="chart-container">
+                <canvas id="chart-visualizacion"></canvas>
             </div>
         </div>
 
-        <!-- Reportes Module (Subdirector) -->
-        <div id="reportes" class="module subdirector-only">
-            <div class="card">
-                <h2 class="card-title">Generación de Reportes</h2>
-                
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Tipo de Reporte</label>
-                        <select class="form-control" id="tipoReporte">
-                            <option value="mensual">Reporte Mensual</option>
-                            <option value="trimestral">Reporte Trimestral</option>
-                            <option value="anual">Reporte Anual</option>
-                            <option value="comparativo">Análisis Comparativo</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Período</label>
-                        <input type="month" class="form-control" id="periodoReporte">
-                    </div>
+        <!-- Módulo de Reportes (Solo Subdirector/Admin) -->
+        <div id="modulo-reportes" class="module" data-rol="subdirector">
+            <h2 style="margin-bottom: 1.5rem; color: #333;">Generación de Reportes</h2>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="tipo-reporte">Tipo de Reporte</label>
+                    <select class="form-control" id="tipo-reporte">
+                        <option value="mensual">Mensual</option>
+                        <option value="trimestral">Trimestral</option>
+                        <option value="anual">Anual</option>
+                    </select>
                 </div>
+                <div class="form-group">
+                    <label for="periodo-reporte">Período</label>
+                    <input type="month" class="form-control" id="periodo-reporte">
+                </div>
+            </div>
 
-                <button class="btn btn-success" onclick="generarReporte()">
-                    Generar Reporte
+            <button class="btn btn-success" onclick="generarReporte()">Generar Reporte</button>
+            <button class="btn btn-primary" onclick="exportarExcel()">Exportar Excel</button>
+
+            <div id="resultado-reporte" style="margin-top: 2rem;"></div>
+        </div>
+
+        <!-- Módulo de Administración (Solo Admin) -->
+        <div id="modulo-administracion" class="module" data-rol="administrador">
+            <h2 style="margin-bottom: 1.5rem; color: #333;">Administración del Sistema</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <button class="btn btn-primary" onclick="window.location.href='admin_usuarios.html'">
+                    Gestión de Usuarios
                 </button>
-                <button class="btn btn-primary" onclick="exportarExcel()">
-                    Exportar a Excel
+                <button class="btn btn-primary" onclick="window.location.href='admin_indicadores.html'">
+                    Gestión de Indicadores
                 </button>
-            </div>
-        </div>
-
-        <!-- Administración Module (Admin) -->
-        <div id="administracion" class="module admin-only">
-            <div class="card">
-                <h2 class="card-title">Panel de Administración</h2>
-                
-                <div class="form-row">
-                    <button class="btn btn-primary" onclick="window.location.href='admin_usuarios.html'">
-                        Gestionar Usuarios
-                    </button>
-                    <button class="btn btn-primary" onclick="window.location.href='admin_areas.html'">
-                        Gestionar Áreas
-                    </button>
-                    <button class="btn btn-primary" onclick="configurarIndicadores()">
-                        Configurar Indicadores
-                    </button>
-                </div>
+                <button class="btn btn-primary" onclick="window.location.href='admin_areas.html'">
+                    Gestión de Áreas
+                </button>
+                <button class="btn btn-primary" onclick="verAuditoria()">
+                    Auditoría del Sistema
+                </button>
             </div>
         </div>
     </div>
+        <!-- Incluir archivos JavaScript -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="navigation.js"></script>
+    <script src="captura.js"></script>
+    <script src="visualizacion.js"></script>
+    <script src="charts.js"></script>
 
-    <!-- Modal -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modal-title">Título</h3>
-                <button class="modal-close" onclick="cerrarModal()">&times;</button>
-            </div>
-            <div id="modal-body">
-                <!-- Contenido dinámico -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Variables globales
         let currentUser = null;
-        let indicadores = [];
-        let datosCapturados = [];
-        let charts = {};
+        let indicadoresData = [];
+        let capturaData = [];
+        let chartInstance = null;
 
         // Función principal de inicialización
         async function inicializarAplicacion() {
@@ -673,7 +487,7 @@
                 window.currentUser = user;
                 currentUser = user;
                 
-                // Mostrar información del usuario
+                // Actualizar UI con info del usuario
                 document.getElementById('user-name').textContent = user.username || user.email;
                 document.getElementById('user-role').textContent = user.rol || 'Usuario';
                 
@@ -681,20 +495,20 @@
                 configurarUISegunRol(user.rol);
                 
                 // Cargar datos iniciales
-                await cargarDatosIniciales();
+                await cargarIndicadores();
+                
+                // Inicializar módulos
+                inicializarModulos();
                 
                 // Inicializar eventos
-                inicializarEventos();
-                
-                // Inicializar gráficas
-                inicializarGraficas();
+                inicializarEventListeners();
                 
                 console.log('Aplicación inicializada correctamente');
                 mostrarMensaje('Sistema cargado correctamente', 'success');
                 
             } catch (error) {
                 console.error('Error en inicialización:', error);
-                manejarError(error, 'Error al inicializar la aplicación');
+                manejarError(error);
                 
                 // Si hay error parseando los datos, limpiar y redirigir
                 if (error instanceof SyntaxError) {
@@ -705,162 +519,92 @@
             }
         }
 
-        // Función para configurar UI según rol
+        // Configurar UI según rol
         function configurarUISegunRol(rol) {
             console.log('Configurando UI para rol:', rol);
             
-            // Obtener elementos por clase de rol
-            const elementosAdmin = document.querySelectorAll('.admin-only');
-            const elementosSubdirector = document.querySelectorAll('.subdirector-only');
-            const elementosCapturista = document.querySelectorAll('.capturista-only');
+            // Obtener elementos por atributo data-rol
+            const elementosAdmin = document.querySelectorAll('[data-rol="administrador"]');
+            const elementosSubdirector = document.querySelectorAll('[data-rol="subdirector"]');
             
-            // Ocultar todos primero
-            elementosAdmin.forEach(el => el.style.display = 'none');
-            elementosSubdirector.forEach(el => el.style.display = 'none');
-            elementosCapturista.forEach(el => el.style.display = 'none');
-            
-            // Mostrar según rol
-            switch(rol) {
-                case 'administrador':
-                    elementosAdmin.forEach(el => el.style.display = '');
-                    elementosSubdirector.forEach(el => el.style.display = '');
-                    elementosCapturista.forEach(el => el.style.display = '');
-                    break;
-                case 'subdirector':
-                    elementosSubdirector.forEach(el => el.style.display = '');
-                    elementosCapturista.forEach(el => el.style.display = '');
-                    break;
-                case 'capturista':
-                    elementosCapturista.forEach(el => el.style.display = '');
-                    break;
+            // Mostrar/ocultar según rol
+            if (rol === 'administrador') {
+                elementosAdmin.forEach(el => el.style.display = '');
+                elementosSubdirector.forEach(el => el.style.display = '');
+            } else if (rol === 'subdirector') {
+                elementosAdmin.forEach(el => el.style.display = 'none');
+                elementosSubdirector.forEach(el => el.style.display = '');
+            } else {
+                elementosAdmin.forEach(el => el.style.display = 'none');
+                elementosSubdirector.forEach(el => el.style.display = 'none');
             }
             
             console.log('UI configurada según permisos');
         }
 
-        // Cargar datos iniciales
-        async function cargarDatosIniciales() {
+        // Cargar indicadores
+        async function cargarIndicadores() {
             try {
-                // Simular carga de indicadores
-                indicadores = [
-                    { id: 1, nombre: 'Pasajeros Comerciales', area: 'Operaciones' },
-                    { id: 2, nombre: 'Carga Transportada', area: 'Carga' },
-                    { id: 3, nombre: 'Vuelos Diarios', area: 'Operaciones' },
-                    { id: 4, nombre: 'Satisfacción del Cliente', area: 'Calidad' }
+                // Simulación de carga de indicadores
+                // En producción, esto vendría de la base de datos
+                indicadoresData = [
+                    { id: 1, nombre: 'Pasajeros Comerciales', area: 'operaciones', unidad: 'personas' },
+                    { id: 2, nombre: 'Aviación General', area: 'operaciones', unidad: 'vuelos' },
+                    { id: 3, nombre: 'Carga Transportada', area: 'carga', unidad: 'toneladas' },
+                    { id: 4, nombre: 'Ingresos Comerciales', area: 'comercial', unidad: 'mdp' }
                 ];
-                
+
                 // Llenar select de indicadores
-                const selectIndicador = document.getElementById('indicador');
+                const selectIndicador = document.getElementById('select-indicador');
                 if (selectIndicador) {
-                    selectIndicador.innerHTML = '<option value="">Seleccione un indicador...</option>';
-                    indicadores.forEach(ind => {
+                    selectIndicador.innerHTML = '<option value="">Seleccione un indicador</option>';
+                    indicadoresData.forEach(ind => {
                         const option = document.createElement('option');
                         option.value = ind.id;
                         option.textContent = `${ind.nombre} (${ind.area})`;
                         selectIndicador.appendChild(option);
                     });
                 }
-                
-                // Actualizar estadísticas del dashboard
-                actualizarEstadisticas();
-                
+
+                console.log('Indicadores cargados:', indicadoresData.length);
             } catch (error) {
-                console.error('Error cargando datos:', error);
+                console.error('Error cargando indicadores:', error);
+                mostrarMensaje('Error al cargar indicadores', 'error');
             }
         }
 
-        // Actualizar estadísticas del dashboard
-        function actualizarEstadisticas() {
-            document.getElementById('total-indicadores').textContent = indicadores.length;
-            document.getElementById('indicadores-actualizados').textContent = Math.floor(Math.random() * indicadores.length);
-            document.getElementById('indicadores-pendientes').textContent = Math.floor(Math.random() * 5);
-            document.getElementById('promedio-cumplimiento').textContent = Math.floor(Math.random() * 30 + 70) + '%';
+        // Inicializar módulos
+        function inicializarModulos() {
+            // Establecer año actual en los campos de año
+            const anioActual = new Date().getFullYear();
+            const inputAnio = document.getElementById('input-anio');
+            if (inputAnio) {
+                inputAnio.value = anioActual;
+            }
+
+            // Establecer mes actual
+            const mesActual = new Date().getMonth() + 1;
+            const inputMes = document.getElementById('input-mes');
+            if (inputMes) {
+                inputMes.value = mesActual;
+            }
+
+            // Establecer período actual en reportes
+            const periodoReporte = document.getElementById('periodo-reporte');
+            if (periodoReporte) {
+                const fecha = new Date();
+                periodoReporte.value = fecha.toISOString().slice(0, 7);
+            }
         }
 
-        // Inicializar eventos
-        function inicializarEventos() {
-            // Form de captura
+        // Inicializar event listeners
+        function inicializarEventListeners() {
+            // Formulario de captura
             const formCaptura = document.getElementById('formCaptura');
             if (formCaptura) {
                 formCaptura.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    guardarDatos();
-                });
-            }
-            
-            // Establecer fecha actual en período
-            const periodo = document.getElementById('periodo');
-            if (periodo) {
-                const hoy = new Date();
-                periodo.value = hoy.toISOString().slice(0, 7);
-            }
-        }
-
-        // Inicializar gráficas
-        function inicializarGraficas() {
-            // Gráfica del dashboard
-            const ctxDashboard = document.getElementById('dashboardChart');
-            if (ctxDashboard) {
-                charts.dashboard = new Chart(ctxDashboard, {
-                    type: 'line',
-                    data: {
-                        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
-                        datasets: [{
-                            label: 'Cumplimiento %',
-                            data: [85, 88, 82, 90, 93, 95],
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            },
-                            title: {
-                                display: true,
-                                text: 'Tendencia de Cumplimiento'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                max: 100
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // Gráfica de visualización
-            const ctxVisualizacion = document.getElementById('visualizacionChart');
-            if (ctxVisualizacion) {
-                charts.visualizacion = new Chart(ctxVisualizacion, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Indicador 1', 'Indicador 2', 'Indicador 3', 'Indicador 4'],
-                        datasets: [{
-                            label: 'Valor Actual',
-                            data: [85, 75, 90, 88],
-                            backgroundColor: '#667eea'
-                        }, {
-                            label: 'Meta',
-                            data: [80, 80, 85, 90],
-                            backgroundColor: '#48bb78'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                            }
-                        }
-                    }
+                    guardarCaptura();
                 });
             }
         }
@@ -871,35 +615,255 @@
             document.querySelectorAll('.module').forEach(m => {
                 m.classList.remove('active');
             });
-            
+
             // Quitar active de todos los tabs
-            document.querySelectorAll('.tab-link').forEach(t => {
+            document.querySelectorAll('.tab-button').forEach(t => {
                 t.classList.remove('active');
             });
-            
+
             // Mostrar módulo seleccionado
-            const moduloElement = document.getElementById(modulo);
+            const moduloElement = document.getElementById('modulo-' + modulo);
             if (moduloElement) {
                 moduloElement.classList.add('active');
             }
-            
+
             // Activar tab correspondiente
-            const tabLink = document.querySelector(`a[href="#${modulo}"]`);
-            if (tabLink) {
-                tabLink.classList.add('active');
+            event.target.classList.add('active');
+
+            // Si es visualización, actualizar gráfica
+            if (modulo === 'visualizacion') {
+                actualizarVisualizacion();
             }
         }
 
-        // Guardar datos del formulario
-        function guardarDatos() {
-            const formData = {
-                indicador: document.getElementById('indicador').value,
-                periodo: document.getElementById('periodo').value,
-                valor: document.getElementById('valor').value,
-                meta: document.getElementById('meta').value,
-                observaciones: document.getElementById('observaciones').value
+        // Guardar captura
+        function guardarCaptura() {
+            const indicadorId = document.getElementById('select-indicador').value;
+            const mes = document.getElementById('input-mes').value;
+            const anio = document.getElementById('input-anio').value;
+            const valor = document.getElementById('input-valor').value;
+            const meta = document.getElementById('input-meta').value;
+            const observaciones = document.getElementById('input-observaciones').value;
+
+            if (!indicadorId || !mes || !anio || !valor || !meta) {
+                mostrarMensaje('Por favor complete todos los campos requeridos', 'error');
+                return;
+            }
+
+            // Simular guardado
+            const nuevaCaptura = {
+                id: Date.now(),
+                indicadorId: indicadorId,
+                periodo: `${anio}-${mes.padStart(2, '0')}`,
+                valor: parseFloat(valor),
+                meta: parseFloat(meta),
+                cumplimiento: ((parseFloat(valor) / parseFloat(meta)) * 100).toFixed(2),
+                observaciones: observaciones,
+                fecha: new Date().toISOString()
             };
+
+            capturaData.push(nuevaCaptura);
+            actualizarTablaCaptura();
+            limpiarFormulario();
+            mostrarMensaje('Datos guardados correctamente', 'success');
+        }
+                // Actualizar tabla de captura
+        function actualizarTablaCaptura() {
+            const tbody = document.querySelector('#tabla-captura tbody');
+            if (!tbody) return;
+
+            if (capturaData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">No hay datos capturados</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            capturaData.forEach(captura => {
+                const indicador = indicadoresData.find(i => i.id == captura.indicadorId);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${indicador ? indicador.nombre : 'N/A'}</td>
+                    <td>${captura.periodo}</td>
+                    <td>${captura.valor}</td>
+                    <td>${captura.meta}</td>
+                    <td>${captura.cumplimiento}%</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="editarCaptura(${captura.id})">Editar</button>
+                        <button class="btn btn-sm" onclick="eliminarCaptura(${captura.id})">Eliminar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Limpiar formulario
+        function limpiarFormulario() {
+            document.getElementById('formCaptura').reset();
+            const anioActual = new Date().getFullYear();
+            const mesActual = new Date().getMonth() + 1;
+            document.getElementById('input-anio').value = anioActual;
+            document.getElementById('input-mes').value = mesActual;
+        }
+
+        // Actualizar visualización
+        function actualizarVisualizacion() {
+            const canvas = document.getElementById('chart-visualizacion');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+
+            // Destruir gráfica anterior si existe
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            // Crear nueva gráfica
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Valor Real',
+                        data: [65, 59, 80, 81, 56, 55],
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'Meta',
+                        data: [70, 70, 70, 70, 70, 70],
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // Generar reporte
+        function generarReporte() {
+            const tipoReporte = document.getElementById('tipo-reporte').value;
+            const periodo = document.getElementById('periodo-reporte').value;
+
+            if (!periodo) {
+                mostrarMensaje('Por favor seleccione un período', 'error');
+                return;
+            }
+
+            mostrarMensaje(`Generando reporte ${tipoReporte} para ${periodo}...`, 'info');
+
+            // Simular generación de reporte
+            setTimeout(() => {
+                const resultadoDiv = document.getElementById('resultado-reporte');
+                resultadoDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4>Reporte ${tipoReporte} generado</h4>
+                        <p>Período: ${periodo}</p>
+                        <p>Total de indicadores: ${indicadoresData.length}</p>
+                        <p>Datos procesados: ${capturaData.length}</p>
+                    </div>
+                `;
+                mostrarMensaje('Reporte generado correctamente', 'success');
+            }, 1000);
+        }
+
+        // Exportar a Excel
+        function exportarExcel() {
+            mostrarMensaje('Preparando exportación a Excel...', 'info');
             
-            // Validar datos
-            if (!formData.indicador || !formData.periodo || !formData.valor || !formData.meta) {
-                mostrarMensaje('Por
+            // Simular exportación
+            setTimeout(() => {
+                mostrarMensaje('Archivo Excel descargado correctamente', 'success');
+            }, 1000);
+        }
+
+        // Ver auditoría
+        function verAuditoria() {
+            mostrarMensaje('Cargando registros de auditoría...', 'info');
+        }
+
+        // Editar captura
+        function editarCaptura(id) {
+            const captura = capturaData.find(c => c.id === id);
+            if (!captura) return;
+
+            // Llenar formulario con datos de la captura
+            document.getElementById('select-indicador').value = captura.indicadorId;
+            const [anio, mes] = captura.periodo.split('-');
+            document.getElementById('input-anio').value = anio;
+            document.getElementById('input-mes').value = parseInt(mes);
+            document.getElementById('input-valor').value = captura.valor;
+            document.getElementById('input-meta').value = captura.meta;
+            document.getElementById('input-observaciones').value = captura.observaciones || '';
+
+            // Eliminar la captura actual para reemplazarla
+            capturaData = capturaData.filter(c => c.id !== id);
+            actualizarTablaCaptura();
+
+            // Hacer scroll al formulario
+            document.getElementById('formCaptura').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Eliminar captura
+        function eliminarCaptura(id) {
+            if (confirm('¿Está seguro de eliminar este registro?')) {
+                capturaData = capturaData.filter(c => c.id !== id);
+                actualizarTablaCaptura();
+                mostrarMensaje('Registro eliminado correctamente', 'success');
+            }
+        }
+
+        // Mostrar mensaje
+        function mostrarMensaje(mensaje, tipo = 'info') {
+            const mensajeDiv = document.getElementById('mensaje-sistema');
+            if (!mensajeDiv) return;
+
+            mensajeDiv.textContent = mensaje;
+            mensajeDiv.className = `alert alert-${tipo}`;
+            mensajeDiv.style.display = 'block';
+
+            setTimeout(() => {
+                mensajeDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Manejar errores
+        function manejarError(error) {
+            console.error('Error:', error);
+            mostrarMensaje('Ocurrió un error: ' + error.message, 'error');
+        }
+
+        // Función de logout
+        function logout() {
+            console.log('Cerrando sesión...');
+            
+            // Limpiar localStorage
+            localStorage.removeItem('aifa_auth_token');
+            localStorage.removeItem('aifa_user_data');
+            localStorage.removeItem('aifa_session_expires');
+            
+            // Mostrar mensaje
+            mostrarMensaje('Sesión cerrada correctamente', 'success');
+            
+            // Redirigir a login
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 1000);
+        }
+
+        // Inicializar aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM cargado, iniciando aplicación...');
+            inicializarAplicacion();
+        });
+    </script>
+</body>
+</html>
