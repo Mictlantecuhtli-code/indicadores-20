@@ -558,13 +558,31 @@
         /**
          * Mostrar información del usuario en la interfaz
          */
-        function mostrarInformacionUsuario() {
-            const elementosUsername = document.querySelectorAll('[data-user="username"], [data-user="username-display"]');
-            elementosUsername.forEach(el => {
-                el.textContent = currentUser.username || 'Usuario';
-            });
-            
-            const elementosRol = document.querySelectorAll('[data-user="rol"], [data-user="rol-display"]');
+            function mostrarInformacionUsuario() {
+                const elementosUsername = document.querySelectorAll('[data-user="username"], [data-user="username-display"]');
+                elementosUsername.forEach(el => {
+                    el.textContent = currentUser.username || 'Usuario';
+                });
+                
+                const elementosRol = document.querySelectorAll('[data-user="rol"], [data-user="rol-display"]');
+                // AGREGAR ESTA PARTE:
+                elementosRol.forEach(el => {
+                    el.textContent = currentUser.rol || 'usuario';
+                });
+                
+                const elementosArea = document.querySelectorAll('[data-user="area-display"]');
+                elementosArea.forEach(el => {
+                    let areaTexto = currentUser.area || '';
+                    if (typeof AREAS !== 'undefined' && AREAS[currentUser.area]) {
+                        areaTexto = ' - ' + AREAS[currentUser.area];
+                    } else if (currentUser.area) {
+                        areaTexto = ' - ' + currentUser.area;
+                    }
+                    el.textContent = areaTexto;
+                });
+                
+                console.log('Información de usuario mostrada en la interfaz');
+            }
           /**
          * Aplicar restricciones específicas según el rol
          */
