@@ -64,6 +64,7 @@ function checkPageAccess() {
     
     // Páginas que no requieren autenticación
     const publicPages = ['login.html', 'recuperar.html'];
+    publicPages.push('construccion.html');
     
     if (publicPages.includes(currentPage)) {
         return true;
