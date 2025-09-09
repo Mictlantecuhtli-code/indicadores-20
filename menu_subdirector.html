@@ -286,7 +286,7 @@
     <script src="auth.js"></script>
     
     <script>
-        // Funciones específicas del menú de subdirector
+        // FUNCIONES GLOBALES PRIMERO - para que estén disponibles en onclick
         function accederArea(area) {
             console.log('Accediendo al área:', area);
             
@@ -305,20 +305,20 @@
         function mostrarInformacionUsuario() {
             const elementosUsername = document.querySelectorAll('[data-user="username"]');
             elementosUsername.forEach(el => {
-                el.textContent = currentUser.username || 'Usuario';
+                el.textContent = window.currentUser.username || 'Usuario';
             });
             
             const elementosArea = document.querySelectorAll('[data-user="area"]');
             elementosArea.forEach(el => {
-                const area = currentUser.area;
-                const nombreArea = area ? (AREAS_SUBDIRECTOR[area]?.nombre || area) : 'Sin asignar';
+                const area = window.currentUser.area;
+                const nombreArea = area ? (AREAS_SUBDIRECTOR && AREAS_SUBDIRECTOR[area] ? AREAS_SUBDIRECTOR[area].nombre : area) : 'Sin asignar';
                 el.textContent = nombreArea;
             });
         }
         
-        // Inicialización simplificada SIN bucles
+        // INICIALIZACIÓN DESPUÉS DE DEFINIR LAS FUNCIONES
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Inicializando menú subdirector');
+            console.log('Inicializando menú subdirector con verificación simple');
             
             const token = localStorage.getItem('aifa_auth_token');
             const userData = localStorage.getItem('aifa_user_data');
@@ -340,7 +340,7 @@
                 }
                 
                 // Restaurar currentUser global
-                currentUser = {
+                window.currentUser = {
                     id: user.id,
                     username: user.username,
                     email: user.email,
@@ -356,6 +356,25 @@
             } catch (error) {
                 console.error('Error procesando datos de usuario:', error);
                 window.location.href = 'login.html';
+            }
+        });
+        
+        // Atajos de teclado
+        document.addEventListener('keydown', function(event) {
+            if (event.altKey && event.key >= '1' && event.key <= '8') {
+                event.preventDefault();
+                const areas = ['operaciones', 'mercadotecnia', 'gerencia_sms', 'calidad', 'recursos_humanos', 'comercial', 'carga', 'sistemas'];
+                const index = parseInt(event.key) - 1;
+                if (areas[index]) {
+                    accederArea(areas[index]);
+                }
+            }
+            
+            if (event.key === 'Escape') {
+                const confirmar = confirm('¿Desea cerrar sesión?');
+                if (confirmar) {
+                    cerrarSesion();
+                }
             }
         });
     </script>
