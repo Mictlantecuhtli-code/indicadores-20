@@ -132,7 +132,7 @@
         <div id="loadingScreen" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
             <div class="text-center">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p class="text-gray-600">Verificando permisos...</p>
+                <p class="text-gray-600">Cargando sistema...</p>
             </div>
         </div>
     
@@ -158,6 +158,7 @@
                 </button>
             </div>
         </div>
+
         <!-- Módulo de Captura -->
         <div id="moduloCaptura" class="bg-white rounded-lg shadow-lg p-6 hidden">
             <div class="flex justify-between items-center mb-6">
@@ -350,6 +351,7 @@
             </div>
         </div>
     </div>
+
     <!-- Scripts en orden específico -->
     <script src="config.js"></script>
     <script src="utils.js"></script>
@@ -365,60 +367,63 @@
         let userPermissionsApplied = false;
         
         /**
-         * Inicialización principal de la aplicación con autenticación
+         * Inicialización principal SIMPLIFICADA (sin verificaciones de BD)
          */
-        async function inicializarAplicacion() {
-            log('Iniciando aplicación con validaciones de autenticación');
+        function inicializarAplicacion() {
+            console.log('Iniciando aplicación con verificación simplificada');
             
             try {
                 mostrarPantallaCargar(true);
                 
-                // Verificar autenticación primero
-                const sesionValida = await authSystem.verificarSesionExistente();
+                // Verificación SOLO de localStorage
+                const token = localStorage.getItem('aifa_auth_token');
+                const userData = localStorage.getItem('aifa_user_data');
                 
-                if (!sesionValida.valid) {
-                    log('Sesión no válida, redirigiendo a login');
-                    if (sesionValida.expired) {
-                        mostrarNotificacion('Su sesión ha expirado', 'warning');
-                    }
+                if (!token || !userData) {
+                    console.log('No hay sesión local, redirigiendo a login');
                     window.location.href = 'login.html';
                     return;
                 }
                 
+                const user = JSON.parse(userData);
+                console.log('Usuario encontrado en localStorage:', user.username, user.rol);
+                
                 // Verificar permisos básicos
-                if (!verificarPermisos('capturar') && !verificarPermisos('ver_historico')) {
-                    log('Usuario sin permisos básicos');
-                    mostrarNotificacion('No tiene permisos para acceder a este sistema', 'error');
-                    setTimeout(() => {
-                        authSystem.redirigirSegunRol(currentUser);
-                    }, 2000);
+                if (!user.permisos || (!user.permisos.puede_capturar && !user.permisos.puede_ver_historico)) {
+                    console.log('Usuario sin permisos básicos');
+                    alert('No tiene permisos para acceder a este sistema');
+                    window.location.href = 'login.html';
                     return;
                 }
                 
+                // Restaurar currentUser sin verificar BD
+                window.currentUser = {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    rol: user.rol,
+                    area: user.area,
+                    permisos: user.permisos,
+                    isAuthenticated: true
+                };
+                
                 // Configurar UI según permisos
-                await configurarUISegunPermisos();
-                
-                // Mostrar información del usuario
+                configurarUISegunPermisos();
                 mostrarInformacionUsuario();
-                
-                // Aplicar restricciones específicas
                 aplicarRestriccionesEspecificas();
                 
                 // Mostrar menú principal
-                await showMenu();
+                showMenu();
                 
-                // Marcar como inicializada
                 appInitialized = true;
                 userPermissionsApplied = true;
                 
-                log('Aplicación inicializada correctamente');
+                console.log('Aplicación inicializada correctamente');
                 
             } catch (error) {
-                logError('Error inicializando aplicación', error);
-                mostrarNotificacion('Error al inicializar la aplicación', 'error');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 3000);
+                console.error('Error inicializando aplicación:', error);
+                alert('Error al cargar la aplicación');
+                window.location.href = 'login.html';
             } finally {
                 mostrarPantallaCargar(false);
             }
@@ -427,71 +432,57 @@
         /**
          * Configurar UI según permisos del usuario
          */
-        async function configurarUISegunPermisos() {
-            // Mostrar/ocultar elementos según permisos
+        function configurarUISegunPermisos() {
             const elementosCaptura = document.querySelectorAll('[data-require="capturar"]');
             const elementosEdicion = document.querySelectorAll('[data-require="editar"]');
             const elementosHistorico = document.querySelectorAll('[data-require="ver_historico"]');
             const elementosHistoricoOCaptura = document.querySelectorAll('[data-require="ver_historico,capturar"]');
             
-            // Elementos de captura
             if (!verificarPermisos('capturar')) {
-                elementosCaptura.forEach(el => {
-                    el.style.display = 'none';
-                });
+                elementosCaptura.forEach(el => el.style.display = 'none');
             }
             
-            // Elementos de edición
             if (!verificarPermisos('editar')) {
-                elementosEdicion.forEach(el => {
-                    el.style.display = 'none';
-                });
+                elementosEdicion.forEach(el => el.style.display = 'none');
             }
             
-            // Elementos de histórico
             if (!verificarPermisos('ver_historico')) {
-                elementosHistorico.forEach(el => {
-                    el.style.display = 'none';
-                });
+                elementosHistorico.forEach(el => el.style.display = 'none');
             }
             
-            // Elementos que requieren histórico O captura
             if (!verificarPermisos('ver_historico') && !verificarPermisos('capturar')) {
-                elementosHistoricoOCaptura.forEach(el => {
-                    el.style.display = 'none';
-                });
+                elementosHistoricoOCaptura.forEach(el => el.style.display = 'none');
             }
             
             // Mostrar botón de menú de áreas solo para subdirectores y admins
             const btnMenuAreas = document.getElementById('btnMenuAreas');
-            if (btnMenuAreas && (currentUser.rol === ROLES.SUBDIRECTOR || currentUser.rol === ROLES.ADMINISTRADOR)) {
+            if (btnMenuAreas && (currentUser.rol === 'subdirector' || currentUser.rol === 'administrador')) {
                 btnMenuAreas.classList.remove('hidden');
             }
             
-            log('UI configurada según permisos');
+            console.log('UI configurada según permisos');
         }
         
         /**
          * Mostrar información del usuario en la interfaz
          */
         function mostrarInformacionUsuario() {
-            // Elementos de nombre de usuario
             const elementosUsername = document.querySelectorAll('[data-user="username"], [data-user="username-display"]');
             elementosUsername.forEach(el => {
                 el.textContent = currentUser.username || 'Usuario';
             });
             
-            // Elementos de rol
             const elementosRol = document.querySelectorAll('[data-user="rol"], [data-user="rol-display"]');
             elementosRol.forEach(el => {
                 el.textContent = currentUser.rol || 'Sin rol';
             });
             
-            // Elementos de área con formato
             const elementosArea = document.querySelectorAll('[data-user="area-display"]');
             elementosArea.forEach(el => {
                 if (currentUser.area) {
-                    const nombreArea = AREAS_SUBDIRECTOR[currentUser.area]?.nombre || AREAS[currentUser.area] || currentUser.area;
+                    const nombreArea = AREAS_SUBDIRECTOR && AREAS_SUBDIRECTOR[currentUser.area] ? 
+                        AREAS_SUBDIRECTOR[currentUser.area].nombre : 
+                        (AREAS[currentUser.area] || currentUser.area);
                     el.textContent = ` - ${nombreArea}`;
                 } else {
                     el.textContent = '';
@@ -503,18 +494,17 @@
          * Aplicar restricciones específicas según el rol
          */
         function aplicarRestriccionesEspecificas() {
-            if (currentUser.rol === ROLES.CAPTURISTA) {
-                // Mostrar notificación de restricciones
+            if (currentUser.rol === 'capturista') {
                 const restrictionNotice = document.getElementById('restrictionNotice');
                 if (restrictionNotice) {
                     restrictionNotice.classList.remove('hidden');
                     const message = document.getElementById('restrictionMessage');
                     if (message) {
-                        message.textContent = `Acceso limitado al año ${ANO_ACTUAL} y área de ${AREAS[currentUser.area] || currentUser.area}`;
+                        const areaTexto = AREAS[currentUser.area] || currentUser.area;
+                        message.textContent = `Acceso limitado al año ${ANO_ACTUAL} y área de ${areaTexto}`;
                     }
                 }
                 
-                // Mostrar notificación en visualización
                 const visualizacionNotice = document.getElementById('visualizacionNotice');
                 if (visualizacionNotice) {
                     visualizacionNotice.classList.remove('hidden');
@@ -530,12 +520,12 @@
          * Función para ir al menú de áreas
          */
         function irAMenuAreas() {
-            if (currentUser.rol === ROLES.SUBDIRECTOR) {
+            if (currentUser.rol === 'subdirector') {
                 window.location.href = 'menu_subdirector.html';
-            } else if (currentUser.rol === ROLES.ADMINISTRADOR) {
+            } else if (currentUser.rol === 'administrador') {
                 window.location.href = 'menu_administrador.html';
             } else {
-                mostrarNotificacion('No tiene permisos para acceder al menú de áreas', 'error');
+                alert('No tiene permisos para acceder al menú de áreas');
             }
         }
         
@@ -553,82 +543,19 @@
             }
         }
         
-        /**
-         * Interceptor de funciones críticas para verificar permisos
-         */
-        const funcionesOriginales = {
-            guardarMedicion: window.guardarMedicion,
-            aplicarFiltrosVisualizacion: window.aplicarFiltrosVisualizacion
-        };
-        
-        // Interceptar guardarMedicion
-        window.guardarMedicion = async function() {
-            if (!verificarPermisos('capturar')) {
-                mostrarNotificacion('No tiene permisos para capturar datos', 'error');
-                return;
-            }
-            
-            if (funcionesOriginales.guardarMedicion) {
-                return await funcionesOriginales.guardarMedicion();
-            }
-        };
-        
-        // Interceptar aplicarFiltrosVisualizacion
-        window.aplicarFiltrosVisualizacion = async function() {
-            if (!verificarPermisos('ver_historico') && !verificarPermisos('capturar')) {
-                mostrarNotificacion('No tiene permisos para visualizar datos', 'error');
-                return;
-            }
-            
-            if (funcionesOriginales.aplicarFiltrosVisualizacion) {
-                return await funcionesOriginales.aplicarFiltrosVisualizacion();
-            }
-        };
-        
-        /**
-         * Manejo de errores globales
-         */
-        window.addEventListener('error', function(event) {
-            if (event.error && event.error.message.includes('permisos')) {
-                mostrarNotificacion('Error de permisos. Contacte al administrador.', 'error');
-            } else if (event.error && event.error.message.includes('autenticación')) {
-                mostrarNotificacion('Error de autenticación. Redirigiendo...', 'error');
-                setTimeout(() => {
-                    window.location.href = 'login.html';
-                }, 2000);
-            }
-        });
-        
-        /**
-         * Función de verificación periódica de permisos
-         */
-        function verificarPermisosPeriodicamente() {
-            setInterval(async () => {
-                if (!appInitialized || !currentUser.isAuthenticated) return;
-                
-                // Verificar que la sesión siga válida
-                const sesionValida = await authSystem.verificarSesionExistente();
-                if (!sesionValida.valid) {
-                    mostrarNotificacion('Su sesión ha expirado', 'warning');
-                    await cerrarSesion();
-                }
-            }, 120000); // Cada 2 minutos
-        }
-        
         // Exponer funciones globales necesarias
         window.irAMenuAreas = irAMenuAreas;
         
         /**
-         * Inicialización cuando carga la página
+         * Inicialización cuando carga la página (SIN VERIFICACIONES AUTOMÁTICAS)
          */
         document.addEventListener('DOMContentLoaded', function() {
-            log('DOM cargado, iniciando aplicación con autenticación');
+            console.log('DOM cargado, iniciando aplicación simplificada');
             inicializarAplicacion();
-            verificarPermisosPeriodicamente();
         });
         
         // Log final
-        log('index_v2.html con autenticación cargado completamente');
+        console.log('index_v2.html con autenticación simplificada cargado');
     </script>
 </body>
 </html>
