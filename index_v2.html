@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indicadores Aviación 2.0</title>
+    <title>Indicadores AIFA 2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -24,32 +24,142 @@
         input[type="checkbox"] {
             accent-color: #10B981;
         }
+        
+        /* Estilos para elementos deshabilitados */
+        .disabled-by-role {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .disabled-by-role input,
+        .disabled-by-role select {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+        }
+        
+        /* Header de usuario */
+        .user-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
+        }
+        
+        .user-info {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        /* Notificación de restricciones */
+        .restriction-notice {
+            background: linear-gradient(90deg, #FEF3C7, #FED7AA);
+            border-left: 4px solid #F59E0B;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     
-    <!-- Menú Principal -->
-    <div id="menuPrincipal" class="container mx-auto p-4">
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h1 class="text-2xl font-bold text-center mb-6 text-blue-800">Sistema de Indicadores de Aviación</h1>
+    <!-- Header con información de usuario -->
+    <header class="user-header text-white shadow-lg">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="text-3xl">✈️</div>
+                    <div>
+                        <h1 class="text-xl font-bold">Sistema de Indicadores AIFA</h1>
+                        <p class="text-blue-200 text-sm">Aeropuerto Internacional Felipe Ángeles</p>
+                    </div>
+                </div>
+                
+                <!-- Información del Usuario -->
+                <div class="flex items-center space-x-4">
+                    <div class="user-info rounded-lg px-4 py-2 flex items-center space-x-3">
+                        <div class="text-right">
+                            <p class="font-semibold text-sm" data-user="username">Cargando...</p>
+                            <p class="text-xs text-blue-200">
+                                <span class="capitalize" data-user="rol">-</span>
+                                <span data-user="area-display"></span>
+                            </p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <!-- Botón Menú (solo para subdirectores y admins) -->
+                            <button 
+                                id="btnMenuAreas"
+                                onclick="irAMenuAreas()" 
+                                class="hidden bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-white text-xs font-medium transition-all"
+                                title="Menú de Áreas"
+                            >
+                                📋 Áreas
+                            </button>
+                            <!-- Botón Cerrar Sesión -->
+                            <button 
+                                onclick="cerrarSesion()" 
+                                class="logout-btn px-3 py-2 rounded text-white text-xs font-medium"
+                                title="Cerrar Sesión"
+                            >
+                                Salir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notificación de restricciones para capturistas -->
+        <div id="restrictionNotice" class="hidden restriction-notice text-yellow-800 px-4 py-2 text-sm">
+            <div class="container mx-auto flex items-center">
+                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span id="restrictionMessage">Acceso limitado al año actual</span>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Contenido Principal -->
+    <div class="container mx-auto p-4">
+        
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-gray-600">Verificando permisos...</p>
+            </div>
+        </div>
+    
+        <!-- Menú Principal -->
+        <div id="menuPrincipal" class="bg-white rounded-lg shadow-lg p-6 hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-center text-blue-800">Sistema de Indicadores</h1>
+                <div class="text-sm text-gray-600">
+                    <span data-user="username-display">Usuario</span> - 
+                    <span class="capitalize" data-user="rol-display">Rol</span>
+                </div>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-                <button onclick="showCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg transition-colors">
+                <button onclick="showCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg transition-colors" data-require="capturar">
                     <div class="text-3xl mb-2">📊</div>
                     <div class="text-xl font-semibold">Módulo de Captura</div>
                     <div class="text-sm opacity-90">Capturar indicadores y metas</div>
                 </button>
-                <button onclick="showVisualizacion()" class="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg transition-colors">
+                <button onclick="showVisualizacion()" class="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg transition-colors" data-require="ver_historico,capturar">
                     <div class="text-3xl mb-2">📈</div>
                     <div class="text-xl font-semibold">Visualización</div>
                     <div class="text-sm opacity-90">Consultar y comparar datos</div>
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Módulo de Captura -->
-    <div id="moduloCaptura" class="container mx-auto p-4 hidden">
-        <div class="bg-white rounded-lg shadow-lg p-6">
+        <!-- Módulo de Captura -->
+        <div id="moduloCaptura" class="bg-white rounded-lg shadow-lg p-6 hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-blue-800">Módulo de Captura</h2>
                 <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
@@ -91,9 +201,12 @@
                 <div>
                     <label class="block text-sm font-medium mb-1">Meta</label>
                     <input type="number" id="fMeta" class="w-full border rounded px-3 py-2" step="0.01">
+                    <div id="metaReadOnly" class="hidden text-sm text-gray-600 mt-1">
+                        Meta automática desde escenarios
+                    </div>
                 </div>
                 <div class="flex items-end">
-                    <button onclick="guardarMedicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full">
+                    <button onclick="guardarMedicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full" data-require="capturar">
                         Guardar
                     </button>
                 </div>
@@ -118,6 +231,7 @@
                                 <th class="border border-gray-300 px-4 py-2">Valor</th>
                                 <th class="border border-gray-300 px-4 py-2">Meta</th>
                                 <th class="border border-gray-300 px-4 py-2">% Cumplimiento</th>
+                                <th class="border border-gray-300 px-4 py-2" data-require="editar">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyCaptura">
@@ -126,15 +240,27 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Módulo de Visualización - Menú -->
-    <div id="menuVisualizacion" class="container mx-auto p-4 hidden">
-        <div class="bg-white rounded-lg shadow-lg p-6">
+        <!-- Módulo de Visualización - Menú -->
+        <div id="menuVisualizacion" class="bg-white rounded-lg shadow-lg p-6 hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-green-800">Módulo de Visualización</h2>
                 <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
             </div>
+            
+            <!-- Notificación de permisos para capturistas -->
+            <div id="visualizacionNotice" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <div>
+                        <p class="text-blue-800 font-medium">Visualización limitada</p>
+                        <p class="text-blue-600 text-sm" id="visualizacionLimite">Solo puede ver datos del año actual</p>
+                    </div>
+                </div>
+            </div>
+            
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
                 <button onclick="showVisualizacionDetalle('pasajeros')" class="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-lg transition-colors">
                     <div class="text-4xl mb-2">👥</div>
@@ -153,17 +279,15 @@
                 </button>
             </div>
         </div>
-    </div>
 
-    <!-- Módulo de Visualización - Detalle -->
-    <div id="visualizacionDetalle" class="container mx-auto p-4 hidden">
-        <div class="bg-white rounded-lg shadow-lg p-6">
+        <!-- Módulo de Visualización - Detalle -->
+        <div id="visualizacionDetalle" class="bg-white rounded-lg shadow-lg p-6 hidden">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-bold text-green-800" id="tituloDetalle">Visualización</h2>
                 <button onclick="showVisualizacion()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
             </div>
             
-            <!-- Filtros ACTUALIZADOS CON ESCENARIO -->
+            <!-- Filtros -->
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 <div>
                     <label class="block text-sm font-medium mb-1">Año Actual</label>
@@ -208,7 +332,7 @@
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-semibold">Gráfica Comparativa</h3>
-                    <label class="flex items-center space-x-2 cursor-pointer">
+                    <label class="flex items-center space-x-2 cursor-pointer" data-require="ver_historico">
                         <input type="checkbox" id="chkMostrarHistorico" class="rounded">
                         <span class="text-sm text-gray-700">Mostrar gráfica histórica completa</span>
                     </label>
@@ -220,26 +344,291 @@
             
             <!-- Botón de descarga -->
             <div class="text-center">
-                <button id="btnDescargar" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold">
+                <button id="btnDescargar" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold" data-require="ver_historico">
                     📥 Descargar Información
                 </button>
             </div>
         </div>
     </div>
-
     <!-- Scripts en orden específico -->
     <script src="config.js"></script>
     <script src="utils.js"></script>
     <script src="charts.js"></script>
+    <script src="auth.js"></script>
     <script src="navigation.js"></script>
     <script src="captura.js"></script>
     <script src="visualizacion.js"></script>
     
     <script>
-        // Inicialización cuando carga la página
-        document.addEventListener('DOMContentLoaded', function() {
-            showMenu();
+        // Variables globales de la aplicación
+        let appInitialized = false;
+        let userPermissionsApplied = false;
+        
+        /**
+         * Inicialización principal de la aplicación con autenticación
+         */
+        async function inicializarAplicacion() {
+            log('Iniciando aplicación con validaciones de autenticación');
+            
+            try {
+                mostrarPantallaCargar(true);
+                
+                // Verificar autenticación primero
+                const sesionValida = await authSystem.verificarSesionExistente();
+                
+                if (!sesionValida.valid) {
+                    log('Sesión no válida, redirigiendo a login');
+                    if (sesionValida.expired) {
+                        mostrarNotificacion('Su sesión ha expirado', 'warning');
+                    }
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                // Verificar permisos básicos
+                if (!verificarPermisos('capturar') && !verificarPermisos('ver_historico')) {
+                    log('Usuario sin permisos básicos');
+                    mostrarNotificacion('No tiene permisos para acceder a este sistema', 'error');
+                    setTimeout(() => {
+                        authSystem.redirigirSegunRol(currentUser);
+                    }, 2000);
+                    return;
+                }
+                
+                // Configurar UI según permisos
+                await configurarUISegunPermisos();
+                
+                // Mostrar información del usuario
+                mostrarInformacionUsuario();
+                
+                // Aplicar restricciones específicas
+                aplicarRestriccionesEspecificas();
+                
+                // Mostrar menú principal
+                await showMenu();
+                
+                // Marcar como inicializada
+                appInitialized = true;
+                userPermissionsApplied = true;
+                
+                log('Aplicación inicializada correctamente');
+                
+            } catch (error) {
+                logError('Error inicializando aplicación', error);
+                mostrarNotificacion('Error al inicializar la aplicación', 'error');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 3000);
+            } finally {
+                mostrarPantallaCargar(false);
+            }
+        }
+        
+        /**
+         * Configurar UI según permisos del usuario
+         */
+        async function configurarUISegunPermisos() {
+            // Mostrar/ocultar elementos según permisos
+            const elementosCaptura = document.querySelectorAll('[data-require="capturar"]');
+            const elementosEdicion = document.querySelectorAll('[data-require="editar"]');
+            const elementosHistorico = document.querySelectorAll('[data-require="ver_historico"]');
+            const elementosHistoricoOCaptura = document.querySelectorAll('[data-require="ver_historico,capturar"]');
+            
+            // Elementos de captura
+            if (!verificarPermisos('capturar')) {
+                elementosCaptura.forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+            
+            // Elementos de edición
+            if (!verificarPermisos('editar')) {
+                elementosEdicion.forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+            
+            // Elementos de histórico
+            if (!verificarPermisos('ver_historico')) {
+                elementosHistorico.forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+            
+            // Elementos que requieren histórico O captura
+            if (!verificarPermisos('ver_historico') && !verificarPermisos('capturar')) {
+                elementosHistoricoOCaptura.forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+            
+            // Mostrar botón de menú de áreas solo para subdirectores y admins
+            const btnMenuAreas = document.getElementById('btnMenuAreas');
+            if (btnMenuAreas && (currentUser.rol === ROLES.SUBDIRECTOR || currentUser.rol === ROLES.ADMINISTRADOR)) {
+                btnMenuAreas.classList.remove('hidden');
+            }
+            
+            log('UI configurada según permisos');
+        }
+        
+        /**
+         * Mostrar información del usuario en la interfaz
+         */
+        function mostrarInformacionUsuario() {
+            // Elementos de nombre de usuario
+            const elementosUsername = document.querySelectorAll('[data-user="username"], [data-user="username-display"]');
+            elementosUsername.forEach(el => {
+                el.textContent = currentUser.username || 'Usuario';
+            });
+            
+            // Elementos de rol
+            const elementosRol = document.querySelectorAll('[data-user="rol"], [data-user="rol-display"]');
+            elementosRol.forEach(el => {
+                el.textContent = currentUser.rol || 'Sin rol';
+            });
+            
+            // Elementos de área con formato
+            const elementosArea = document.querySelectorAll('[data-user="area-display"]');
+            elementosArea.forEach(el => {
+                if (currentUser.area) {
+                    const nombreArea = AREAS_SUBDIRECTOR[currentUser.area]?.nombre || AREAS[currentUser.area] || currentUser.area;
+                    el.textContent = ` - ${nombreArea}`;
+                } else {
+                    el.textContent = '';
+                }
+            });
+        }
+        
+        /**
+         * Aplicar restricciones específicas según el rol
+         */
+        function aplicarRestriccionesEspecificas() {
+            if (currentUser.rol === ROLES.CAPTURISTA) {
+                // Mostrar notificación de restricciones
+                const restrictionNotice = document.getElementById('restrictionNotice');
+                if (restrictionNotice) {
+                    restrictionNotice.classList.remove('hidden');
+                    const message = document.getElementById('restrictionMessage');
+                    if (message) {
+                        message.textContent = `Acceso limitado al año ${ANO_ACTUAL} y área de ${AREAS[currentUser.area] || currentUser.area}`;
+                    }
+                }
+                
+                // Mostrar notificación en visualización
+                const visualizacionNotice = document.getElementById('visualizacionNotice');
+                if (visualizacionNotice) {
+                    visualizacionNotice.classList.remove('hidden');
+                    const limite = document.getElementById('visualizacionLimite');
+                    if (limite) {
+                        limite.textContent = `Solo puede ver datos del año ${ANO_ACTUAL}`;
+                    }
+                }
+            }
+        }
+        
+        /**
+         * Función para ir al menú de áreas
+         */
+        function irAMenuAreas() {
+            if (currentUser.rol === ROLES.SUBDIRECTOR) {
+                window.location.href = 'menu_subdirector.html';
+            } else if (currentUser.rol === ROLES.ADMINISTRADOR) {
+                window.location.href = 'menu_administrador.html';
+            } else {
+                mostrarNotificacion('No tiene permisos para acceder al menú de áreas', 'error');
+            }
+        }
+        
+        /**
+         * Funciones de utilidad para la interfaz
+         */
+        function mostrarPantallaCargar(mostrar) {
+            const loadingScreen = document.getElementById('loadingScreen');
+            if (loadingScreen) {
+                if (mostrar) {
+                    loadingScreen.classList.remove('hidden');
+                } else {
+                    loadingScreen.classList.add('hidden');
+                }
+            }
+        }
+        
+        /**
+         * Interceptor de funciones críticas para verificar permisos
+         */
+        const funcionesOriginales = {
+            guardarMedicion: window.guardarMedicion,
+            aplicarFiltrosVisualizacion: window.aplicarFiltrosVisualizacion
+        };
+        
+        // Interceptar guardarMedicion
+        window.guardarMedicion = async function() {
+            if (!verificarPermisos('capturar')) {
+                mostrarNotificacion('No tiene permisos para capturar datos', 'error');
+                return;
+            }
+            
+            if (funcionesOriginales.guardarMedicion) {
+                return await funcionesOriginales.guardarMedicion();
+            }
+        };
+        
+        // Interceptar aplicarFiltrosVisualizacion
+        window.aplicarFiltrosVisualizacion = async function() {
+            if (!verificarPermisos('ver_historico') && !verificarPermisos('capturar')) {
+                mostrarNotificacion('No tiene permisos para visualizar datos', 'error');
+                return;
+            }
+            
+            if (funcionesOriginales.aplicarFiltrosVisualizacion) {
+                return await funcionesOriginales.aplicarFiltrosVisualizacion();
+            }
+        };
+        
+        /**
+         * Manejo de errores globales
+         */
+        window.addEventListener('error', function(event) {
+            if (event.error && event.error.message.includes('permisos')) {
+                mostrarNotificacion('Error de permisos. Contacte al administrador.', 'error');
+            } else if (event.error && event.error.message.includes('autenticación')) {
+                mostrarNotificacion('Error de autenticación. Redirigiendo...', 'error');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+            }
         });
+        
+        /**
+         * Función de verificación periódica de permisos
+         */
+        function verificarPermisosPeriodicamente() {
+            setInterval(async () => {
+                if (!appInitialized || !currentUser.isAuthenticated) return;
+                
+                // Verificar que la sesión siga válida
+                const sesionValida = await authSystem.verificarSesionExistente();
+                if (!sesionValida.valid) {
+                    mostrarNotificacion('Su sesión ha expirado', 'warning');
+                    await cerrarSesion();
+                }
+            }, 120000); // Cada 2 minutos
+        }
+        
+        // Exponer funciones globales necesarias
+        window.irAMenuAreas = irAMenuAreas;
+        
+        /**
+         * Inicialización cuando carga la página
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            log('DOM cargado, iniciando aplicación con autenticación');
+            inicializarAplicacion();
+            verificarPermisosPeriodicamente();
+        });
+        
+        // Log final
+        log('index_v2.html con autenticación cargado completamente');
     </script>
 </body>
 </html>
