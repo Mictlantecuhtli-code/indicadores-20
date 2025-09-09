@@ -63,8 +63,8 @@ function checkPageAccess() {
     console.log('Verificando acceso a:', currentPage);
     
     // Páginas que no requieren autenticación
-    const publicPages = ['login.html', 'recuperar.html'];
-    publicPages.push('construccion.html');
+    const publicPages = ['login.html', 'recuperar.html', 'construccion.html'];
+    //publicPages.push('construccion.html');
     
     if (publicPages.includes(currentPage)) {
         return true;
