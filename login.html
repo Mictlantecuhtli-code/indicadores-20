@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Ingreso | Indicadores AIFA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Tailwind (opcional) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #f1f5f9; }
+    .card { backdrop-filter: blur(6px); }
+    .spin { border-top-color: transparent; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center">
+
+  <div class="w-full max-w-md">
+    <div class="bg-white/90 card shadow-xl rounded-xl p-6">
+      <div class="flex items-center justify-center mb-4">
+        <div class="text-4xl mr-2">✈️</div>
+        <h1 class="text-xl font-bold text-slate-800">Sistema de Indicadores AIFA</h1>
+      </div>
+
+      <p class="text-slate-500 text-sm mb-6 text-center">
+        Inicia sesión con tu usuario de AIFA.
+      </p>
+
+      <!-- Alert -->
+      <div id="alert" class="hidden mb-4 p-3 rounded-lg text-sm"></div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Usuario</label>
+          <input id="username" type="text" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring"
+                 autocomplete="username" required />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+          <input id="password" type="password" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring"
+                 autocomplete="current-password" required />
+        </div>
+
+        <div class="flex items-center justify-between">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-600">
+            <input id="remember" type="checkbox" class="rounded">
+            Recordarme
+          </label>
+          <a href="recuperar.html" class="text-sm text-blue-700 hover:underline">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <button id="btnLogin" type="submit"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg py-2.5 transition">
+          Entrar
+        </button>
+      </form>
+    </div>
+
+    <p class="text-center text-xs text-slate-400 mt-4">
+      © <span id="y"></span> AIFA
+    </p>
+  </div>
+
+  <!-- Scripts base del proyecto -->
+  <script src="config.js"></script>
+  <script src="utils.js"></script>
+  <script src="navigation.js"></script>
+  <script src="auth.js"></script>
+
+  <script>
+    // Utilidades UI locales
+    function showAlert(msg, type) {
+      const el = document.getElementById('alert');
+      if (!el) return;
+      el.textContent = msg || '';
+      el.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-800');
+      if (type === 'error')  el.classList.add('bg-red-100','text-red-700');
+      else if (type === 'ok') el.classList.add('bg-green-100','text-green-700');
+      else el.classList.add('bg-yellow-100','text-yellow-800');
+    }
+    function hideAlert() {
+      const el = document.getElementById('alert');
+      if (el) el.classList.add('hidden');
+    }
+    function setLoading(on) {
+      const btn = document.getElementById('btnLogin');
+      if (!btn) return;
+      if (on) {
+        btn.disabled = true;
+        btn.dataset._old = btn.innerHTML;
+        btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white/60 spin rounded-full animate-spin mr-2 align-[-2px]"></span> Verificando...';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset._old || 'Entrar';
+      }
+    }
+    function genToken() {
+      const rnd = Math.random().toString(36).slice(2);
+      const stamp = Date.now().toString(36);
+      return `aifa_${Date.now()}_${rnd}_${navigator.userAgent.split(' ').at(0) || 'ua'}`;
+    }
+
+    // Año pie
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('=== LOGIN INIT ===');
+
+      // 1) Si ya hay sesión, redirige a destino
+      try {
+        const s = (typeof readSession === 'function') ? readSession() : { token:null, userStr:null };
+        console.log('Session at load:', s);
+        if (s.token && s.userStr) {
+          const to = localStorage.getItem('aifa_redirect_after_login') || 'index_v2.html';
+          console.log('Ya hay sesión. Redirigiendo a:', to);
+          window.location.href = to;
+          return;
+        }
+      } catch (e) {
+        console.warn('No se pudo leer sesión al cargar login:', e);
+      }
+
+      // 2) Manejador submit
+      const form = document.getElementById('loginForm');
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        hideAlert();
+
+        const username = (document.getElementById('username').value || '').trim();
+        const password = (document.getElementById('password').value || '').trim();
+        const remember = !!document.getElementById('remember').checked;
+
+        if (!username || !password) {
+          showAlert('Capture usuario y contraseña.', 'error');
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          // 3) Intentar login “oficial” si existe authSystem.login
+          let userObj = null;
+
+          if (window.authSystem && typeof authSystem.login === 'function') {
+            console.log('[LOGIN] Autenticando con authSystem.login');
+            userObj = await authSystem.login(username, password); // debe lanzar en error de credenciales
+          } else {
+            // 4) Fallback: login local usando USUARIOS del config (opcional)
+            console.log('[LOGIN] authSystem.login no disponible → modo local');
+            if (Array.isArray(window.USUARIOS)) {
+              const found = USUARIOS.find(u => u.username === username && u.password === password);
+              if (found) {
+                userObj = {
+                  id: found.id || 0,
+                  username: found.username,
+                  email: found.email || '',
+                  rol: found.rol || 'capturista',
+                  area: found.area || 'operaciones',
+                  permisos: found.permisos || null
+                };
+              } else {
+                throw new Error('Credenciales incorrectas (modo local).');
+              }
+            } else {
+              throw new Error('No hay backend de autenticación ni catálogo local (USUARIOS).');
+            }
+          }
+
+          // 5) Normalizar permisos si no vienen
+          if (!userObj.permisos) {
+            const rol = (userObj.rol || '').toLowerCase();
+            if (rol === 'administrador' || rol === 'subdirector') {
+              userObj.permisos = {
+                puede_capturar: true,
+                puede_editar: true,
+                puede_ver_historico: true,
+                puede_administrar_usuarios: (rol === 'administrador'),
+                anos_permitidos: [ (window.ANO_ACTUAL || new Date().getFullYear()) ],
+                areas_permitidas: Object.keys(window.AREAS || { operaciones:1, comercial:1, general:1, carga:1 })
+              };
+            } else {
+              // Capturista por defecto
+              userObj.permisos = {
+                puede_capturar: true,
+                puede_editar: false,
+                puede_ver_historico: false,
+                puede_administrar_usuarios: false,
+                anos_permitidos: [ (window.ANO_ACTUAL || new Date().getFullYear()) ],
+                areas_permitidas: Object.keys(window.AREAS || { operaciones:1, comercial:1, general:1, carga:1 })
+              };
+            }
+          }
+
+          // 6) Persistir sesión (LS/SS según “Recordarme”)
+          const token = genToken();
+          if (typeof setSession === 'function') {
+            setSession(token, userObj, remember);
+          } else {
+            // fallback ultra simple si utils.js no cargó
+            (remember ? localStorage : sessionStorage).setItem('aifa_auth_token', token);
+            (remember ? localStorage : sessionStorage).setItem('aifa_user_data', JSON.stringify(userObj));
+          }
+
+          // 7) Refrescar currentUser global (evitar redeclarar)
+          window.currentUser = Object.assign({}, window.currentUser || {}, userObj, { isAuthenticated: true });
+
+          // 8) Redirigir a destino
+          const go = localStorage.getItem('aifa_redirect_after_login') || 'index_v2.html';
+          localStorage.removeItem('aifa_redirect_after_login');
+          showAlert('Acceso concedido. Redirigiendo…', 'ok');
+          setTimeout(() => { window.location.href = go; }, 200);
+
+        } catch (err) {
+          console.error('[LOGIN] Error:', err);
+          showAlert(err?.message || 'No fue posible iniciar sesión.', 'error');
+        } finally {
+          setLoading(false);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
