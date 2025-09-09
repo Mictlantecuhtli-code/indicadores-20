@@ -485,7 +485,7 @@ function redirigirSegunRol(usuario) {
             break;
             
         case ROLES.ADMINISTRADOR:
-            // Administradores pueden elegir entre áreas o administración
+            // Administradores van a su menú específico
             window.location.href = 'menu_administrador.html';
             break;
             
