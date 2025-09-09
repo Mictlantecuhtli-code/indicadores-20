@@ -74,7 +74,7 @@ const AREAS_SUBDIRECTOR = {
     'recursos_humanos': {
         nombre: 'Recursos Humanos',
         icono: '👥',
-        descripción: 'Gestión del capital humano'
+        descripcion: 'Gestión del capital humano'
     },
     'comercial': {
         nombre: 'Comercial',
