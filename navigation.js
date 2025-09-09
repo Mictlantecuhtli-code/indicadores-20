@@ -71,8 +71,8 @@ function checkPageAccess() {
     }
     
     // Verificar si hay sesión
-    const token = localStorage.getItem('aifa_auth_token');
-    const userData = localStorage.getItem('aifa_user_data');
+    const token = localStorage.getItem(SESSION_CONFIG.token_key);
+    const userData = localStorage.getItem(SESSION_CONFIG.user_key);
     
     if (!token || !userData) {
         console.log('No hay sesión activa, redirigiendo a login');
@@ -115,25 +115,38 @@ function checkPageAccess() {
  * Navegar a una página específica
  * @param {string} page - Nombre de la página (ej: 'index.html')
  */
-function navigateTo(page) {
-    console.log('Navegando a:', page);
+    function navigateTo(page) {
+      console.log('Navegando a:', page);
     
-    // Verificar si la página requiere autenticación
-    const publicPages = ['login.html', 'recuperar.html'];
+      // Normaliza por si te pasan rutas tipo "/algo/index_v2.html"
+      const pageName = (page || '').split('/').pop();
+      const publicPages = ['login.html', 'recuperar.html'];
     
-    if (!publicPages.includes(page)) {
-        const token = localStorage.getItem('aifa_auth_token') || sessionStorage.getItem(SESSION_CONFIG.token_key);
-        if (!token) {
-            console.log('Se requiere autenticación');
-            localStorage.setItem('aifa_redirect_after_login', page);
-            window.location.href = 'login.html';
-            return;
+      // Usa las mismas llaves que auth.js
+      const tokenKey = (window.SESSION_CONFIG && SESSION_CONFIG.token_key) || 'aifa_auth_token';
+      const userKey  = (window.SESSION_CONFIG && SESSION_CONFIG.user_key)  || 'aifa_user_data';
+      const redirectKey = 'aifa_redirect_after_login';
+    
+      // Si la página NO es pública, exige sesión
+      if (!publicPages.includes(pageName)) {
+        const token = localStorage.getItem(tokenKey) || sessionStorage.getItem(tokenKey);
+        const userData = localStorage.getItem(userKey) || sessionStorage.getItem(userKey);
+    
+        if (!token || !userData) {
+          console.log('Se requiere autenticación');
+          try {
+            // guarda a dónde querías ir
+            localStorage.setItem(redirectKey, page);
+          } catch (_) {}
+          // envía a login
+          window.location.href = 'login.html';
+          return;
         }
-    }
+      }
     
-    // Navegar a la página
-    window.location.href = page;
-}
+      // Navegar a la página solicitada (mantén el path original)
+      window.location.href = page;
+    }
 
 /**
  * Redirigir al usuario según su rol
