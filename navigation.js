@@ -1,441 +1,422 @@
-// ====================================
-// ARCHIVO 5: navigation.js (CORREGIDO SIN BUCLES)
-// Funciones de navegación entre módulos con validaciones simplificadas
-// ====================================
+/**
+ * Sistema de Navegación y Control de Acceso
+ * Maneja la navegación entre páginas y verificación de permisos
+ */
+
+// Variable global para almacenar datos del usuario actual
+let currentUser = null;
 
 /**
- * Estados de navegación
+ * Inicializar sistema de navegación
  */
-const NAVEGACION_ESTADOS = {
-    MENU_PRINCIPAL: 'menuPrincipal',
-    MODULO_CAPTURA: 'moduloCaptura',
-    MENU_VISUALIZACION: 'menuVisualizacion',
-    DETALLE_VISUALIZACION: 'visualizacionDetalle'
-};
-
-let estadoActual = NAVEGACION_ESTADOS.MENU_PRINCIPAL;
-let historialNavegacion = [];
+function initNavigation() {
+    console.log('Inicializando sistema de navegación');
+    
+    // Verificar si hay una sesión activa
+    const token = localStorage.getItem('aifa_auth_token');
+    const userData = localStorage.getItem('aifa_user_data');
+    
+    if (token && userData) {
+        try {
+            currentUser = JSON.parse(userData);
+            console.log('Usuario restaurado:', currentUser.username, currentUser.rol);
+        } catch (error) {
+            console.error('Error restaurando usuario:', error);
+            currentUser = null;
+        }
+    }
+    
+    // Agregar event listeners para navegación
+    document.addEventListener('DOMContentLoaded', function() {
+        setupNavigationListeners();
+        checkPageAccess();
+    });
+}
 
 /**
- * Verificar autenticación simple (solo localStorage)
+ * Configurar listeners de navegación
  */
-function verificarAutenticacionSimple() {
+function setupNavigationListeners() {
+    // Prevenir navegación con retroceso si no hay sesión
+    window.addEventListener('popstate', function(event) {
+        checkPageAccess();
+    });
+    
+    // Interceptar clicks en enlaces
+    document.addEventListener('click', function(event) {
+        const link = event.target.closest('a');
+        if (link && link.href && !link.target && !link.download) {
+            const url = new URL(link.href);
+            if (url.origin === window.location.origin) {
+                event.preventDefault();
+                navigateTo(url.pathname.split('/').pop());
+            }
+        }
+    });
+}
+
+/**
+ * Verificar acceso a la página actual
+ */
+function checkPageAccess() {
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    console.log('Verificando acceso a:', currentPage);
+    
+    // Páginas que no requieren autenticación
+    const publicPages = ['login.html', 'recuperar.html'];
+    
+    if (publicPages.includes(currentPage)) {
+        return true;
+    }
+    
+    // Verificar si hay sesión
     const token = localStorage.getItem('aifa_auth_token');
     const userData = localStorage.getItem('aifa_user_data');
     
     if (!token || !userData) {
-        console.log('No hay sesión local válida');
+        console.log('No hay sesión activa, redirigiendo a login');
+        window.location.href = 'login.html';
+        return false;
+    }
+    
+    // Verificar permisos según la página
+    try {
+        const user = JSON.parse(userData);
+        
+        // Páginas con restricción de rol
+        const pagePermissions = {
+            'menu_administrador.html': ['administrador'],
+            'menu_subdirector.html': ['subdirector', 'administrador'],
+            'admin_usuarios.html': ['administrador'],
+            'admin_areas.html': ['administrador']
+        };
+        
+        if (pagePermissions[currentPage]) {
+            const allowedRoles = pagePermissions[currentPage];
+            if (!allowedRoles.includes(user.rol)) {
+                console.log('Usuario no tiene permisos para esta página');
+                alert('No tienes permisos para acceder a esta página');
+                redirectToHome(user.rol);
+                return false;
+            }
+        }
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error verificando permisos:', error);
+        window.location.href = 'login.html';
+        return false;
+    }
+}
+
+/**
+ * Navegar a una página específica
+ * @param {string} page - Nombre de la página (ej: 'index.html')
+ */
+function navigateTo(page) {
+    console.log('Navegando a:', page);
+    
+    // Verificar si la página requiere autenticación
+    const publicPages = ['login.html', 'recuperar.html'];
+    
+    if (!publicPages.includes(page)) {
+        const token = localStorage.getItem('aifa_auth_token');
+        if (!token) {
+            console.log('Se requiere autenticación');
+            localStorage.setItem('aifa_redirect_after_login', page);
+            window.location.href = 'login.html';
+            return;
+        }
+    }
+    
+    // Navegar a la página
+    window.location.href = page;
+}
+
+/**
+ * Redirigir al usuario según su rol
+ * @param {string} rol - Rol del usuario
+ */
+function redirectToHome(rol) {
+    console.log('Redirigiendo según rol:', rol);
+    
+    switch(rol) {
+        case 'administrador':
+            window.location.href = 'menu_administrador.html';
+            break;
+        case 'subdirector':
+            window.location.href = 'menu_subdirector.html';
+            break;
+        case 'capturista':
+            window.location.href = 'index_v2.html';
+            break;
+        default:
+            window.location.href = 'index_v2.html';
+    }
+}
+
+/**
+ * Verificar si el usuario tiene un rol específico
+ * @param {string} requiredRole - Rol requerido
+ * @returns {boolean} - True si el usuario tiene el rol
+ */
+function checkUserRole(requiredRole) {
+    const userData = localStorage.getItem('aifa_user_data');
+    
+    if (!userData) {
         return false;
     }
     
     try {
         const user = JSON.parse(userData);
         
-        // Restaurar currentUser si no está configurado
-        if (!window.currentUser || !window.currentUser.isAuthenticated) {
-            window.currentUser = {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                rol: user.rol,
-                area: user.area,
-                permisos: user.permisos,
-                isAuthenticated: true
-            };
+        // Para administrador, verificación exacta
+        if (requiredRole === 'administrador') {
+            return user.rol === 'administrador';
         }
         
-        return true;
+        // Para otros roles, verificación jerárquica
+        const roleHierarchy = {
+            'capturista': 1,
+            'subdirector': 2,
+            'administrador': 3
+        };
+        
+        const userLevel = roleHierarchy[user.rol] || 0;
+        const requiredLevel = roleHierarchy[requiredRole] || 999;
+        
+        return userLevel >= requiredLevel;
+        
     } catch (error) {
-        console.error('Error verificando sesión simple:', error);
+        console.error('Error verificando rol:', error);
         return false;
     }
 }
 
 /**
- * Función principal para mostrar el menú principal
+ * Verificar si el usuario tiene permiso para un área específica
+ * @param {string} area - Área a verificar
+ * @returns {boolean} - True si tiene permiso
  */
-function showMenu() {
-    log('Navegando a menú principal');
+function checkAreaPermission(area) {
+    const userData = localStorage.getItem('aifa_user_data');
     
-    // Verificar autenticación simple
-    if (!verificarAutenticacionSimple()) {
-        window.location.href = 'login.html';
-        return;
+    if (!userData) {
+        return false;
     }
     
-    // Limpiar gráficas al salir de otros módulos
-    destruirGraficas();
-    
-    // Ocultar todos los contenedores
-    ocultarTodosLosModulos();
-    
-    // Mostrar menú principal
-    const menuPrincipal = $('#menuPrincipal');
-    if (menuPrincipal) {
-        menuPrincipal.classList.remove('hidden');
-    }
-    
-    // Actualizar estado
-    estadoActual = NAVEGACION_ESTADOS.MENU_PRINCIPAL;
-    actualizarHistorialNavegacion(NAVEGACION_ESTADOS.MENU_PRINCIPAL);
-    
-    // Resetear contexto
-    resetearContexto();
-    
-    // Aplicar restricciones de UI según rol
-    aplicarRestriccionesUI();
-}
-
-/**
- * Función para mostrar el módulo de captura
- */
-function showCaptura() {
-    log('Navegando a módulo de captura');
-    
-    // Verificar autenticación simple
-    if (!verificarAutenticacionSimple()) {
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    if (!verificarPermisos('capturar')) {
-        mostrarNotificacion('No tiene permisos para capturar datos', 'error');
-        return;
-    }
-    
-    // Limpiar gráficas anteriores
-    destruirGraficas();
-    
-    // Ocultar todos los módulos
-    ocultarTodosLosModulos();
-    
-    // Mostrar módulo de captura
-    const moduloCaptura = $('#moduloCaptura');
-    if (moduloCaptura) {
-        moduloCaptura.classList.remove('hidden');
-    }
-    
-    // Actualizar estado
-    estadoActual = NAVEGACION_ESTADOS.MODULO_CAPTURA;
-    actualizarHistorialNavegacion(NAVEGACION_ESTADOS.MODULO_CAPTURA);
-    
-    // Inicializar módulo de captura con restricciones
     try {
-        if (typeof inicializarModuloCaptura === 'function') {
-            inicializarModuloCapturaConPermisos();
-        }
-    } catch (error) {
-        logError('Error al inicializar módulo de captura', error);
-        mostrarNotificacion('Error al cargar el módulo de captura', 'error');
-    }
-}
-
-/**
- * Inicializar módulo de captura con restricciones de permisos
- */
-function inicializarModuloCapturaConPermisos() {
-    // Llamar inicialización original
-    inicializarModuloCaptura();
-    
-    // Aplicar restricciones específicas por rol
-    if (currentUser.rol === 'capturista') {
-        // Capturistas solo pueden ver año actual
-        const anioSelect = $('#fAnio');
-        if (anioSelect) {
-            anioSelect.innerHTML = `<option value="${ANO_ACTUAL}">${ANO_ACTUAL}</option>`;
-            anioSelect.disabled = true;
+        const user = JSON.parse(userData);
+        
+        // Administrador tiene acceso a todo
+        if (user.rol === 'administrador') {
+            return true;
         }
         
-        // Limitar áreas según asignación
-        const areaSelect = $('#fArea');
-        if (areaSelect && currentUser.area) {
-            const areaNombre = AREAS[currentUser.area] || currentUser.area;
-            areaSelect.innerHTML = `
-                <option value="">Seleccionar...</option>
-                <option value="${currentUser.area}">${areaNombre}</option>
-            `;
-        }
-    }
-    
-    log('Módulo de captura inicializado con restricciones de permisos');
-}
-
-/**
- * Función para mostrar el menú de visualización
- */
-function showVisualizacion() {
-    log('Navegando a menú de visualización');
-    
-    // Verificar autenticación simple
-    if (!verificarAutenticacionSimple()) {
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    if (!verificarPermisos('ver_historico') && !verificarPermisos('capturar')) {
-        mostrarNotificacion('No tiene permisos para ver datos históricos', 'error');
-        return;
-    }
-    
-    // Limpiar gráficas anteriores
-    destruirGraficas();
-    
-    // Ocultar todos los módulos
-    ocultarTodosLosModulos();
-    
-    // Mostrar menú de visualización
-    const menuVisualizacion = $('#menuVisualizacion');
-    if (menuVisualizacion) {
-        menuVisualizacion.classList.remove('hidden');
-    }
-    
-    // Actualizar estado
-    estadoActual = NAVEGACION_ESTADOS.MENU_VISUALIZACION;
-    actualizarHistorialNavegacion(NAVEGACION_ESTADOS.MENU_VISUALIZACION);
-    
-    // Resetear contexto de visualización
-    vContext.modo = null;
-    
-    // Aplicar restricciones de UI para visualización
-    aplicarRestriccionesVisualizacion();
-}
-
-/**
- * Función para mostrar el detalle de visualización con validaciones
- */
-function showVisualizacionDetalle(modo) {
-    log('Navegando a detalle de visualización', { modo });
-    
-    // Verificar autenticación simple
-    if (!verificarAutenticacionSimple()) {
-        window.location.href = 'login.html';
-        return;
-    }
-    
-    // Validar modo
-    if (!modo || !['pasajeros', 'operaciones', 'carga'].includes(modo)) {
-        logError('Modo de visualización inválido', modo);
-        mostrarNotificacion('Modo de visualización inválido', 'error');
-        return;
-    }
-    
-    // Verificar permisos para visualización
-    if (!verificarPermisos('ver_historico') && !verificarPermisos('capturar')) {
-        mostrarNotificacion('No tiene permisos para acceder a la visualización', 'error');
-        return;
-    }
-    
-    // Verificar acceso al área específica según el modo
-    const areaRequerida = obtenerAreaPorModo(modo);
-    if (areaRequerida && !puedeAccederArea(areaRequerida)) {
-        mostrarNotificacion(`No tiene acceso al área de ${areaRequerida}`, 'error');
-        return;
-    }
-    
-    // Limpiar gráficas anteriores
-    destruirGraficas();
-    
-    // Actualizar contexto
-    vContext.modo = modo;
-    
-    // Ocultar todos los módulos
-    ocultarTodosLosModulos();
-    
-    // Mostrar detalle de visualización
-    const detalleVisualizacion = $('#visualizacionDetalle');
-    if (detalleVisualizacion) {
-        detalleVisualizacion.classList.remove('hidden');
-    }
-    
-    // Actualizar título según el modo
-    actualizarTituloVisualizacion(modo);
-    
-    // Actualizar estado
-    estadoActual = NAVEGACION_ESTADOS.DETALLE_VISUALIZACION;
-    actualizarHistorialNavegacion(NAVEGACION_ESTADOS.DETALLE_VISUALIZACION);
-    
-    // Inicializar filtros de visualización con restricciones
-    try {
-        if (typeof inicializarFiltrosVisualizacion === 'function') {
-            inicializarFiltrosVisualizacionConPermisos();
-        }
-    } catch (error) {
-        logError('Error al inicializar filtros de visualización', error);
-        mostrarNotificacion('Error al cargar los filtros', 'error');
-    }
-}
-
-/**
- * Inicializar filtros de visualización con restricciones de permisos
- */
-function inicializarFiltrosVisualizacionConPermisos() {
-    // Llamar inicialización original
-    inicializarFiltrosVisualizacion();
-    
-    // Aplicar restricciones específicas por rol
-    if (currentUser.rol === 'capturista') {
-        // Capturistas solo pueden ver año actual
-        const anioSelect = $('#vAnio');
-        if (anioSelect) {
-            anioSelect.innerHTML = `<option value="${ANO_ACTUAL}">${ANO_ACTUAL}</option>`;
-            anioSelect.disabled = true;
-            anioSelect.classList.add('bg-gray-100');
+        // Verificar si el área está en los permisos del usuario
+        if (user.area && user.area === area) {
+            return true;
         }
         
-        // Ocultar opciones de comparación con años muy antiguos
-        const compararSelect = $('#vComparar');
-        if (compararSelect) {
-            const opcionesPermitidas = [
-                { valor: 'anterior', texto: 'Mismo periodo año anterior' }
-            ];
-            
-            compararSelect.innerHTML = '';
-            opcionesPermitidas.forEach(opcion => {
-                const option = document.createElement('option');
-                option.value = opcion.valor;
-                option.textContent = opcion.texto;
-                compararSelect.appendChild(option);
-            });
+        // Verificar permisos adicionales
+        if (user.permisos && Array.isArray(user.permisos)) {
+            return user.permisos.includes(area);
         }
+        
+        return false;
+        
+    } catch (error) {
+        console.error('Error verificando permisos de área:', error);
+        return false;
     }
-    
-    // Restringir escenarios según permisos
-    if (!verificarPermisos('editar')) {
-        const escenarioSelect = $('#vEscenario');
-        if (escenarioSelect) {
-            escenarioSelect.disabled = true;
-            escenarioSelect.classList.add('bg-gray-100');
-            escenarioSelect.title = 'Solo lectura - No tiene permisos de edición';
-        }
-    }
-    
-    log('Filtros de visualización inicializados con restricciones de permisos');
 }
 
 /**
- * Funciones auxiliares de navegación
+ * Obtener datos del usuario actual
+ * @returns {Object|null} - Datos del usuario o null
  */
-function obtenerAreaPorModo(modo) {
-    switch(modo) {
-        case 'pasajeros':
-        case 'operaciones':
-            return 'operaciones';
-        case 'carga':
-            return 'carga';
-        default:
-            return null;
+function getCurrentUser() {
+    if (currentUser) {
+        return currentUser;
+    }
+    
+    const userData = localStorage.getItem('aifa_user_data');
+    
+    if (!userData) {
+        return null;
+    }
+    
+    try {
+        currentUser = JSON.parse(userData);
+        return currentUser;
+    } catch (error) {
+        console.error('Error obteniendo usuario actual:', error);
+        return null;
     }
 }
 
-function ocultarTodosLosModulos() {
-    const modulos = [
-        '#menuPrincipal',
-        '#moduloCaptura', 
-        '#menuVisualizacion',
-        '#visualizacionDetalle'
-    ];
+/**
+ * Cerrar sesión
+ */
+function logout() {
+    console.log('Cerrando sesión...');
     
-    modulos.forEach(moduloId => {
-        const modulo = $(moduloId);
-        if (modulo && !modulo.classList.contains('hidden')) {
-            modulo.classList.add('hidden');
+    // Limpiar localStorage
+    localStorage.removeItem('aifa_auth_token');
+    localStorage.removeItem('aifa_user_data');
+    localStorage.removeItem('aifa_session_expires');
+    
+    // Limpiar variable global
+    currentUser = null;
+    
+    // Mostrar mensaje si existe la función
+    if (typeof mostrarMensaje === 'function') {
+        mostrarMensaje('Sesión cerrada correctamente', 'success');
+    }
+    
+    // Redirigir a login después de un breve delay
+    setTimeout(() => {
+        window.location.href = 'login.html';
+    }, 1000);
+}
+
+/**
+ * Verificar si la sesión ha expirado
+ * @returns {boolean} - True si la sesión es válida
+ */
+function isSessionValid() {
+    const token = localStorage.getItem('aifa_auth_token');
+    const expires = localStorage.getItem('aifa_session_expires');
+    
+    if (!token) {
+        return false;
+    }
+    
+    if (expires) {
+        const expirationTime = parseInt(expires);
+        const now = Date.now();
+        
+        if (now > expirationTime) {
+            console.log('Sesión expirada');
+            logout();
+            return false;
         }
+    }
+    
+    return true;
+}
+
+/**
+ * Renovar sesión (extender tiempo de expiración)
+ */
+function renewSession() {
+    const token = localStorage.getItem('aifa_auth_token');
+    
+    if (token) {
+        // Extender por 2 horas más
+        const newExpiration = Date.now() + (2 * 60 * 60 * 1000);
+        localStorage.setItem('aifa_session_expires', newExpiration.toString());
+        console.log('Sesión renovada');
+    }
+}
+
+/**
+ * Mostrar información del usuario en la interfaz
+ */
+function mostrarInformacionUsuario() {
+    const user = getCurrentUser();
+    
+    if (!user) {
+        return;
+    }
+    
+    // Actualizar nombre de usuario
+    const userNameElements = document.querySelectorAll('.user-name');
+    userNameElements.forEach(element => {
+        element.textContent = user.username || user.email;
     });
-}
-
-function actualizarTituloVisualizacion(modo) {
-    const titulo = $('#tituloDetalle');
-    if (!titulo) return;
     
-    let textoTitulo = '';
-    switch(modo) {
-        case 'pasajeros':
-            textoTitulo = 'Visualización - Pasajeros';
-            break;
-        case 'operaciones':
-            textoTitulo = 'Visualización - Operaciones';
-            break;
-        case 'carga':
-            textoTitulo = 'Visualización - Carga';
-            break;
-        default:
-            textoTitulo = 'Visualización';
+    // Actualizar rol
+    const userRoleElements = document.querySelectorAll('.user-role');
+    userRoleElements.forEach(element => {
+        element.textContent = user.rol || 'Usuario';
+    });
+    
+    // Actualizar área si existe
+    const userAreaElements = document.querySelectorAll('.user-area');
+    userAreaElements.forEach(element => {
+        element.textContent = user.area || 'General';
+    });
+    
+    // Actualizar menú de usuario si existe
+    const userMenuName = document.getElementById('user-menu-name');
+    if (userMenuName) {
+        userMenuName.textContent = user.username || user.email;
     }
     
-    // Agregar indicador de restricciones si es capturista
-    if (currentUser.rol === 'capturista') {
-        textoTitulo += ` (${ANO_ACTUAL})`;
+    const userMenuRole = document.getElementById('user-menu-role');
+    if (userMenuRole) {
+        userMenuRole.textContent = user.rol || 'Usuario';
+    }
+}
+
+/**
+ * Verificar acceso a función específica
+ * @param {string} funcion - Nombre de la función a verificar
+ * @returns {boolean} - True si tiene acceso
+ */
+function canAccess(funcion) {
+    const user = getCurrentUser();
+    
+    if (!user) {
+        return false;
     }
     
-    titulo.textContent = textoTitulo;
+    // Definir permisos por rol
+    const permissions = {
+        'administrador': ['all'],
+        'subdirector': ['view', 'edit', 'capture', 'export'],
+        'capturista': ['view', 'capture']
+    };
+    
+    const userPermissions = permissions[user.rol] || [];
+    
+    // Si tiene permiso 'all', puede hacer todo
+    if (userPermissions.includes('all')) {
+        return true;
+    }
+    
+    // Verificar permiso específico
+    return userPermissions.includes(funcion);
 }
 
-function resetearContexto() {
-    vContext.modo = null;
-    vContext.currentData = null;
-    vContext.currentFilters = null;
-}
-
-function actualizarHistorialNavegacion(nuevoEstado) {
-    if (historialNavegacion.length === 0 || historialNavegacion[historialNavegacion.length - 1] !== nuevoEstado) {
-        historialNavegacion.push(nuevoEstado);
-        
-        if (historialNavegacion.length > 10) {
-            historialNavegacion.shift();
+/**
+ * Inicializar verificación periódica de sesión
+ */
+function initSessionCheck() {
+    // Verificar sesión cada 5 minutos
+    setInterval(() => {
+        if (!isSessionValid()) {
+            console.log('Sesión inválida, redirigiendo a login');
+            window.location.href = 'login.html';
         }
-    }
+    }, 5 * 60 * 1000);
+    
+    // Renovar sesión con actividad del usuario
+    document.addEventListener('click', renewSession);
+    document.addEventListener('keypress', renewSession);
 }
 
-function aplicarRestriccionesUI() {
-    // Ocultar elementos que requieren permisos específicos
-    const elementosEdicion = document.querySelectorAll('[data-require="editar"]');
-    const elementosHistorico = document.querySelectorAll('[data-require="ver_historico"]');
-    const elementosAdmin = document.querySelectorAll('[data-require="administrar_usuarios"]');
-    
-    if (!verificarPermisos('editar')) {
-        elementosEdicion.forEach(el => el.style.display = 'none');
-    }
-    
-    if (!verificarPermisos('ver_historico')) {
-        elementosHistorico.forEach(el => el.style.display = 'none');
-    }
-    
-    if (!verificarPermisos('administrar_usuarios')) {
-        elementosAdmin.forEach(el => el.style.display = 'none');
-    }
-}
+// Inicializar cuando se carga el script
+initNavigation();
+initSessionCheck();
 
-function aplicarRestriccionesVisualizacion() {
-    if (currentUser.rol === 'capturista') {
-        const menuVisualizacion = $('#menuVisualizacion');
-        if (menuVisualizacion) {
-            const notice = document.createElement('div');
-            notice.className = 'bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center';
-            notice.innerHTML = `
-                <p class="text-blue-800 font-medium">
-                    Visualización limitada al año ${ANO_ACTUAL}
-                </p>
-                <p class="text-blue-600 text-sm mt-1">
-                    Los datos históricos requieren permisos adicionales
-                </p>
-            `;
-            
-            const grid = menuVisualizacion.querySelector('.grid');
-            if (grid) {
-                menuVisualizacion.insertBefore(notice, grid);
-            }
-        }
-    }
-}
-
-// FUNCIONES GLOBALES EXPOSTAS - SIN BUCLES DE INICIALIZACIÓN
-window.showMenu = showMenu;
-window.showCaptura = showCaptura;
-window.showVisualizacion = showVisualizacion;
-window.showVisualizacionDetalle = showVisualizacionDetalle;
-
-// NOTA IMPORTANTE: Se eliminó la inicialización automática que causaba bucles
-// La inicialización ahora debe ser manual desde cada página que la necesite
-
-// Log de confirmación
-log('Módulo de navegación navigation.js cargado (sin inicialización automática)');
+// Exportar funciones para uso global
+window.navigateTo = navigateTo;
+window.logout = logout;
+window.checkUserRole = checkUserRole;
+window.checkAreaPermission = checkAreaPermission;
+window.getCurrentUser = getCurrentUser;
+window.canAccess = canAccess;
+window.mostrarInformacionUsuario = mostrarInformacionUsuario;
