@@ -417,7 +417,17 @@
                     window.location.href = 'login.html';
                     return;
                 }
-                
+                // VALIDACIÓN DE EXPIRACIÓN
+                const expires = localStorage.getItem('aifa_session_expires');
+                if (!expires || Date.now() > Number(expires)) {
+                    console.log('Sesión expirada o inválida, redirigiendo a login');
+                    localStorage.removeItem('aifa_auth_token');
+                    localStorage.removeItem('aifa_user_data');
+                    localStorage.removeItem('aifa_session_expires');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                                
                 const user = JSON.parse(userData);
                 console.log('Usuario encontrado en localStorage:', user.username, user.rol);
                 
