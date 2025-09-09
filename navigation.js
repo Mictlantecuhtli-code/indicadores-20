@@ -13,8 +13,8 @@ function initNavigation() {
     console.log('Inicializando sistema de navegación');
     
     // Verificar si hay una sesión activa
-    const token = localStorage.getItem('aifa_auth_token');
-    const userData = localStorage.getItem('aifa_user_data');
+ const token = localStorage.getItem(SESSION_CONFIG.token_key) || sessionStorage.getItem(SESSION_CONFIG.token_key);
+ const userData = localStorage.getItem(SESSION_CONFIG.user_key) || sessionStorage.getItem(SESSION_CONFIG.user_key);
     
     if (token && userData) {
         try {
@@ -121,7 +121,7 @@ function navigateTo(page) {
     const publicPages = ['login.html', 'recuperar.html'];
     
     if (!publicPages.includes(page)) {
-        const token = localStorage.getItem('aifa_auth_token');
+        const token = localStorage.getItem('aifa_auth_token') || sessionStorage.getItem(SESSION_CONFIG.token_key);
         if (!token) {
             console.log('Se requiere autenticación');
             localStorage.setItem('aifa_redirect_after_login', page);
