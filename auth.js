@@ -501,7 +501,7 @@ function redirigirSegunRol(usuario) {
  */
 async function verificarAutenticacionRequerida() {
     const paginaActual = window.location.pathname.split('/').pop();
-    const paginasPublicas = ['login.html', 'index.html', ''];
+    const paginasPublicas = ['login.html', 'index.html', '', 'construccion.html'];
     
     // Si estamos en una página pública, no verificar autenticación
     if (paginasPublicas.includes(paginaActual)) {
