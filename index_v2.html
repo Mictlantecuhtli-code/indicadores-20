@@ -1,561 +1,905 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Indicadores AIFA 2.0</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Sistema de Indicadores - AIFA</title>
     <style>
-        /* Estilos para controlar el tamaño de las gráficas */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            height: 50px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .user-role {
+            font-size: 0.875rem;
+            color: #666;
+            background: #f0f0f0;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+        }
+
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .nav-tabs {
+            background: white;
+            padding: 0 2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .nav-tabs ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-tabs li {
+            position: relative;
+        }
+
+        .nav-tabs a {
+            display: block;
+            padding: 1rem 0;
+            text-decoration: none;
+            color: #666;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-tabs a:hover,
+        .nav-tabs a.active {
+            color: #667eea;
+        }
+
+        .nav-tabs a.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #667eea;
+        }
+
+        .container {
+            flex: 1;
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            width: 100%;
+        }
+
+        .module {
+            display: none;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .module.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-warning {
+            background: #ed8936;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #dd6b20;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+            position: sticky;
+            top: 0;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 0.5rem;
+        }
+
         .chart-container {
             position: relative;
             height: 400px;
+            margin-top: 2rem;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-height: 400px;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
         }
-        
-        #chartCaptura, #vChart {
-            max-height: 400px !important;
+
+        .modal.active {
+            display: flex;
         }
-        
-        /* Estilos para el checkbox */
-        input[type="checkbox"] {
-            accent-color: #10B981;
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
         }
-        
-        /* Estilos para elementos deshabilitados */
-        .disabled-by-role {
-            opacity: 0.6;
-            cursor: not-allowed;
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
         }
-        
-        .disabled-by-role input,
-        .disabled-by-role select {
-            background-color: #f3f4f6;
-            cursor: not-allowed;
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
         }
-        
-        /* Header de usuario */
-        .user-header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
+
+        /* Estilos específicos para permisos */
+        .admin-only,
+        .subdirector-only,
+        .capturista-only {
+            display: none;
         }
-        
-        .user-info {
-            backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .logout-btn {
-            background: rgba(239, 68, 68, 0.2);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            transition: all 0.3s ease;
-        }
-        
-        .logout-btn:hover {
-            background: rgba(239, 68, 68, 0.3);
-            transform: translateY(-2px);
-        }
-        
-        /* Notificación de restricciones */
-        .restriction-notice {
-            background: linear-gradient(90deg, #FEF3C7, #FED7AA);
-            border-left: 4px solid #F59E0B;
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-tabs ul {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .container {
+                padding: 0 1rem;
+            }
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    
-    <!-- Header con información de usuario -->
-    <header class="user-header text-white shadow-lg">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-4">
-                    <div class="text-3xl">✈️</div>
-                    <div>
-                        <h1 class="text-xl font-bold">Sistema de Indicadores AIFA</h1>
-                        <p class="text-blue-200 text-sm">Aeropuerto Internacional Felipe Ángeles</p>
-                    </div>
-                </div>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <img src="https://www.aifa.aero/wp-content/uploads/2021/09/logo-aifa.png" alt="AIFA" class="logo">
+            <h1 style="font-size: 1.5rem; color: #333;">Sistema de Indicadores</h1>
+        </div>
+        <div class="user-info">
+            <div>
+                <div class="user-name" id="user-name">Cargando...</div>
+                <div class="user-role" id="user-role">...</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                Cerrar Sesión
+            </button>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <ul>
+            <li><a href="#dashboard" class="tab-link active" onclick="cambiarModulo('dashboard')">Dashboard</a></li>
+            <li><a href="#captura" class="tab-link" onclick="cambiarModulo('captura')">Captura</a></li>
+            <li><a href="#visualizacion" class="tab-link" onclick="cambiarModulo('visualizacion')">Visualización</a></li>
+            <li class="subdirector-only"><a href="#reportes" class="tab-link" onclick="cambiarModulo('reportes')">Reportes</a></li>
+            <li class="admin-only"><a href="#administracion" class="tab-link" onclick="cambiarModulo('administracion')">Administración</a></li>
+        </ul>
+    </nav>
+
+    <!-- Container -->
+    <div class="container">
+        <!-- Mensaje del sistema -->
+        <div id="mensaje-sistema" class="alert" style="display: none;"></div>
+
+        <!-- Dashboard Module -->
+        <div id="dashboard" class="module active">
+            <div class="card">
+                <h2 class="card-title">Dashboard - Resumen de Indicadores</h2>
                 
-                <!-- Información del Usuario -->
-                <div class="flex items-center space-x-4">
-                    <div class="user-info rounded-lg px-4 py-2 flex items-center space-x-3">
-                        <div class="text-right">
-                            <p class="font-semibold text-sm" data-user="username">Cargando...</p>
-                            <p class="text-xs text-blue-200">
-                                <span class="capitalize" data-user="rol">-</span>
-                                <span data-user="area-display"></span>
-                            </p>
-                        </div>
-                        <div class="flex space-x-2">
-                            <!-- Botón Menú (solo para subdirectores y admins) -->
-                            <button 
-                                id="btnMenuAreas"
-                                onclick="irAMenuAreas()" 
-                                class="hidden bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-white text-xs font-medium transition-all"
-                                title="Menú de Áreas"
-                            >
-                                📋 Áreas
-                            </button>
-                            <!-- Botón Cerrar Sesión -->
-                            <button 
-                                onclick="cerrarSesion()" 
-                                class="logout-btn px-3 py-2 rounded text-white text-xs font-medium"
-                                title="Cerrar Sesión"
-                            >
-                                Salir
-                            </button>
-                        </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-indicadores">0</div>
+                        <div class="stat-label">Total Indicadores</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="indicadores-actualizados">0</div>
+                        <div class="stat-label">Actualizados este mes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="indicadores-pendientes">0</div>
+                        <div class="stat-label">Pendientes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="promedio-cumplimiento">0%</div>
+                        <div class="stat-label">Cumplimiento Promedio</div>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Notificación de restricciones para capturistas -->
-        <div id="restrictionNotice" class="hidden restriction-notice text-yellow-800 px-4 py-2 text-sm">
-            <div class="container mx-auto flex items-center">
-                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                </svg>
-                <span id="restrictionMessage">Acceso limitado al año actual</span>
-            </div>
-        </div>
-    </header>
-    
-    <!-- Contenido Principal -->
-    <div class="container mx-auto p-4">
-        
-        <!-- Loading Screen -->
-        <div id="loadingScreen" class="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
-            <div class="text-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p class="text-gray-600">Cargando sistema...</p>
-            </div>
-        </div>
-    
-        <!-- Menú Principal -->
-        <div id="menuPrincipal" class="bg-white rounded-lg shadow-lg p-6 hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold text-center text-blue-800">Sistema de Indicadores</h1>
-                <div class="text-sm text-gray-600">
-                    <span data-user="username-display">Usuario</span> - 
-                    <span class="capitalize" data-user="rol-display">Rol</span>
+
+                <div class="chart-container">
+                    <canvas id="dashboardChart"></canvas>
                 </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
-                <button onclick="showCaptura()" class="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg transition-colors" data-require="capturar">
-                    <div class="text-3xl mb-2">📊</div>
-                    <div class="text-xl font-semibold">Módulo de Captura</div>
-                    <div class="text-sm opacity-90">Capturar indicadores y metas</div>
-                </button>
-                <button onclick="showVisualizacion()" class="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg transition-colors" data-require="ver_historico,capturar">
-                    <div class="text-3xl mb-2">📈</div>
-                    <div class="text-xl font-semibold">Visualización</div>
-                    <div class="text-sm opacity-90">Consultar y comparar datos</div>
-                </button>
             </div>
         </div>
 
-        <!-- Módulo de Captura -->
-        <div id="moduloCaptura" class="bg-white rounded-lg shadow-lg p-6 hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-blue-800">Módulo de Captura</h2>
-                <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
-            </div>
-            
-            <!-- Filtros -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Área</label>
-                    <select id="fArea" class="w-full border rounded px-3 py-2">
-                        <option value="">Seleccionar...</option>
-                        <option value="comercial">Aviación Comercial</option>
-                        <option value="general">Aviación General</option>
-                        <option value="carga">Aviación de Carga</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Indicador</label>
-                    <select id="fIndicador" class="w-full border rounded px-3 py-2">
-                        <option value="">Seleccionar...</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Año</label>
-                    <select id="fAnio" class="w-full border rounded px-3 py-2"></select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Mes</label>
-                    <select id="fMes" class="w-full border rounded px-3 py-2"></select>
-                </div>
-            </div>
-            
-            <!-- Formulario de captura -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Valor</label>
-                    <input type="number" id="fValor" class="w-full border rounded px-3 py-2" step="0.01">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Meta</label>
-                    <input type="number" id="fMeta" class="w-full border rounded px-3 py-2" step="0.01">
-                    <div id="metaReadOnly" class="hidden text-sm text-gray-600 mt-1">
-                        Meta automática desde escenarios
+        <!-- Captura Module -->
+        <div id="captura" class="module">
+            <div class="card">
+                <h2 class="card-title">Captura de Datos</h2>
+                
+                <form id="formCaptura">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="indicador">Indicador</label>
+                            <select class="form-control" id="indicador" required>
+                                <option value="">Seleccione un indicador...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="periodo">Período</label>
+                            <input type="month" class="form-control" id="periodo" required>
+                        </div>
                     </div>
-                </div>
-                <div class="flex items-end">
-                    <button onclick="guardarMedicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full" data-require="capturar">
-                        Guardar
-                    </button>
-                </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="valor">Valor</label>
+                            <input type="number" class="form-control" id="valor" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="meta">Meta</label>
+                            <input type="number" class="form-control" id="meta" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="observaciones">Observaciones</label>
+                        <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem;">
+                        <button type="submit" class="btn btn-primary">
+                            Guardar Datos
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="limpiarFormulario()">
+                            Limpiar
+                        </button>
+                    </div>
+                </form>
             </div>
-            
-            <!-- Gráfica de líneas -->
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Comparativo por Años</h3>
-                <div class="chart-container">
-                    <canvas id="chartCaptura"></canvas>
-                </div>
-            </div>
-            
-            <!-- Tabla de datos -->
-            <div id="tablaContainer">
-                <h3 class="text-lg font-semibold mb-4">Datos Actuales</h3>
-                <div class="overflow-x-auto">
-                    <table id="tablaCaptura" class="min-w-full border-collapse border border-gray-300">
-                        <thead class="bg-gray-50">
+
+            <!-- Tabla de datos capturados -->
+            <div class="card">
+                <h3 class="card-title">Datos Capturados Recientes</h3>
+                <div class="table-responsive">
+                    <table id="tablaDatosCapturados">
+                        <thead>
                             <tr>
-                                <th class="border border-gray-300 px-4 py-2">Mes</th>
-                                <th class="border border-gray-300 px-4 py-2">Valor</th>
-                                <th class="border border-gray-300 px-4 py-2">Meta</th>
-                                <th class="border border-gray-300 px-4 py-2">% Cumplimiento</th>
-                                <th class="border border-gray-300 px-4 py-2" data-require="editar">Acciones</th>
+                                <th>Indicador</th>
+                                <th>Período</th>
+                                <th>Valor</th>
+                                <th>Meta</th>
+                                <th>Cumplimiento</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="tbodyCaptura">
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="empty-state">
+                                    <div class="empty-state-icon">📊</div>
+                                    <div>No hay datos capturados</div>
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- Módulo de Visualización - Menú -->
-        <div id="menuVisualizacion" class="bg-white rounded-lg shadow-lg p-6 hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-green-800">Módulo de Visualización</h2>
-                <button onclick="showMenu()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
-            </div>
-            
-            <!-- Notificación de permisos para capturistas -->
-            <div id="visualizacionNotice" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 text-blue-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                    </svg>
-                    <div>
-                        <p class="text-blue-800 font-medium">Visualización limitada</p>
-                        <p class="text-blue-600 text-sm" id="visualizacionLimite">Solo puede ver datos del año actual</p>
+        <!-- Visualización Module -->
+        <div id="visualizacion" class="module">
+            <div class="card">
+                <h2 class="card-title">Visualización de Indicadores</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="filtroArea">Área</label>
+                        <select class="form-control" id="filtroArea" onchange="filtrarIndicadores()">
+                            <option value="">Todas las áreas</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filtroAnio">Año</label>
+                        <select class="form-control" id="filtroAnio" onchange="actualizarVisualizacion()">
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tipoGrafica">Tipo de Gráfica</label>
+                        <select class="form-control" id="tipoGrafica" onchange="actualizarVisualizacion()">
+                            <option value="line">Líneas</option>
+                            <option value="bar">Barras</option>
+                            <option value="radar">Radar</option>
+                        </select>
                     </div>
                 </div>
+
+                <div class="chart-container">
+                    <canvas id="visualizacionChart"></canvas>
+                </div>
             </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-                <button onclick="showVisualizacionDetalle('pasajeros')" class="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-lg transition-colors">
-                    <div class="text-4xl mb-2">👥</div>
-                    <div class="text-xl font-semibold">Pasajeros</div>
-                    <div class="text-sm opacity-90">Comercial y General</div>
+        </div>
+
+        <!-- Reportes Module (Subdirector) -->
+        <div id="reportes" class="module subdirector-only">
+            <div class="card">
+                <h2 class="card-title">Generación de Reportes</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Tipo de Reporte</label>
+                        <select class="form-control" id="tipoReporte">
+                            <option value="mensual">Reporte Mensual</option>
+                            <option value="trimestral">Reporte Trimestral</option>
+                            <option value="anual">Reporte Anual</option>
+                            <option value="comparativo">Análisis Comparativo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Período</label>
+                        <input type="month" class="form-control" id="periodoReporte">
+                    </div>
+                </div>
+
+                <button class="btn btn-success" onclick="generarReporte()">
+                    Generar Reporte
                 </button>
-                <button onclick="showVisualizacionDetalle('operaciones')" class="bg-orange-600 hover:bg-orange-700 text-white p-6 rounded-lg transition-colors">
-                    <div class="text-4xl mb-2">✈️</div>
-                    <div class="text-xl font-semibold">Operaciones</div>
-                    <div class="text-sm opacity-90">Comercial y General</div>
-                </button>
-                <button onclick="showVisualizacionDetalle('carga')" class="bg-red-600 hover:bg-red-700 text-white p-6 rounded-lg transition-colors">
-                    <div class="text-4xl mb-2">📦</div>
-                    <div class="text-xl font-semibold">Carga</div>
-                    <div class="text-sm opacity-90">Operaciones y Toneladas</div>
+                <button class="btn btn-primary" onclick="exportarExcel()">
+                    Exportar a Excel
                 </button>
             </div>
         </div>
 
-        <!-- Módulo de Visualización - Detalle -->
-        <div id="visualizacionDetalle" class="bg-white rounded-lg shadow-lg p-6 hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-green-800" id="tituloDetalle">Visualización</h2>
-                <button onclick="showVisualizacion()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">← Regresar</button>
-            </div>
-            
-            <!-- Filtros -->
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Año Actual</label>
-                    <select id="vAnio" class="w-full border rounded px-3 py-2"></select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Tipo</label>
-                    <select id="vTipo" class="w-full border rounded px-3 py-2"></select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Escenario Meta</label>
-                    <select id="vEscenario" class="w-full border rounded px-3 py-2">
-                        <option value="mediano">Mediano</option>
-                        <option value="bajo">Bajo</option>
-                        <option value="alto">Alto</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Comparar Contra</label>
-                    <select id="vComparar" class="w-full border rounded px-3 py-2">
-                        <option value="anterior">Mismo periodo año anterior</option>
-                        <option value="2023">Mismo periodo 2023</option>
-                        <option value="2022">Mismo periodo 2022</option>
-                    </select>
-                </div>
-                <div class="flex items-end">
-                    <button id="btnAplicar" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded w-full">
-                        Aplicar Filtros
+        <!-- Administración Module (Admin) -->
+        <div id="administracion" class="module admin-only">
+            <div class="card">
+                <h2 class="card-title">Panel de Administración</h2>
+                
+                <div class="form-row">
+                    <button class="btn btn-primary" onclick="window.location.href='admin_usuarios.html'">
+                        Gestionar Usuarios
+                    </button>
+                    <button class="btn btn-primary" onclick="window.location.href='admin_areas.html'">
+                        Gestionar Áreas
+                    </button>
+                    <button class="btn btn-primary" onclick="configurarIndicadores()">
+                        Configurar Indicadores
                     </button>
                 </div>
-            </div>
-            
-            <!-- Tabla simplificada -->
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4">Resumen de Avance</h3>
-                <div class="overflow-x-auto">
-                    <div id="tablaVisualizacion"></div>
-                </div>
-            </div>
-            
-            <!-- Controles de gráfica -->
-            <div class="mb-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Gráfica Comparativa</h3>
-                    <label class="flex items-center space-x-2 cursor-pointer" data-require="ver_historico">
-                        <input type="checkbox" id="chkMostrarHistorico" class="rounded">
-                        <span class="text-sm text-gray-700">Mostrar gráfica histórica completa</span>
-                    </label>
-                </div>
-                <div class="chart-container">
-                    <canvas id="vChart"></canvas>
-                </div>
-            </div>
-            
-            <!-- Botón de descarga -->
-            <div class="text-center">
-                <button id="btnDescargar" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold" data-require="ver_historico">
-                    📥 Descargar Información
-                </button>
             </div>
         </div>
     </div>
 
-    <!-- Scripts en orden específico -->
-    <script src="config.js"></script>
-    <script src="utils.js"></script>
-    <script src="charts.js"></script>
-    <script src="auth.js"></script>
-    <script src="navigation.js"></script>
-    <script src="captura.js"></script>
-    <script src="visualizacion.js"></script>
-    
+    <!-- Modal -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Título</h3>
+                <button class="modal-close" onclick="cerrarModal()">&times;</button>
+            </div>
+            <div id="modal-body">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Variables globales de la aplicación
-        let appInitialized = false;
-        let userPermissionsApplied = false;
-        
-        /**
-         * Inicialización principal SIMPLIFICADA (sin verificaciones de BD)
-         */
-        function inicializarAplicacion() {
-            console.log('Iniciando aplicación con verificación simplificada');
+        // Variables globales
+        let currentUser = null;
+        let indicadores = [];
+        let datosCapturados = [];
+        let charts = {};
+
+        // Función principal de inicialización
+        async function inicializarAplicacion() {
+            console.log('Iniciando aplicación...');
             
             try {
-                mostrarPantallaCargar(true);
-                
-                // Verificación SOLO de localStorage
+                // Verificar sesión con localStorage simple
                 const token = localStorage.getItem('aifa_auth_token');
                 const userData = localStorage.getItem('aifa_user_data');
                 
                 if (!token || !userData) {
-                    console.log('No hay sesión local, redirigiendo a login');
+                    console.log('No hay sesión activa');
                     window.location.href = 'login.html';
                     return;
                 }
                 
+                // Parsear datos del usuario
                 const user = JSON.parse(userData);
                 console.log('Usuario encontrado en localStorage:', user.username, user.rol);
                 
-                // Verificar permisos básicos
-                if (!user.permisos || (!user.permisos.puede_capturar && !user.permisos.puede_ver_historico)) {
-                    console.log('Usuario sin permisos básicos');
-                    alert('No tiene permisos para acceder a este sistema');
-                    window.location.href = 'login.html';
-                    return;
-                }
+                // Establecer usuario global
+                window.currentUser = user;
+                currentUser = user;
                 
-                // Restaurar currentUser sin verificar BD
-                window.currentUser = {
-                    id: user.id,
-                    username: user.username,
-                    email: user.email,
-                    rol: user.rol,
-                    area: user.area,
-                    permisos: user.permisos,
-                    isAuthenticated: true
-                };
+                // Mostrar información del usuario
+                document.getElementById('user-name').textContent = user.username || user.email;
+                document.getElementById('user-role').textContent = user.rol || 'Usuario';
                 
-                // Configurar UI según permisos
-                configurarUISegunPermisos();
-                mostrarInformacionUsuario();
-                aplicarRestriccionesEspecificas();
+                // Configurar la UI según el rol
+                configurarUISegunRol(user.rol);
                 
-                // Mostrar menú principal
-                showMenu();
+                // Cargar datos iniciales
+                await cargarDatosIniciales();
                 
-                appInitialized = true;
-                userPermissionsApplied = true;
+                // Inicializar eventos
+                inicializarEventos();
+                
+                // Inicializar gráficas
+                inicializarGraficas();
                 
                 console.log('Aplicación inicializada correctamente');
+                mostrarMensaje('Sistema cargado correctamente', 'success');
                 
             } catch (error) {
-                console.error('Error inicializando aplicación:', error);
-                alert('Error al cargar la aplicación');
-                window.location.href = 'login.html';
-            } finally {
-                mostrarPantallaCargar(false);
+                console.error('Error en inicialización:', error);
+                manejarError(error, 'Error al inicializar la aplicación');
+                
+                // Si hay error parseando los datos, limpiar y redirigir
+                if (error instanceof SyntaxError) {
+                    localStorage.removeItem('aifa_auth_token');
+                    localStorage.removeItem('aifa_user_data');
+                    window.location.href = 'login.html';
+                }
             }
         }
-        
-        /**
-         * Configurar UI según permisos del usuario
-         */
-        function configurarUISegunPermisos() {
-            const elementosCaptura = document.querySelectorAll('[data-require="capturar"]');
-            const elementosEdicion = document.querySelectorAll('[data-require="editar"]');
-            const elementosHistorico = document.querySelectorAll('[data-require="ver_historico"]');
-            const elementosHistoricoOCaptura = document.querySelectorAll('[data-require="ver_historico,capturar"]');
+
+        // Función para configurar UI según rol
+        function configurarUISegunRol(rol) {
+            console.log('Configurando UI para rol:', rol);
             
-            if (!verificarPermisos('capturar')) {
-                elementosCaptura.forEach(el => el.style.display = 'none');
-            }
+            // Obtener elementos por clase de rol
+            const elementosAdmin = document.querySelectorAll('.admin-only');
+            const elementosSubdirector = document.querySelectorAll('.subdirector-only');
+            const elementosCapturista = document.querySelectorAll('.capturista-only');
             
-            if (!verificarPermisos('editar')) {
-                elementosEdicion.forEach(el => el.style.display = 'none');
-            }
+            // Ocultar todos primero
+            elementosAdmin.forEach(el => el.style.display = 'none');
+            elementosSubdirector.forEach(el => el.style.display = 'none');
+            elementosCapturista.forEach(el => el.style.display = 'none');
             
-            if (!verificarPermisos('ver_historico')) {
-                elementosHistorico.forEach(el => el.style.display = 'none');
-            }
-            
-            if (!verificarPermisos('ver_historico') && !verificarPermisos('capturar')) {
-                elementosHistoricoOCaptura.forEach(el => el.style.display = 'none');
-            }
-            
-            // Mostrar botón de menú de áreas solo para subdirectores y admins
-            const btnMenuAreas = document.getElementById('btnMenuAreas');
-            if (btnMenuAreas && (currentUser.rol === 'subdirector' || currentUser.rol === 'administrador')) {
-                btnMenuAreas.classList.remove('hidden');
+            // Mostrar según rol
+            switch(rol) {
+                case 'administrador':
+                    elementosAdmin.forEach(el => el.style.display = '');
+                    elementosSubdirector.forEach(el => el.style.display = '');
+                    elementosCapturista.forEach(el => el.style.display = '');
+                    break;
+                case 'subdirector':
+                    elementosSubdirector.forEach(el => el.style.display = '');
+                    elementosCapturista.forEach(el => el.style.display = '');
+                    break;
+                case 'capturista':
+                    elementosCapturista.forEach(el => el.style.display = '');
+                    break;
             }
             
             console.log('UI configurada según permisos');
         }
-        
-        /**
-         * Mostrar información del usuario en la interfaz
-         */
-        function mostrarInformacionUsuario() {
-            const elementosUsername = document.querySelectorAll('[data-user="username"], [data-user="username-display"]');
-            elementosUsername.forEach(el => {
-                el.textContent = currentUser.username || 'Usuario';
-            });
-            
-            const elementosRol = document.querySelectorAll('[data-user="rol"], [data-user="rol-display"]');
-            elementosRol.forEach(el => {
-                el.textContent = currentUser.rol || 'Sin rol';
-            });
-            
-            const elementosArea = document.querySelectorAll('[data-user="area-display"]');
-            elementosArea.forEach(el => {
-                if (currentUser.area) {
-                    const nombreArea = AREAS_SUBDIRECTOR && AREAS_SUBDIRECTOR[currentUser.area] ? 
-                        AREAS_SUBDIRECTOR[currentUser.area].nombre : 
-                        (AREAS[currentUser.area] || currentUser.area);
-                    el.textContent = ` - ${nombreArea}`;
-                } else {
-                    el.textContent = '';
-                }
-            });
-        }
-        
-        /**
-         * Aplicar restricciones específicas según el rol
-         */
-        function aplicarRestriccionesEspecificas() {
-            if (currentUser.rol === 'capturista') {
-                const restrictionNotice = document.getElementById('restrictionNotice');
-                if (restrictionNotice) {
-                    restrictionNotice.classList.remove('hidden');
-                    const message = document.getElementById('restrictionMessage');
-                    if (message) {
-                        const areaTexto = AREAS[currentUser.area] || currentUser.area;
-                        message.textContent = `Acceso limitado al año ${ANO_ACTUAL} y área de ${areaTexto}`;
-                    }
+
+        // Cargar datos iniciales
+        async function cargarDatosIniciales() {
+            try {
+                // Simular carga de indicadores
+                indicadores = [
+                    { id: 1, nombre: 'Pasajeros Comerciales', area: 'Operaciones' },
+                    { id: 2, nombre: 'Carga Transportada', area: 'Carga' },
+                    { id: 3, nombre: 'Vuelos Diarios', area: 'Operaciones' },
+                    { id: 4, nombre: 'Satisfacción del Cliente', area: 'Calidad' }
+                ];
+                
+                // Llenar select de indicadores
+                const selectIndicador = document.getElementById('indicador');
+                if (selectIndicador) {
+                    selectIndicador.innerHTML = '<option value="">Seleccione un indicador...</option>';
+                    indicadores.forEach(ind => {
+                        const option = document.createElement('option');
+                        option.value = ind.id;
+                        option.textContent = `${ind.nombre} (${ind.area})`;
+                        selectIndicador.appendChild(option);
+                    });
                 }
                 
-                const visualizacionNotice = document.getElementById('visualizacionNotice');
-                if (visualizacionNotice) {
-                    visualizacionNotice.classList.remove('hidden');
-                    const limite = document.getElementById('visualizacionLimite');
-                    if (limite) {
-                        limite.textContent = `Solo puede ver datos del año ${ANO_ACTUAL}`;
+                // Actualizar estadísticas del dashboard
+                actualizarEstadisticas();
+                
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+            }
+        }
+
+        // Actualizar estadísticas del dashboard
+        function actualizarEstadisticas() {
+            document.getElementById('total-indicadores').textContent = indicadores.length;
+            document.getElementById('indicadores-actualizados').textContent = Math.floor(Math.random() * indicadores.length);
+            document.getElementById('indicadores-pendientes').textContent = Math.floor(Math.random() * 5);
+            document.getElementById('promedio-cumplimiento').textContent = Math.floor(Math.random() * 30 + 70) + '%';
+        }
+
+        // Inicializar eventos
+        function inicializarEventos() {
+            // Form de captura
+            const formCaptura = document.getElementById('formCaptura');
+            if (formCaptura) {
+                formCaptura.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    guardarDatos();
+                });
+            }
+            
+            // Establecer fecha actual en período
+            const periodo = document.getElementById('periodo');
+            if (periodo) {
+                const hoy = new Date();
+                periodo.value = hoy.toISOString().slice(0, 7);
+            }
+        }
+
+        // Inicializar gráficas
+        function inicializarGraficas() {
+            // Gráfica del dashboard
+            const ctxDashboard = document.getElementById('dashboardChart');
+            if (ctxDashboard) {
+                charts.dashboard = new Chart(ctxDashboard, {
+                    type: 'line',
+                    data: {
+                        labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Cumplimiento %',
+                            data: [85, 88, 82, 90, 93, 95],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: 'Tendencia de Cumplimiento'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
                     }
-                }
+                });
+            }
+            
+            // Gráfica de visualización
+            const ctxVisualizacion = document.getElementById('visualizacionChart');
+            if (ctxVisualizacion) {
+                charts.visualizacion = new Chart(ctxVisualizacion, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Indicador 1', 'Indicador 2', 'Indicador 3', 'Indicador 4'],
+                        datasets: [{
+                            label: 'Valor Actual',
+                            data: [85, 75, 90, 88],
+                            backgroundColor: '#667eea'
+                        }, {
+                            label: 'Meta',
+                            data: [80, 80, 85, 90],
+                            backgroundColor: '#48bb78'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            }
+                        }
+                    }
+                });
             }
         }
-        
-        /**
-         * Función para ir al menú de áreas
-         */
-        function irAMenuAreas() {
-            if (currentUser.rol === 'subdirector') {
-                window.location.href = 'menu_subdirector.html';
-            } else if (currentUser.rol === 'administrador') {
-                window.location.href = 'menu_administrador.html';
-            } else {
-                alert('No tiene permisos para acceder al menú de áreas');
+
+        // Cambiar módulo activo
+        function cambiarModulo(modulo) {
+            // Ocultar todos los módulos
+            document.querySelectorAll('.module').forEach(m => {
+                m.classList.remove('active');
+            });
+            
+            // Quitar active de todos los tabs
+            document.querySelectorAll('.tab-link').forEach(t => {
+                t.classList.remove('active');
+            });
+            
+            // Mostrar módulo seleccionado
+            const moduloElement = document.getElementById(modulo);
+            if (moduloElement) {
+                moduloElement.classList.add('active');
+            }
+            
+            // Activar tab correspondiente
+            const tabLink = document.querySelector(`a[href="#${modulo}"]`);
+            if (tabLink) {
+                tabLink.classList.add('active');
             }
         }
-        
-        /**
-         * Funciones de utilidad para la interfaz
-         */
-        function mostrarPantallaCargar(mostrar) {
-            const loadingScreen = document.getElementById('loadingScreen');
-            if (loadingScreen) {
-                if (mostrar) {
-                    loadingScreen.classList.remove('hidden');
-                } else {
-                    loadingScreen.classList.add('hidden');
-                }
-            }
-        }
-        
-        // Exponer funciones globales necesarias
-        window.irAMenuAreas = irAMenuAreas;
-        
-        /**
-         * Inicialización cuando carga la página (SIN VERIFICACIONES AUTOMÁTICAS)
-         */
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM cargado, iniciando aplicación simplificada');
-            inicializarAplicacion();
-        });
-        
-        // Log final
-        console.log('index_v2.html con autenticación simplificada cargado');
-    </script>
-</body>
-</html>
+
+        // Guardar datos del formulario
+        function guardarDatos() {
+            const formData = {
+                indicador: document.getElementById('indicador').value,
+                periodo: document.getElementById('periodo').value,
+                valor: document.getElementById('valor').value,
+                meta: document.getElementById('meta').value,
+                observaciones: document.getElementById('observaciones').value
+            };
+            
+            // Validar datos
+            if (!formData.indicador || !formData.periodo || !formData.valor || !formData.meta) {
+                mostrarMensaje('Por
