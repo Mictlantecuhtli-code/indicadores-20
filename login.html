@@ -296,5 +296,14 @@
             }
         });
     </script>
+    <script>
+// Debug temporal
+    window.addEventListener('load', function() {
+    console.log('=== DEBUG LOGIN ===');
+    console.log('Token en localStorage:', localStorage.getItem('aifa_auth_token'));
+    console.log('User data en localStorage:', localStorage.getItem('aifa_user_data'));
+    console.log('CurrentUser global:', window.currentUser);
+});
+</script>
 </body>
 </html>
