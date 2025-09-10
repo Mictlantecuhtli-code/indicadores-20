@@ -110,7 +110,7 @@ const AREAS_SUBDIRECTOR = {
     'direccion_operacion': {
         nombre: 'Dirección de Operación',
         icono: '🎯',
-        descripcion: 'Supervisión y coordinación de operaciones aeroportuarias'
+        descripcion: 'Gestión y control de operaciones aeroportuarias'
     },
     'direccion_planeacion': {
         nombre: 'Dirección de Planeación Estratégica',
@@ -125,7 +125,7 @@ const AREAS_SUBDIRECTOR = {
     'direccion_administracion': {
         nombre: 'Dirección de Administración',
         icono: '📊',
-        descripcion: 'Gestión administrativa y financiera'
+        descripcion: 'Gestión administrativa'
     },
     'direccion_juridica': {
         nombre: 'Dirección Jurídica',
@@ -249,6 +249,8 @@ const MENSAJES = {
     DESCARGA_ERROR: 'Error al descargar los datos',
     ESCENARIO_CAMBIADO: 'Escenario de meta actualizado',
     FILTROS_APLICADOS: 'Filtros aplicados correctamente',
+    BIENVENIDO_GENERAL: 'Bienvenido al Panel de Control General',
+    ACCESO_TOTAL_VISUALIZACION: 'Acceso completo en modo visualización',
     
     // Mensajes de autenticación
     ERROR_LOGIN: 'Usuario o contraseña incorrectos',
@@ -312,6 +314,27 @@ const CONFIGURACION_INDICADORES = {
         sufijo: ' t',
         color: '#F59E0B'
     }
+};
+
+const CONFIGURACION_GENERAL = {
+    mostrar_comparacion_anual: true,
+    anos_comparacion: [2024, 2025],
+    mostrar_porcentaje_variacion: true,
+    orden_elementos_vista: [
+        'selector_tipo',
+        'tabla_comparativa',
+        'grafica',
+        'selector_meta',
+        'tabla_meta'
+    ],
+    areas_disponibles: ['pasajeros', 'operaciones', 'carga'],
+    direcciones_en_construccion: [
+        'dir_operacion',
+        'dir_planeacion', 
+        'dir_comercial',
+        'dir_administracion',
+        'dir_juridica'
+    ]
 };
 
 // Configuración de tablas
