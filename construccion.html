@@ -334,11 +334,20 @@
         }
         
         // Mostrar información del usuario
+
         function mostrarInfoUsuario() {
-            const usernameElements = document.querySelectorAll('[data-user="username"]');
-            usernameElements.forEach(el => {
-                el.textContent = currentUser.username || 'Usuario';
-            });
+        const usernameElements = document.querySelectorAll('[data-user="username"]');
+        usernameElements.forEach(el => {
+            el.textContent = currentUser.username || 'Usuario';
+        });
+        
+        // Agregar indicador de rol para General
+        if (currentUser.rol === ROLES.GENERAL) {
+            const headerTexto = document.querySelector('header p.text-sm');
+            if (headerTexto) {
+                headerTexto.textContent = 'Área en Construcción - Vista General';
+                }
+            }
         }
         
         // Funciones de navegación
@@ -349,6 +358,8 @@
                 window.location.href = 'menu_administrador.html';
             } else if (currentUser.rol === ROLES.SUBDIRECTOR) {
                 window.location.href = 'menu_subdirector.html';
+            } else if (currentUser.rol === ROLES.GENERAL) {
+                window.location.href = 'menu_general.html';
             } else {
                 window.location.href = 'index_v2.html';
             }
@@ -356,6 +367,12 @@
         
         function accederOperaciones() {
             log('Accediendo a operaciones desde construcción');
+            
+            // Si es General, redirigir a su vista específica
+            if (currentUser.rol === ROLES.GENERAL) {
+                window.location.href = 'vista_general.html?tipo=operaciones';
+                return;
+            }
             
             if (puedeAccederArea('operaciones')) {
                 mostrarNotificacion('Redirigiendo al sistema de operaciones...', 'success');
@@ -366,7 +383,7 @@
                 mostrarNotificacion('No tiene permisos para acceder a operaciones', 'error');
             }
         }
-        
+
         // Event listeners
         document.addEventListener('keydown', function(event) {
             // Escape para volver al menú
