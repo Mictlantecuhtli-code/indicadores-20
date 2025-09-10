@@ -613,15 +613,108 @@
         }
         
         // Evento checkbox histórico
-        document.getElementById('chkHistoricoCompleto')?.addEventListener('change', async function() {
-            if (this.checked) {
-                // Cargar datos históricos completos
-                mostrarNotificacion('Cargando histórico completo...', 'info');
-                // Implementar carga de histórico
-            } else {
-                crearGraficaGeneral();
+        
+// Evento checkbox histórico
+document.getElementById('chkHistoricoCompleto')?.addEventListener('change', async function() {
+    if (this.checked) {
+        // Cargar datos históricos completos
+        mostrarNotificacion('Cargando histórico completo...', 'info');
+        mostrarLoading(true);
+        
+        try {
+            // Determinar área e indicador
+            let area, indicador;
+            if (vistaGeneralState.tipoVista === 'pasajeros') {
+                area = vistaGeneralState.tipoSeleccionado;
+                indicador = 'pasajeros';
+            } else if (vistaGeneralState.tipoVista === 'operaciones') {
+                area = vistaGeneralState.tipoSeleccionado;
+                indicador = 'operaciones';
+            } else if (vistaGeneralState.tipoVista === 'carga') {
+                area = 'carga';
+                indicador = vistaGeneralState.tipoSeleccionado;
             }
-        });
+            
+            // Cargar TODOS los años desde 2022
+            const { data: datosHistoricos, error } = await sb
+                .from('v_medicion')
+                .select('*')
+                .eq('area', area)
+                .eq('indicador', indicador)
+                .gte('anio', 2022)
+                .lte('anio', 2025)
+                .order('anio')
+                .order('mes');
+            
+            if (error) {
+                console.error('Error cargando histórico:', error);
+                mostrarNotificacion('Error al cargar datos históricos', 'error');
+                return;
+            }
+            
+            // Crear gráfica con todos los años
+            const ctx = document.getElementById('chartGeneral').getContext('2d');
+            
+            if (vistaGeneralState.chartInstance) {
+                vistaGeneralState.chartInstance.destroy();
+            }
+            
+            const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const años = [...new Set(datosHistoricos.map(d => d.anio))].sort();
+            const colores = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
+            
+            const datasets = años.map((año, index) => {
+                const datosAño = [];
+                for (let mes = 1; mes <= 12; mes++) {
+                    const dato = datosHistoricos.find(d => d.anio === año && d.mes === mes);
+                    datosAño.push(dato?.valor || null);
+                }
+                
+                return {
+                    label: año.toString(),
+                    data: datosAño,
+                    borderColor: colores[index % colores.length],
+                    backgroundColor: `${colores[index % colores.length]}20`,
+                    tension: 0.1
+                };
+            });
+            
+            vistaGeneralState.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: {
+                            display: true,
+                            text: `Histórico Completo ${años[0]} - ${años[años.length - 1]}`
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+            
+            mostrarNotificacion('Histórico completo cargado', 'success');
+            
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarNotificacion('Error al cargar histórico', 'error');
+        } finally {
+            mostrarLoading(false);
+        }
+        
+    } else {
+        // Volver a la vista de solo 2 años
+        crearGraficaGeneral();
+    }
+});
         
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
