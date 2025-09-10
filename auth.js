@@ -488,6 +488,10 @@ function redirigirSegunRol(usuario) {
             // Administradores van a su menú específico
             window.location.href = 'menu_administrador.html';
             break;
+        case ROLES.GENERAL:
+            // General va a su menú específico
+            window.location.href = 'menu_general.html';
+            break;
             
         default:
             logError('Rol no reconocido', usuario.rol);
@@ -551,6 +555,12 @@ function verificarPermisosSeccion(pagina) {
             
         case 'menu_administrador.html':
             return currentUser.rol === ROLES.ADMINISTRADOR;
+
+        case 'menu_general.html':
+            return currentUser.rol === ROLES.GENERAL;
+            
+        case 'vista_general.html':
+            return currentUser.rol === ROLES.GENERAL;
             
         case 'admin_usuarios.html':
             return permisos.puede_administrar_usuarios;
