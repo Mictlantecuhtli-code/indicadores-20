@@ -53,8 +53,7 @@ const PERMISOS = {
         puede_administrar_usuarios: true,
         anos_permitidos: 'todos',
         areas_permitidas: 'todas'
-    }
-  // ← AGREGAR NUEVO
+    },
     [ROLES.GENERAL]: {
         puede_capturar: false,
         puede_ver_historico: true,
