@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel General - AIFA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .general-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
+        }
+        
+        .card-operativo {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .card-operativo:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+        }
+        
+        .card-direccion {
+            background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .card-direccion:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.3);
+        }
+        
+        .card-construccion {
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+        
+        .card-construccion:hover {
+            opacity: 1;
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3);
+        }
+        
+        .user-info {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .badge-disponible {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #10B981;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .badge-construccion {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #F59E0B;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .animate-delay-1 { animation-delay: 0.1s; }
+        .animate-delay-2 { animation-delay: 0.2s; }
+        .animate-delay-3 { animation-delay: 0.3s; }
+        .animate-delay-4 { animation-delay: 0.4s; }
+        .animate-delay-5 { animation-delay: 0.5s; }
+        .animate-delay-6 { animation-delay: 0.6s; }
+        .animate-delay-7 { animation-delay: 0.7s; }
+        .animate-delay-8 { animation-delay: 0.8s; }
+        
+        .section-divider {
+            border-top: 2px solid #E5E7EB;
+            margin: 3rem 0;
+            position: relative;
+        }
+        
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 2px solid #E5E7EB;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- Header -->
+    <header class="general-header text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="text-4xl">✈️</div>
+                    <div>
+                        <h1 class="text-2xl font-bold">Aeropuerto Internacional Felipe Ángeles</h1>
+                        <p class="text-blue-200">Panel de Control General - Vista Integral</p>
+                    </div>
+                </div>
+                
+                <!-- Información del Usuario -->
+                <div class="user-info rounded-lg px-4 py-3 flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="font-semibold" data-user="username">General</p>
+                        <p class="text-sm text-blue-200">Acceso Total - Solo Lectura</p>
+                    </div>
+                    <button 
+                        onclick="cerrarSesion()" 
+                        class="logout-btn px-4 py-2 rounded-lg text-white text-sm font-medium"
+                        title="Cerrar Sesión"
+                    >
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Contenido Principal -->
+    <main class="container mx-auto px-4 py-8">
+        
+        <!-- Título Principal -->
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-bold text-gray-800 mb-2">Panel de Control General</h2>
+            <p class="text-gray-600">Acceso completo a todos los indicadores del sistema</p>
+        </div>
+        
+        <!-- Sección de Indicadores Operativos -->
+        <div class="mb-12">
+            <div class="text-center mb-6">
+                <h3 class="text-2xl font-semibold text-gray-700">Indicadores Operativos</h3>
+                <p class="text-sm text-gray-500">Datos en tiempo real de operaciones aeroportuarias</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                
+                <!-- Pasajeros -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-1">
+                    <button 
+                        onclick="accederVistaGeneral('pasajeros')" 
+                        class="card-operativo w-full p-8 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-5xl mb-4 block">👥</span>
+                        <h3 class="text-xl font-bold mb-2">Pasajeros</h3>
+                        <p class="text-sm opacity-90">Aviación Comercial y General</p>
+                        <div class="badge-disponible">✓</div>
+                    </button>
+                </div>
+                
+                <!-- Operaciones -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-2">
+                    <button 
+                        onclick="accederVistaGeneral('operaciones')" 
+                        class="card-operativo w-full p-8 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-5xl mb-4 block">✈️</span>
+                        <h3 class="text-xl font-bold mb-2">Operaciones</h3>
+                        <p class="text-sm opacity-90">Vuelos Comerciales y Generales</p>
+                        <div class="badge-disponible">✓</div>
+                    </button>
+                </div>
+                
+                <!-- Carga -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-3">
+                    <button 
+                        onclick="accederVistaGeneral('carga')" 
+                        class="card-operativo w-full p-8 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-5xl mb-4 block">📦</span>
+                        <h3 class="text-xl font-bold mb-2">Carga</h3>
+                        <p class="text-sm opacity-90">Operaciones y Toneladas</p>
+                        <div class="badge-disponible">✓</div>
+                    </button>
+                </div>
+                
+            </div>
+        </div>
+        
+        <!-- Separador -->
+        <div class="section-divider"></div>
+        
+        <!-- Sección de Direcciones -->
+        <div>
+            <div class="text-center mb-6">
+                <h3 class="text-2xl font-semibold text-gray-700">Direcciones Estratégicas</h3>
+                <p class="text-sm text-gray-500">Módulos especializados por área funcional</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                
+                <!-- Dirección de Operación -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-4">
+                    <button 
+                        onclick="accederDireccion('direccion_operacion')" 
+                        class="card-construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-3 block">🎯</span>
+                        <h3 class="text-lg font-bold mb-2">Dirección de Operación</h3>
+                        <p class="text-xs opacity-90">Control operacional integral</p>
+                        <div class="badge-construccion">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Dirección de Planeación Estratégica -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-5">
+                    <button 
+                        onclick="accederDireccion('direccion_planeacion')" 
+                        class="card-construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-3 block">📋</span>
+                        <h3 class="text-lg font-bold mb-2">Dirección de Planeación Estratégica</h3>
+                        <p class="text-xs opacity-90">Desarrollo institucional</p>
+                        <div class="badge-construccion">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Dirección Comercial y de Servicios -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-6">
+                    <button 
+                        onclick="accederDireccion('direccion_comercial')" 
+                        class="card-construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-3 block">🏢</span>
+                        <h3 class="text-lg font-bold mb-2">Dirección Comercial y de Servicios</h3>
+                        <p class="text-xs opacity-90">Desarrollo de negocios</p>
+                        <div class="badge-construccion">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Dirección de Administración -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-7">
+                    <button 
+                        onclick="accederDireccion('direccion_administracion')" 
+                        class="card-construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-3 block">📊</span>
+                        <h3 class="text-lg font-bold mb-2">Dirección de Administración</h3>
+                        <p class="text-xs opacity-90">Gestión administrativa</p>
+                        <div class="badge-construccion">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Dirección Jurídica -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-8">
+                    <button 
+                        onclick="accederDireccion('direccion_juridica')" 
+                        class="card-construccion w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-3 block">⚖️</span>
+                        <h3 class="text-lg font-bold mb-2">Dirección Jurídica</h3>
+                        <p class="text-xs opacity-90">Asuntos legales</p>
+                        <div class="badge-construccion">🚧</div>
+                    </button>
+                </div>
+                
+            </div>
+        </div>
+        <!-- Información de Estado -->
+        <div class="mt-12 bg-white rounded-xl shadow-lg p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                <div>
+                    <div class="text-2xl text-green-600 mb-2">✅</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Módulos Operativos</h4>
+                    <p class="text-sm text-gray-600">Indicadores disponibles para consulta</p>
+                </div>
+                <div>
+                    <div class="text-2xl text-yellow-600 mb-2">🚧</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Direcciones</h4>
+                    <p class="text-sm text-gray-600">En desarrollo - Próximamente</p>
+                </div>
+                <div>
+                    <div class="text-2xl text-blue-600 mb-2">👁️</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Modo Visualización</h4>
+                    <p class="text-sm text-gray-600">Acceso de solo lectura</p>
+                </div>
+            </div>
+        </div>
+        
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white text-center py-6 mt-12">
+        <p>&copy; 2025 Aeropuerto Internacional Felipe Ángeles</p>
+        <p class="text-sm text-gray-400 mt-1">Sistema de Indicadores v0.6.1 - Panel General</p>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="navigation.js"></script>
+    <script src="auth.js"></script>
+    
+    <script>
+        // Variables globales
+        let modoVistaGeneral = null;
+        
+        // Funciones de navegación
+        function accederVistaGeneral(tipo) {
+            console.log('General accediendo a vista:', tipo);
+            
+            // Guardar el tipo de vista en sessionStorage para la página siguiente
+            sessionStorage.setItem('vista_general_tipo', tipo);
+            
+            // Redirigir a la vista general de indicadores
+            window.location.href = `vista_general.html?tipo=${tipo}`;
+        }
+        
+        function accederDireccion(direccion) {
+            console.log('Accediendo a dirección:', direccion);
+            
+            // Por ahora, redirigir a página en construcción
+            window.location.href = `construccion.html?area=${direccion}`;
+        }
+        
+        // Función para mostrar información del usuario
+        function mostrarInformacionUsuario() {
+            const elementosUsername = document.querySelectorAll('[data-user="username"]');
+            elementosUsername.forEach(el => {
+                el.textContent = window.currentUser.username || 'General';
+            });
+        }
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Inicializando menú general');
+            
+            // Verificar autenticación y rol
+            const token = localStorage.getItem('aifa_auth_token');
+            const userData = localStorage.getItem('aifa_user_data');
+            
+            if (!token || !userData) {
+                console.log('No hay sesión, redirigiendo a login');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                const user = JSON.parse(userData);
+                console.log('Usuario encontrado:', user.username, user.rol);
+                
+                // Verificar que sea rol General
+                if (user.rol !== 'general') {
+                    console.log('Rol no válido para menú general');
+                    alert('No tiene permisos para acceder a esta vista');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                // Restaurar currentUser global
+                window.currentUser = {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    rol: user.rol,
+                    area: user.area,
+                    permisos: user.permisos || {
+                        puede_capturar: false,
+                        puede_ver_historico: true,
+                        puede_editar: false,
+                        puede_administrar_usuarios: false,
+                        anos_permitidos: 'todos',
+                        areas_permitidas: 'todas'
+                    },
+                    isAuthenticated: true
+                };
+                
+                mostrarInformacionUsuario();
+                
+                // Mostrar mensaje de bienvenida
+                if (typeof mostrarNotificacion === 'function') {
+                    mostrarNotificacion('Bienvenido al Panel de Control General', 'success');
+                }
+                
+                console.log('Menú general inicializado correctamente');
+                
+            } catch (error) {
+                console.error('Error procesando datos de usuario:', error);
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // Atajos de teclado
+        document.addEventListener('keydown', function(event) {
+            // Alt + P para Pasajeros
+            if (event.altKey && event.key === 'p') {
+                event.preventDefault();
+                accederVistaGeneral('pasajeros');
+            }
+            
+            // Alt + O para Operaciones
+            if (event.altKey && event.key === 'o') {
+                event.preventDefault();
+                accederVistaGeneral('operaciones');
+            }
+            
+            // Alt + C para Carga
+            if (event.altKey && event.key === 'c') {
+                event.preventDefault();
+                accederVistaGeneral('carga');
+            }
+            
+            // Escape para cerrar sesión
+            if (event.key === 'Escape') {
+                const confirmar = confirm('¿Desea cerrar sesión?');
+                if (confirmar) {
+                    cerrarSesion();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
