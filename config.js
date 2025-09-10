@@ -21,7 +21,13 @@ const ROLES = {
     ADMINISTRADOR: 'administrador',
     GENERAL: 'general'  // ← NUEVO ROL
 };
-
+// Configuración de sesión
+const SESSION_CONFIG = {
+    token_key: 'aifa_auth_token',
+    user_key: 'aifa_user_data',
+    expires_hours: 2,
+    remember_me_days: 7
+};
 // Permisos por rol
 const PERMISOS = {
     [ROLES.CAPTURISTA]: {
@@ -94,7 +100,7 @@ const AREAS_SUBDIRECTOR = {
     'carga': {
         nombre: 'Carga',
         icono: '📦',
-        descripción: 'Operaciones de carga y logística'
+        descripcion: 'Operaciones de carga y logística'
     },
     'sistemas': {
         nombre: 'Sistemas',
@@ -138,14 +144,6 @@ var currentUser = {
     area: null,
     permisos: null,
     isAuthenticated: false
-};
-
-// Configuración de sesión
-const SESSION_CONFIG = {
-    token_key: 'aifa_auth_token',
-    user_key: 'aifa_user_data',
-    expires_hours: 2,
-    remember_me_days: 7
 };
 // ====================================
 // CONSTANTES ORIGINALES DEL SISTEMA
