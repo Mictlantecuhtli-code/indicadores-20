@@ -11,41 +11,65 @@
             background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
         }
         
-        .indicador-card {
+        .indicador-principal {
             background: white;
             border: 2px solid #E5E7EB;
             transition: all 0.3s ease;
             border-radius: 0.75rem;
             overflow: hidden;
+            cursor: pointer;
         }
         
-        .indicador-card:hover {
+        .indicador-principal:hover {
             border-color: #3B82F6;
             box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
+            transform: translateY(-4px);
+        }
+        
+        .indicador-principal.activo {
+            border-color: #3B82F6;
+            box-shadow: 0 15px 30px rgba(59, 130, 246, 0.2);
         }
         
         .indicador-header {
             background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
             color: white;
-            padding: 1rem;
-        }
-        
-        .indicador-header.fbo {
-            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            padding: 1.5rem;
         }
         
         .indicador-header.carga {
             background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
         }
         
+        .indicador-header.fbo {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+        
+        .submenu-analisis {
+            display: none;
+            background: #F9FAFB;
+            border-top: 1px solid #E5E7EB;
+            padding: 1rem;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        
+        .submenu-analisis.activo {
+            display: block;
+            max-height: 400px;
+        }
+        
         .analisis-btn {
             background: white;
             border: 1px solid #E5E7EB;
             transition: all 0.2s ease;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1rem;
             text-align: left;
             width: 100%;
             font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0.5rem;
         }
         
         .analisis-btn:hover {
@@ -88,23 +112,21 @@
             transform: translateY(-2px);
         }
         
-        .section-divider {
-            border-top: 2px solid #E5E7EB;
-            margin: 3rem 0;
-            position: relative;
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #E5E7EB;
         }
         
-        .section-divider::before {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 20px;
-            height: 20px;
-            background: white;
-            border: 2px solid #E5E7EB;
-            border-radius: 50%;
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+        
+        .expand-icon.rotated {
+            transform: rotate(180deg);
         }
         
         @keyframes fadeInUp {
@@ -160,25 +182,31 @@
         <!-- Título Principal -->
         <div class="text-center mb-10">
             <h2 class="text-3xl font-bold text-gray-800 mb-2">Panel de Análisis de Indicadores</h2>
-            <p class="text-gray-600">Seleccione un indicador y tipo de análisis para visualizar</p>
+            <p class="text-gray-600">Seleccione un indicador para ver las opciones de análisis disponibles</p>
         </div>
         
         <!-- Sección de Indicadores Principales -->
-        <div class="mb-12">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="mb-8">
+            <h3 class="section-title">Indicadores Operativos</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 <!-- Pasajeros Comercial -->
-                <div class="indicador-card animate-fadeInUp">
-                    <div class="indicador-header">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-3xl">👥</span>
-                            <div>
-                                <h3 class="text-lg font-bold">Pasajeros Comercial</h3>
-                                <p class="text-xs opacity-90">Aviación Comercial</p>
+                <div class="animate-fadeInUp">
+                    <div class="indicador-principal" onclick="toggleSubmenu('pasajeros-comercial')">
+                        <div class="indicador-header">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-4xl">👥</span>
+                                    <div>
+                                        <h3 class="text-xl font-bold">Pasajeros Comercial</h3>
+                                        <p class="text-sm opacity-90">Aviación Comercial</p>
+                                    </div>
+                                </div>
+                                <span class="expand-icon" id="icon-pasajeros-comercial">▼</span>
                             </div>
                         </div>
                     </div>
-                    <div class="p-3 space-y-2">
+                    <div class="submenu-analisis" id="submenu-pasajeros-comercial">
                         <button onclick="abrirAnalisis('pasajeros', 'comercial', 'mensual-2024')" class="analisis-btn analisis-mensual">
                             📊 Comparativo mensual 2025 vs 2024
                         </button>
@@ -200,51 +228,23 @@
                     </div>
                 </div>
                 
-                <!-- Pasajeros FBO (General) -->
-                <div class="indicador-card animate-fadeInUp" style="animation-delay: 0.1s;">
-                    <div class="indicador-header fbo">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-3xl">👥</span>
-                            <div>
-                                <h3 class="text-lg font-bold">Pasajeros FBO</h3>
-                                <p class="text-xs opacity-90">Aviación General</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-3 space-y-2">
-                        <button onclick="abrirAnalisis('pasajeros', 'general', 'mensual-2024')" class="analisis-btn analisis-mensual">
-                            📊 Comparativo mensual 2025 vs 2024
-                        </button>
-                        <button onclick="abrirAnalisis('pasajeros', 'general', 'trimestral-2024')" class="analisis-btn analisis-trimestral">
-                            📈 Comparativo trimestral 2025 vs 2024
-                        </button>
-                        <button onclick="abrirAnalisis('pasajeros', 'general', 'anual-2024')" class="analisis-btn analisis-anual">
-                            📉 Comparativo anual 2025 vs 2024
-                        </button>
-                        <button onclick="abrirAnalisis('pasajeros', 'general', 'meta-bajo')" class="analisis-btn analisis-meta-bajo">
-                            🎯 Real vs Meta Escenario Bajo
-                        </button>
-                        <button onclick="abrirAnalisis('pasajeros', 'general', 'meta-medio')" class="analisis-btn analisis-meta-medio">
-                            🎯 Real vs Meta Escenario Medio
-                        </button>
-                        <button onclick="abrirAnalisis('pasajeros', 'general', 'meta-alto')" class="analisis-btn analisis-meta-alto">
-                            🎯 Real vs Meta Escenario Alto
-                        </button>
-                    </div>
-                </div>
-                
                 <!-- Operaciones Comercial -->
-                <div class="indicador-card animate-fadeInUp" style="animation-delay: 0.2s;">
-                    <div class="indicador-header">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-3xl">✈️</span>
-                            <div>
-                                <h3 class="text-lg font-bold">Operaciones Comercial</h3>
-                                <p class="text-xs opacity-90">Aviación Comercial</p>
+                <div class="animate-fadeInUp" style="animation-delay: 0.1s;">
+                    <div class="indicador-principal" onclick="toggleSubmenu('operaciones-comercial')">
+                        <div class="indicador-header">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-4xl">✈️</span>
+                                    <div>
+                                        <h3 class="text-xl font-bold">Operaciones Comercial</h3>
+                                        <p class="text-sm opacity-90">Aviación Comercial</p>
+                                    </div>
+                                </div>
+                                <span class="expand-icon" id="icon-operaciones-comercial">▼</span>
                             </div>
                         </div>
                     </div>
-                    <div class="p-3 space-y-2">
+                    <div class="submenu-analisis" id="submenu-operaciones-comercial">
                         <button onclick="abrirAnalisis('operaciones', 'comercial', 'mensual-2024')" class="analisis-btn analisis-mensual">
                             📊 Comparativo mensual 2025 vs 2024
                         </button>
@@ -265,52 +265,24 @@
                         </button>
                     </div>
                 </div>
-
-                <!-- Operaciones FBO (General) -->
-                <div class="indicador-card animate-fadeInUp" style="animation-delay: 0.3s;">
-                    <div class="indicador-header fbo">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-3xl">✈️</span>
-                            <div>
-                                <h3 class="text-lg font-bold">Operaciones FBO</h3>
-                                <p class="text-xs opacity-90">Aviación General</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-3 space-y-2">
-                        <button onclick="abrirAnalisis('operaciones', 'general', 'mensual-2024')" class="analisis-btn analisis-mensual">
-                            📊 Comparativo mensual 2025 vs 2024
-                        </button>
-                        <button onclick="abrirAnalisis('operaciones', 'general', 'trimestral-2024')" class="analisis-btn analisis-trimestral">
-                            📈 Comparativo trimestral 2025 vs 2024
-                        </button>
-                        <button onclick="abrirAnalisis('operaciones', 'general', 'anual-2024')" class="analisis-btn analisis-anual">
-                            📉 Comparativo anual 2025 vs 2024
-                        </button>
-                        <button onclick="abrirAnalisis('operaciones', 'general', 'meta-bajo')" class="analisis-btn analisis-meta-bajo">
-                            🎯 Real vs Meta Escenario Bajo
-                        </button>
-                        <button onclick="abrirAnalisis('operaciones', 'general', 'meta-medio')" class="analisis-btn analisis-meta-medio">
-                            🎯 Real vs Meta Escenario Medio
-                        </button>
-                        <button onclick="abrirAnalisis('operaciones', 'general', 'meta-alto')" class="analisis-btn analisis-meta-alto">
-                            🎯 Real vs Meta Escenario Alto
-                        </button>
-                    </div>
-                </div>
                 
                 <!-- Carga Operaciones -->
-                <div class="indicador-card animate-fadeInUp" style="animation-delay: 0.4s;">
-                    <div class="indicador-header carga">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-3xl">📦</span>
-                            <div>
-                                <h3 class="text-lg font-bold">Carga - Operaciones</h3>
-                                <p class="text-xs opacity-90">Operaciones de Carga</p>
+                <div class="animate-fadeInUp" style="animation-delay: 0.2s;">
+                    <div class="indicador-principal" onclick="toggleSubmenu('carga-operaciones')">
+                        <div class="indicador-header carga">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-4xl">📦</span>
+                                    <div>
+                                        <h3 class="text-xl font-bold">Carga - Operaciones</h3>
+                                        <p class="text-sm opacity-90">Operaciones de Carga</p>
+                                    </div>
+                                </div>
+                                <span class="expand-icon" id="icon-carga-operaciones">▼</span>
                             </div>
                         </div>
                     </div>
-                    <div class="p-3 space-y-2">
+                    <div class="submenu-analisis" id="submenu-carga-operaciones">
                         <button onclick="abrirAnalisis('operaciones', 'carga', 'mensual-2024')" class="analisis-btn analisis-mensual">
                             📊 Comparativo mensual 2025 vs 2024
                         </button>
@@ -331,19 +303,24 @@
                         </button>
                     </div>
                 </div>
-                
-                <!-- Carga Toneladas -->
-                <div class="indicador-card animate-fadeInUp" style="animation-delay: 0.5s;">
-                    <div class="indicador-header carga">
-                        <div class="flex items-center space-x-3">
-                            <span class="text-3xl">⚖️</span>
-                            <div>
-                                <h3 class="text-lg font-bold">Carga - Toneladas</h3>
-                                <p class="text-xs opacity-90">Toneladas Transportadas</p>
+
+            <!-- Carga Toneladas -->
+                <div class="animate-fadeInUp" style="animation-delay: 0.3s;">
+                    <div class="indicador-principal" onclick="toggleSubmenu('carga-toneladas')">
+                        <div class="indicador-header carga">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-4xl">⚖️</span>
+                                    <div>
+                                        <h3 class="text-xl font-bold">Carga - Toneladas</h3>
+                                        <p class="text-sm opacity-90">Toneladas Transportadas</p>
+                                    </div>
+                                </div>
+                                <span class="expand-icon" id="icon-carga-toneladas">▼</span>
                             </div>
                         </div>
                     </div>
-                    <div class="p-3 space-y-2">
+                    <div class="submenu-analisis" id="submenu-carga-toneladas">
                         <button onclick="abrirAnalisis('toneladas', 'carga', 'mensual-2024')" class="analisis-btn analisis-mensual">
                             📊 Comparativo mensual 2025 vs 2024
                         </button>
@@ -368,17 +345,96 @@
             </div>
         </div>
         
-        <!-- Separador -->
-        <div class="section-divider"></div>
+        <!-- Sección de Indicadores FBO (separados) -->
+        <div class="mb-8">
+            <h3 class="section-title">Indicadores FBO (Aviación General)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- Pasajeros FBO -->
+                <div class="animate-fadeInUp" style="animation-delay: 0.4s;">
+                    <div class="indicador-principal" onclick="toggleSubmenu('pasajeros-fbo')">
+                        <div class="indicador-header fbo">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-4xl">👥</span>
+                                    <div>
+                                        <h3 class="text-xl font-bold">Pasajeros FBO</h3>
+                                        <p class="text-sm opacity-90">Aviación General</p>
+                                    </div>
+                                </div>
+                                <span class="expand-icon" id="icon-pasajeros-fbo">▼</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="submenu-analisis" id="submenu-pasajeros-fbo">
+                        <button onclick="abrirAnalisis('pasajeros', 'general', 'mensual-2024')" class="analisis-btn analisis-mensual">
+                            📊 Comparativo mensual 2025 vs 2024
+                        </button>
+                        <button onclick="abrirAnalisis('pasajeros', 'general', 'trimestral-2024')" class="analisis-btn analisis-trimestral">
+                            📈 Comparativo trimestral 2025 vs 2024
+                        </button>
+                        <button onclick="abrirAnalisis('pasajeros', 'general', 'anual-2024')" class="analisis-btn analisis-anual">
+                            📉 Comparativo anual 2025 vs 2024
+                        </button>
+                        <button onclick="abrirAnalisis('pasajeros', 'general', 'meta-bajo')" class="analisis-btn analisis-meta-bajo">
+                            🎯 Real vs Meta Escenario Bajo
+                        </button>
+                        <button onclick="abrirAnalisis('pasajeros', 'general', 'meta-medio')" class="analisis-btn analisis-meta-medio">
+                            🎯 Real vs Meta Escenario Medio
+                        </button>
+                        <button onclick="abrirAnalisis('pasajeros', 'general', 'meta-alto')" class="analisis-btn analisis-meta-alto">
+                            🎯 Real vs Meta Escenario Alto
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Operaciones FBO -->
+                <div class="animate-fadeInUp" style="animation-delay: 0.5s;">
+                    <div class="indicador-principal" onclick="toggleSubmenu('operaciones-fbo')">
+                        <div class="indicador-header fbo">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-4xl">✈️</span>
+                                    <div>
+                                        <h3 class="text-xl font-bold">Operaciones FBO</h3>
+                                        <p class="text-sm opacity-90">Aviación General</p>
+                                    </div>
+                                </div>
+                                <span class="expand-icon" id="icon-operaciones-fbo">▼</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="submenu-analisis" id="submenu-operaciones-fbo">
+                        <button onclick="abrirAnalisis('operaciones', 'general', 'mensual-2024')" class="analisis-btn analisis-mensual">
+                            📊 Comparativo mensual 2025 vs 2024
+                        </button>
+                        <button onclick="abrirAnalisis('operaciones', 'general', 'trimestral-2024')" class="analisis-btn analisis-trimestral">
+                            📈 Comparativo trimestral 2025 vs 2024
+                        </button>
+                        <button onclick="abrirAnalisis('operaciones', 'general', 'anual-2024')" class="analisis-btn analisis-anual">
+                            📉 Comparativo anual 2025 vs 2024
+                        </button>
+                        <button onclick="abrirAnalisis('operaciones', 'general', 'meta-bajo')" class="analisis-btn analisis-meta-bajo">
+                            🎯 Real vs Meta Escenario Bajo
+                        </button>
+                        <button onclick="abrirAnalisis('operaciones', 'general', 'meta-medio')" class="analisis-btn analisis-meta-medio">
+                            🎯 Real vs Meta Escenario Medio
+                        </button>
+                        <button onclick="abrirAnalisis('operaciones', 'general', 'meta-alto')" class="analisis-btn analisis-meta-alto">
+                            🎯 Real vs Meta Escenario Alto
+                        </button>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
         
         <!-- Sección de Direcciones -->
-        <div>
-            <div class="text-center mb-6">
-                <h3 class="text-2xl font-semibold text-gray-700">Direcciones Estratégicas</h3>
-                <p class="text-sm text-gray-500">Módulos especializados por área funcional (En desarrollo)</p>
-            </div>
+        <div class="mb-8">
+            <h3 class="section-title">Direcciones Estratégicas</h3>
+            <p class="text-sm text-gray-500 mb-4">Módulos especializados por área funcional (En desarrollo)</p>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 max-w-7xl mx-auto">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 
                 <!-- Dirección de Operación -->
                 <div class="relative">
@@ -452,6 +508,40 @@
     <script src="auth.js"></script>
     
     <script>
+        // Variable para rastrear el submenu activo
+        let submenuActivo = null;
+        
+        // Función para toggle de submenús
+        function toggleSubmenu(id) {
+            const submenu = document.getElementById(`submenu-${id}`);
+            const icon = document.getElementById(`icon-${id}`);
+            const indicador = submenu.parentElement.querySelector('.indicador-principal');
+            
+            // Si hay un submenu activo diferente, cerrarlo
+            if (submenuActivo && submenuActivo !== id) {
+                const submenuAnterior = document.getElementById(`submenu-${submenuActivo}`);
+                const iconAnterior = document.getElementById(`icon-${submenuActivo}`);
+                const indicadorAnterior = submenuAnterior.parentElement.querySelector('.indicador-principal');
+                
+                submenuAnterior.classList.remove('activo');
+                iconAnterior.classList.remove('rotated');
+                indicadorAnterior.classList.remove('activo');
+            }
+            
+            // Toggle del submenu actual
+            if (submenu.classList.contains('activo')) {
+                submenu.classList.remove('activo');
+                icon.classList.remove('rotated');
+                indicador.classList.remove('activo');
+                submenuActivo = null;
+            } else {
+                submenu.classList.add('activo');
+                icon.classList.add('rotated');
+                indicador.classList.add('activo');
+                submenuActivo = id;
+            }
+        }
+        
         // Función para abrir análisis específico
         function abrirAnalisis(indicador, area, tipoAnalisis) {
             console.log('Abriendo análisis:', { indicador, area, tipoAnalisis });
@@ -479,9 +569,26 @@
             });
         }
         
+        // Cerrar submenús al hacer clic fuera
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.indicador-principal') && 
+                !event.target.closest('.submenu-analisis')) {
+                if (submenuActivo) {
+                    const submenu = document.getElementById(`submenu-${submenuActivo}`);
+                    const icon = document.getElementById(`icon-${submenuActivo}`);
+                    const indicador = submenu.parentElement.querySelector('.indicador-principal');
+                    
+                    submenu.classList.remove('activo');
+                    icon.classList.remove('rotated');
+                    indicador.classList.remove('activo');
+                    submenuActivo = null;
+                }
+            }
+        });
+        
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('Inicializando menú general v2');
+            console.log('Inicializando menú general v3');
             
             // Verificar autenticación y rol
             const token = localStorage.getItem('aifa_auth_token');
@@ -525,7 +632,7 @@
                 
                 mostrarInformacionUsuario();
                 
-                console.log('Menú general v2 inicializado correctamente');
+                console.log('Menú general v3 inicializado correctamente');
                 
             } catch (error) {
                 console.error('Error procesando datos de usuario:', error);
@@ -536,9 +643,15 @@
         // Atajos de teclado
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
-                const confirmar = confirm('¿Desea cerrar sesión?');
-                if (confirmar) {
-                    cerrarSesion();
+                // Primero cerrar submenú si está abierto
+                if (submenuActivo) {
+                    toggleSubmenu(submenuActivo);
+                } else {
+                    // Si no hay submenú abierto, preguntar por cerrar sesión
+                    const confirmar = confirm('¿Desea cerrar sesión?');
+                    if (confirmar) {
+                        cerrarSesion();
+                    }
                 }
             }
         });
