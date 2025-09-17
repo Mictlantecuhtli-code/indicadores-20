@@ -315,9 +315,148 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
     }
 }
 /**
+ * Crear gráfica Meta
+ */
+    function crearGraficaMeta() {
+        const ctx = $('#chartMeta');
+        if (!ctx) {
+            console.error('Canvas de meta no encontrado');
+            return;
+        }
+    
+        // Destruir gráfica existente si hay una
+        if (window.chartMetaInstance) {
+            window.chartMetaInstance.destroy();
+        }
+    
+        const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        
+        const dataReal = [];
+        const dataMeta = [];
+        
+        for (let mes = 1; mes <= 12; mes++) {
+            const datoReal = analisisState.datos2025.find(d => d.mes === mes);
+            const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
+            
+            dataReal.push(datoReal?.valor || null);
+            dataMeta.push(datoMeta?.meta || null);
+        }
+    
+        const config = {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Real 2025',
+                        data: dataReal,
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.1,
+                        pointBackgroundColor: '#3B82F6',
+                        pointBorderColor: '#3B82F6',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    },
+                    {
+                        label: `Meta ${analisisState.escenario.charAt(0).toUpperCase() + analisisState.escenario.slice(1)}`,
+                        data: dataMeta,
+                        borderColor: obtenerColorEscenario(analisisState.escenario),
+                        backgroundColor: `${obtenerColorEscenario(analisisState.escenario)}20`,
+                        borderWidth: 3,
+                        borderDash: [10, 5],
+                        tension: 0.1,
+                        pointBackgroundColor: obtenerColorEscenario(analisisState.escenario),
+                        pointBorderColor: obtenerColorEscenario(analisisState.escenario),
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `Real vs Meta Escenario ${analisisState.escenario.charAt(0).toUpperCase() + analisisState.escenario.slice(1)} - 2025`,
+                        font: { size: 16, weight: 'bold' }
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: { 
+                            usePointStyle: true, 
+                            padding: 15,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function(context) {
+                                const valor = context.parsed.y;
+                                if (valor === null || valor === undefined) return null;
+                                return `${context.dataset.label}: ${formatearNumero(valor)}`;
+                            },
+                            afterLabel: function(context) {
+                                // Mostrar % cumplimiento en tooltip
+                                if (context.datasetIndex === 0 && context.parsed.y !== null) {
+                                    const mes = context.dataIndex + 1;
+                                    const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
+                                    if (datoMeta?.meta) {
+                                        const cumplimiento = (context.parsed.y / datoMeta.meta * 100).toFixed(1);
+                                        return `Cumplimiento: ${cumplimiento}%`;
+                                    }
+                                }
+                                return null;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return formatearNumero(value);
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: obtenerNombreIndicador() // Esta función ya existe en analisis_general.html
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Meses 2025'
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: 5,
+                        hoverRadius: 7,
+                        borderWidth: 2
+                    },
+                    line: {
+                        borderWidth: 3,
+                        tension: 0.1
+                    }
+                }
+            }
+        };
+    
+        window.chartMetaInstance = new Chart(ctx.getContext('2d'), config);
+        
+        console.log('Gráfica de meta creada exitosamente');
+    }
+
+/**
  * Crear gráfica trimestral (SOLO 2 AÑOS)
  */
-
 function crearGraficaTrimestral(trimestres) {
     const ctx = $('#chartTrimestral');
     if (!ctx) {
