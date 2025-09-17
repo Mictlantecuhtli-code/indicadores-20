@@ -1329,6 +1329,28 @@
             });
         }
 
+            function obtenerUltimoMesConDatos() {
+                let ultimoMes = 0;
+                
+                // Revisar los datos de 2025 para encontrar el último mes con valor
+                for (let mes = 12; mes >= 1; mes--) {
+                    const dato = analisisState.datos2025.find(d => d.mes === mes);
+                    if (dato && dato.valor && dato.valor > 0) {
+                        ultimoMes = mes;
+                        break;
+                    }
+                }
+                
+                // Si no encontramos datos, usar el mes actual como fallback
+                if (ultimoMes === 0) {
+                    ultimoMes = new Date().getMonth() + 1;
+                }
+                
+                console.log('Último mes con datos detectado:', ultimoMes, '(' + MESES[ultimoMes - 1] + ')');
+                return ultimoMes;
+            }
+
+        
         function crearGraficaMeta() {
             const canvas = document.getElementById('chartMeta');
             if (!canvas) {
