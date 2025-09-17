@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área en Construcción - AIFA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .construction-bg {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FED7AA 50%, #FECACA 100%);
+            min-height: 100vh;
+        }
+        
+        .construction-container {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .bounce-animation {
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% {
+                animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+                transform: translate3d(0,0,0);
+            }
+            40%, 43% {
+                animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+                transform: translate3d(0, -30px, 0);
+            }
+            70% {
+                animation-timing-function: cubic-bezier(0.755, 0.050, 0.855, 0.060);
+                transform: translate3d(0, -15px, 0);
+            }
+            90% {
+                transform: translate3d(0,-4px,0);
+            }
+        }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #F59E0B, #D97706, #B45309);
+            animation: progress 3s ease-in-out infinite;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 75%; }
+            100% { width: 0%; }
+        }
+        
+        .feature-card {
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(5px);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-back {
+            background: linear-gradient(45deg, #3B82F6, #1E40AF);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-back:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .notification-bell {
+            animation: ring 2s ease-in-out infinite;
+        }
+        
+        @keyframes ring {
+            0% { transform: rotate(0); }
+            10% { transform: rotate(30deg); }
+            20% { transform: rotate(-28deg); }
+            30% { transform: rotate(34deg); }
+            40% { transform: rotate(-32deg); }
+            50% { transform: rotate(30deg); }
+            60% { transform: rotate(-28deg); }
+            70% { transform: rotate(26deg); }
+            80% { transform: rotate(-24deg); }
+            90% { transform: rotate(22deg); }
+            100% { transform: rotate(0); }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="construction-bg">
+    
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="text-3xl">✈️</div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-800">AIFA - Sistema de Indicadores</h1>
+                        <p class="text-sm text-gray-600">Área en Construcción</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <span class="text-sm text-gray-600" data-user="username">Usuario</span>
+                    <button 
+                        onclick="volverAlMenu()" 
+                        class="btn-back px-4 py-2 rounded-lg text-white text-sm font-medium"
+                    >
+                        Volver al Menú
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Contenido Principal -->
+    <main class="container mx-auto px-4 py-12">
+        <div class="max-w-4xl mx-auto">
+            
+            <!-- Icono Principal y Título -->
+            <div class="text-center mb-8 animate-fadeInUp">
+                <div class="text-8xl mb-6 bounce-animation">🚧</div>
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Área en Construcción</h2>
+                <h3 class="text-2xl font-semibold text-amber-600 mb-2" id="areaNombre">Cargando...</h3>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto" id="areaDescripcion">
+                    Esta sección del sistema está siendo desarrollada y estará disponible próximamente.
+                </p>
+            </div>
+            
+            <!-- Barra de Progreso -->
+            <div class="construction-container rounded-xl p-8 mb-8 animate-fadeInUp" style="animation-delay: 0.2s;">
+                <div class="text-center mb-6">
+                    <h4 class="text-xl font-bold text-gray-800 mb-2">Progreso de Desarrollo</h4>
+                    <p class="text-gray-600">Nuestro equipo está trabajando para completar esta funcionalidad</p>
+                </div>
+                
+                <div class="relative">
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+                        <div class="progress-bar h-4 rounded-full"></div>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>Planificación</span>
+                        <span>Desarrollo</span>
+                        <span>Pruebas</span>
+                        <span>Implementación</span>
+                    </div>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <p class="text-sm text-gray-500">
+                        <span class="notification-bell inline-block">🔔</span>
+                        Será notificado cuando el módulo esté disponible
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Características Próximas -->
+            <div class="animate-fadeInUp" style="animation-delay: 0.4s;">
+                <h4 class="text-2xl font-bold text-gray-800 text-center mb-8">Características que Incluirá</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+                    <div class="feature-card rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-4">📊</div>
+                        <h5 class="font-bold text-gray-800 mb-2">Dashboards Interactivos</h5>
+                        <p class="text-sm text-gray-600">Visualización en tiempo real de indicadores clave de rendimiento</p>
+                    </div>
+                    
+                    <div class="feature-card rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-4">📈</div>
+                        <h5 class="font-bold text-gray-800 mb-2">Reportes Automáticos</h5>
+                        <p class="text-sm text-gray-600">Generación automatizada de reportes personalizados</p>
+                    </div>
+                    
+                    <div class="feature-card rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-4">📋</div>
+                        <h5 class="font-bold text-gray-800 mb-2">Captura de Datos</h5>
+                        <p class="text-sm text-gray-600">Formularios intuitivos para registro de información</p>
+                    </div>
+                    
+                    <div class="feature-card rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-4">🔍</div>
+                        <h5 class="font-bold text-gray-800 mb-2">Análisis Avanzado</h5>
+                        <p class="text-sm text-gray-600">Herramientas de análisis y comparación de tendencias</p>
+                    </div>
+                    
+                    <div class="feature-card rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-4">📱</div>
+                        <h5 class="font-bold text-gray-800 mb-2">Acceso Móvil</h5>
+                        <p class="text-sm text-gray-600">Interfaz optimizada para dispositivos móviles</p>
+                    </div>
+                    
+                    <div class="feature-card rounded-xl p-6 text-center">
+                        <div class="text-3xl mb-4">🔐</div>
+                        <h5 class="font-bold text-gray-800 mb-2">Seguridad Integral</h5>
+                        <p class="text-sm text-gray-600">Control de acceso y auditoría completa</p>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <!-- Información de Contacto -->
+            <div class="construction-container rounded-xl p-8 mt-8 text-center animate-fadeInUp" style="animation-delay: 0.6s;">
+                <div class="text-3xl mb-4">📧</div>
+                <h4 class="text-xl font-bold text-gray-800 mb-2">¿Necesita Acceso Urgente?</h4>
+                <p class="text-gray-600 mb-4">
+                    Si requiere funcionalidades específicas de esta área, puede contactar al equipo de desarrollo
+                </p>
+                <div class="space-y-2">
+                    <p class="text-sm font-medium text-blue-600">desarrollo@aifa.aero</p>
+                    <p class="text-sm text-gray-500">Respuesta en 24-48 horas hábiles</p>
+                </div>
+            </div>
+            
+            <!-- Botones de Acción -->
+            <div class="text-center mt-8 space-y-4 animate-fadeInUp" style="animation-delay: 0.8s;">
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button 
+                        onclick="volverAlMenu()" 
+                        class="btn-back px-8 py-3 rounded-lg text-white font-semibold"
+                    >
+                        Volver al Menú Principal
+                    </button>
+                    
+                    <button 
+                        onclick="accederOperaciones()" 
+                        class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-lg text-white font-semibold transition-all duration-300 hover:transform hover:-translate-y-1"
+                    >
+                        Ir a Operaciones (Disponible)
+                    </button>
+                </div>
+                
+                <p class="text-sm text-gray-500 mt-4">
+                    Presione <kbd class="bg-gray-200 px-2 py-1 rounded text-xs">Escape</kbd> para volver al menú
+                </p>
+            </div>
+            
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-white/80 backdrop-blur-md text-center py-6 mt-12">
+        <p class="text-gray-600">&copy; 2025 Aeropuerto Internacional Felipe Ángeles</p>
+        <p class="text-sm text-gray-500 mt-1">Sistema de Indicadores v2.1.0</p>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="navigation.js"></script>
+    <script src="auth.js"></script>
+    
+    <script>
+        // Variables globales
+        let areaActual = null;
+        
+        // Inicialización de la página
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Inicializando página de construcción');
+            
+            // Verificar autenticación
+            if (!currentUser.isAuthenticated) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Obtener área desde URL
+            const urlParams = new URLSearchParams(window.location.search);
+            areaActual = urlParams.get('area') || 'desconocida';
+            
+            // Configurar información del área
+            configurarInformacionArea(areaActual);
+            
+            // Mostrar información del usuario
+            mostrarInfoUsuario();
+            
+            // Registrar evento
+            if (typeof registrarEventoSeguridad === 'function') {
+                registrarEventoSeguridad('ACCESO_AREA_CONSTRUCCION', {
+                    area: areaActual
+                });
+            }
+            
+            log('Página de construcción inicializada', { area: areaActual });
+        });
+        
+        // Configurar información específica del área
+        function configurarInformacionArea(area) {
+            const nombreElemento = document.getElementById('areaNombre');
+            const descripcionElemento = document.getElementById('areaDescripcion');
+            
+            const infoArea = AREAS_SUBDIRECTOR[area];
+            
+            if (infoArea) {
+                nombreElemento.textContent = infoArea.nombre;
+                descripcionElemento.textContent = infoArea.descripcion || 'Esta sección del sistema está siendo desarrollada y estará disponible próximamente.';
+                
+                // Actualizar título de la página
+                document.title = `${infoArea.nombre} - En Construcción - AIFA`;
+            } else {
+                nombreElemento.textContent = 'Área Desconocida';
+                descripcionElemento.textContent = 'El área solicitada no fue encontrada en el sistema.';
+            }
+        }
+        
+        // Mostrar información del usuario
+
+        function mostrarInfoUsuario() {
+        const usernameElements = document.querySelectorAll('[data-user="username"]');
+        usernameElements.forEach(el => {
+            el.textContent = currentUser.username || 'Usuario';
+        });
+        
+        // Agregar indicador de rol para General
+        if (currentUser.rol === ROLES.GENERAL) {
+            const headerTexto = document.querySelector('header p.text-sm');
+            if (headerTexto) {
+                headerTexto.textContent = 'Área en Construcción - Vista General';
+                }
+            }
+        }
+        
+        // Funciones de navegación
+        function volverAlMenu() {
+            log('Regresando al menú según rol');
+            
+            if (currentUser.rol === ROLES.ADMINISTRADOR) {
+                window.location.href = 'menu_administrador.html';
+            } else if (currentUser.rol === ROLES.SUBDIRECTOR) {
+                window.location.href = 'menu_subdirector.html';
+            } else if (currentUser.rol === ROLES.GENERAL) {
+                window.location.href = 'menu_general.html';
+            } else {
+                window.location.href = 'index_v2.html';
+            }
+        }
+        
+        function accederOperaciones() {
+            log('Accediendo a operaciones desde construcción');
+            
+            // Si es General, redirigir a su vista específica
+            if (currentUser.rol === ROLES.GENERAL) {
+                window.location.href = 'vista_general.html?tipo=operaciones';
+                return;
+            }
+            
+            if (puedeAccederArea('operaciones')) {
+                mostrarNotificacion('Redirigiendo al sistema de operaciones...', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index_v2.html';
+                }, 1000);
+            } else {
+                mostrarNotificacion('No tiene permisos para acceder a operaciones', 'error');
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', function(event) {
+            // Escape para volver al menú
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                volverAlMenu();
+            }
+            
+            // Enter para ir a operaciones
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                accederOperaciones();
+            }
+            
+            // Alt + M para ir al menú
+            if (event.altKey && event.key === 'm') {
+                event.preventDefault();
+                volverAlMenu();
+            }
+        });
+        
+        // Mostrar mensaje de bienvenida específico del área
+        setTimeout(() => {
+            const infoArea = AREAS_SUBDIRECTOR[areaActual];
+            if (infoArea) {
+                mostrarNotificacion(`Módulo de ${infoArea.nombre} en desarrollo activo`, 'info', 4000);
+            }
+        }, 2000);
+    </script>
+</body>
+</html>

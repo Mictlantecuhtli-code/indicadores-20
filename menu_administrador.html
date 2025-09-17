@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú Administrador - AIFA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .admin-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+        }
+        
+        .admin-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(220, 38, 38, 0.3);
+        }
+        
+        .area-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        }
+        
+        .area-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+        }
+        
+        .construccion-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        }
+        
+        .construccion-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3);
+        }
+        
+        .header-gradient {
+            background: linear-gradient(135deg, #7C2D12 0%, #DC2626 50%, #B91C1C 100%);
+        }
+        
+        .user-info {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #EF4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .admin-badge {
+            background: #DC2626;
+        }
+        
+        .available-badge {
+            background: #10B981;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-fadeInUp {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        .animate-delay-1 { animation-delay: 0.1s; }
+        .animate-delay-2 { animation-delay: 0.2s; }
+        .animate-delay-3 { animation-delay: 0.3s; }
+        .animate-delay-4 { animation-delay: 0.4s; }
+        .animate-delay-5 { animation-delay: 0.5s; }
+        .animate-delay-6 { animation-delay: 0.6s; }
+        .animate-delay-7 { animation-delay: 0.7s; }
+        .animate-delay-8 { animation-delay: 0.8s; }
+        .animate-delay-9 { animation-delay: 0.9s; }
+        .animate-delay-10 { animation-delay: 1.0s; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- Header -->
+    <header class="header-gradient text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="text-4xl">✈️</div>
+                    <div>
+                        <h1 class="text-2xl font-bold">Aeropuerto Internacional Felipe Ángeles</h1>
+                        <p class="text-red-200">Sistema de Indicadores - Panel de Administrador</p>
+                    </div>
+                </div>
+                
+                <!-- Información del Usuario -->
+                <div class="user-info rounded-lg px-4 py-3 flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="font-semibold" data-user="username">Administrador</p>
+                        <p class="text-sm text-red-200">Acceso Total</p>
+                    </div>
+                    <button 
+                        onclick="cerrarSesion()" 
+                        class="logout-btn px-4 py-2 rounded-lg text-white text-sm font-medium"
+                        title="Cerrar Sesión"
+                    >
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Contenido Principal -->
+    <main class="container mx-auto px-4 py-8">
+        
+        <!-- Sección de Administración -->
+        <div class="mb-12">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Panel de Administración</h2>
+                <p class="text-gray-600">Gestión de usuarios y configuración del sistema</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                <!-- Gestión de Usuarios -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-1">
+                    <button 
+                        onclick="gestionarUsuarios()" 
+                        class="admin-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">👥</span>
+                        <h3 class="text-xl font-bold mb-2">Gestión de Usuarios</h3>
+                        <p class="text-sm opacity-90">Crear, editar y administrar usuarios del sistema</p>
+                        <div class="badge admin-badge">⚙️</div>
+                    </button>
+                </div>
+                
+                <!-- Configuración del Sistema -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-2">
+                    <button 
+                        onclick="configurarSistema()" 
+                        class="admin-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">⚙️</span>
+                        <h3 class="text-xl font-bold mb-2">Configuración</h3>
+                        <p class="text-sm opacity-90">Parámetros del sistema y configuraciones globales</p>
+                        <div class="badge admin-badge">🔧</div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Separador -->
+        <div class="border-t border-gray-300 mb-12"></div>
+        
+        <!-- Sección de Áreas -->
+        <div>
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Acceso a Áreas</h2>
+                <p class="text-gray-600">Acceso completo a todos los módulos del sistema</p>
+            </div>
+            
+            <!-- Grid de Áreas -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+                
+                <!-- Operaciones (Disponible) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-3">
+                    <button 
+                        onclick="accederArea('operaciones')" 
+                        class="area-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">✈️</span>
+                        <h3 class="text-xl font-bold mb-2">Operaciones</h3>
+                        <p class="text-sm opacity-90">Indicadores de aviación y operaciones aeroportuarias</p>
+                        <div class="badge available-badge">✓</div>
+                    </button>
+                </div>
+                
+                <!-- Mercadotecnia (En Construcción) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-4">
+                    <button 
+                        onclick="accederAreaConstruccion('mercadotecnia')" 
+                        class="construccion-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">📊</span>
+                        <h3 class="text-xl font-bold mb-2">Mercadotecnia</h3>
+                        <p class="text-sm opacity-90">Estrategias comerciales y promoción</p>
+                        <div class="badge">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Gerencia de SMS (En Construcción) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-5">
+                    <button 
+                        onclick="accederAreaConstruccion('gerencia_sms')" 
+                        class="construccion-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">🛡️</span>
+                        <h3 class="text-xl font-bold mb-2">Gerencia de SMS</h3>
+                        <p class="text-sm opacity-90">Sistema de Gestión de Seguridad</p>
+                        <div class="badge">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Calidad (En Construcción) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-6">
+                    <button 
+                        onclick="accederAreaConstruccion('calidad')" 
+                        class="construccion-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">🏆</span>
+                        <h3 class="text-xl font-bold mb-2">Calidad</h3>
+                        <p class="text-sm opacity-90">Control y aseguramiento de calidad</p>
+                        <div class="badge">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Recursos Humanos (En Construcción) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-7">
+                    <button 
+                        onclick="accederAreaConstruccion('recursos_humanos')" 
+                        class="construccion-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">👥</span>
+                        <h3 class="text-xl font-bold mb-2">Recursos Humanos</h3>
+                        <p class="text-sm opacity-90">Gestión del capital humano</p>
+                        <div class="badge">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Comercial (En Construcción) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-8">
+                    <button 
+                        onclick="accederAreaConstruccion('comercial')" 
+                        class="construccion-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">💼</span>
+                        <h3 class="text-xl font-bold mb-2">Comercial</h3>
+                        <p class="text-sm opacity-90">Actividades comerciales y ventas</p>
+                        <div class="badge">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Carga (En Construcción) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-9">
+                    <button 
+                        onclick="accederAreaConstruccion('carga')" 
+                        class="construccion-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">📦</span>
+                        <h3 class="text-xl font-bold mb-2">Carga</h3>
+                        <p class="text-sm opacity-90">Operaciones de carga y logística</p>
+                        <div class="badge">🚧</div>
+                    </button>
+                </div>
+                
+                <!-- Sistemas (En Construcción) -->
+                <div class="relative opacity-0 animate-fadeInUp animate-delay-10">
+                    <button 
+                        onclick="accederAreaConstruccion('sistemas')" 
+                        class="construccion-card w-full p-6 rounded-xl text-white text-center hover:shadow-xl relative group"
+                    >
+                        <span class="text-4xl mb-4 block">💻</span>
+                        <h3 class="text-xl font-bold mb-2">Sistemas</h3>
+                        <p class="text-sm opacity-90">Tecnología e infraestructura</p>
+                        <div class="badge">🚧</div>
+                    </button>
+                </div>
+                
+            </div>
+        </div>
+        
+        <!-- Información de Estado -->
+        <div class="mt-12 bg-white rounded-xl shadow-lg p-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
+                <div>
+                    <div class="text-2xl text-red-600 mb-2">⚙️</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Administración</h4>
+                    <p class="text-sm text-gray-600">Funciones administrativas del sistema</p>
+                </div>
+                <div>
+                    <div class="text-2xl text-green-600 mb-2">✅</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Área Disponible</h4>
+                    <p class="text-sm text-gray-600">Sistema completo operativo</p>
+                </div>
+                <div>
+                    <div class="text-2xl text-yellow-600 mb-2">🚧</div>
+                    <h4 class="font-bold text-gray-800 mb-1">En Construcción</h4>
+                    <p class="text-sm text-gray-600">Próximamente disponible</p>
+                </div>
+                <div>
+                    <div class="text-2xl text-blue-600 mb-2">🔑</div>
+                    <h4 class="font-bold text-gray-800 mb-1">Acceso Total</h4>
+                    <p class="text-sm text-gray-600">Sin restricciones de tiempo o área</p>
+                </div>
+            </div>
+        </div>
+        
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white text-center py-6 mt-12">
+        <p>&copy; 2025 Aeropuerto Internacional Felipe Ángeles</p>
+        <p class="text-sm text-gray-400 mt-1">Sistema de Indicadores v2.1.0 - Panel de Administrador</p>
+    </footer>
+    
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="navigation.js"></script>
+    <script src="auth.js"></script>
+    
+    <script>
+        // FUNCIONES GLOBALES PRIMERO - para que estén disponibles en onclick
+        function gestionarUsuarios() {
+            console.log('Accediendo a gestión de usuarios');
+            alert('Módulo de gestión de usuarios próximamente disponible');
+        }
+        
+        function configurarSistema() {
+            console.log('Accediendo a configuración del sistema');
+            alert('Módulo de configuración próximamente disponible');
+        }
+        
+        function accederArea(area) {
+            console.log('Admin accediendo al área:', area);
+            
+            if (area === 'operaciones') {
+                window.location.href = 'index_v2.html';
+            } else {
+                accederAreaConstruccion(area);
+            }
+        }
+        
+        function accederAreaConstruccion(area) {
+            console.log('Admin accediendo a área en construcción:', area);
+            window.location.href = `construccion.html?area=${area}`;
+        }
+        
+        function mostrarInformacionUsuario() {
+            const elementosUsername = document.querySelectorAll('[data-user="username"]');
+            elementosUsername.forEach(el => {
+                el.textContent = window.currentUser.username || 'Administrador';
+            });
+        }
+        
+        // INICIALIZACIÓN DESPUÉS DE DEFINIR LAS FUNCIONES
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Inicializando menú administrador con verificación simple');
+            
+            const token = localStorage.getItem('aifa_auth_token');
+            const userData = localStorage.getItem('aifa_user_data');
+            
+            if (!token || !userData) {
+                console.log('No hay sesión, redirigiendo a login');
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            try {
+                const user = JSON.parse(userData);
+                console.log('Usuario encontrado:', user.username, user.rol);
+                
+                if (user.rol !== 'administrador') {
+                    console.log('Rol no válido para menú administrador');
+                    window.location.href = 'login.html';
+                    return;
+                }
+                
+                // Restaurar currentUser global
+                window.currentUser = {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    rol: user.rol,
+                    area: user.area,
+                    permisos: user.permisos,
+                    isAuthenticated: true
+                };
+                
+                mostrarInformacionUsuario();
+                console.log('Menú administrador inicializado correctamente');
+                
+            } catch (error) {
+                console.error('Error procesando datos de usuario:', error);
+                window.location.href = 'login.html';
+            }
+        });
+        
+        // Atajos de teclado para administradores
+        document.addEventListener('keydown', function(event) {
+            if (event.altKey && event.key === 'u') {
+                event.preventDefault();
+                gestionarUsuarios();
+            }
+            
+            if (event.altKey && event.key === 's') {
+                event.preventDefault();
+                configurarSistema();
+            }
+            
+            if (event.altKey && event.key >= '1' && event.key <= '8') {
+                event.preventDefault();
+                const areas = ['operaciones', 'mercadotecnia', 'gerencia_sms', 'calidad', 'recursos_humanos', 'comercial', 'carga', 'sistemas'];
+                const index = parseInt(event.key) - 1;
+                if (areas[index]) {
+                    accederArea(areas[index]);
+                }
+            }
+            
+            if (event.key === 'Escape') {
+                const confirmar = confirm('¿Desea cerrar sesión?');
+                if (confirmar) {
+                    cerrarSesion();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

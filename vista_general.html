@@ -1,0 +1,739 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vista General - Indicadores AIFA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+            max-height: 400px;
+        }
+        
+        #chartGeneral {
+            max-height: 400px !important;
+        }
+        
+        .general-header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 50%, #581c87 100%);
+        }
+        
+        .user-info {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .back-btn {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: rgba(59, 130, 246, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        input[type="checkbox"] {
+            accent-color: #10B981;
+        }
+        
+        .info-card {
+            background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+            border-left: 4px solid #3B82F6;
+        }
+        
+        .tabla-comparativa th {
+            background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+        }
+        
+        .valor-positivo {
+            color: #10B981;
+            font-weight: 600;
+        }
+        
+        .valor-negativo {
+            color: #EF4444;
+            font-weight: 600;
+        }
+        
+        .valor-neutro {
+            color: #6B7280;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    
+    <!-- Header -->
+    <header class="general-header text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div class="text-3xl">✈️</div>
+                    <div>
+                        <h1 class="text-xl font-bold">Sistema de Indicadores AIFA</h1>
+                        <p class="text-blue-200 text-sm">Vista General - <span id="tipoVista">Cargando...</span></p>
+                    </div>
+                </div>
+                
+                <!-- Información del Usuario y Botones -->
+                <div class="flex items-center space-x-4">
+                    <div class="user-info rounded-lg px-4 py-2 flex items-center space-x-3">
+                        <div class="text-right">
+                            <p class="font-semibold text-sm" data-user="username">General</p>
+                            <p class="text-xs text-blue-200">Solo Lectura</p>
+                        </div>
+                        <button 
+                            onclick="volverAMenu()" 
+                            class="back-btn px-3 py-2 rounded text-white text-xs font-medium"
+                            title="Volver al Menú"
+                        >
+                            ← Menú
+                        </button>
+                        <button 
+                            onclick="cerrarSesion()" 
+                            class="logout-btn px-3 py-2 rounded text-white text-xs font-medium"
+                            title="Cerrar Sesión"
+                        >
+                            Salir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- Contenido Principal -->
+    <div class="container mx-auto p-4">
+        
+        <!-- Panel de Información -->
+        <div class="info-card rounded-lg p-4 mb-6 animate-fadeIn">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+                <div>
+                    <p class="text-blue-800 font-medium">Modo Visualización General</p>
+                    <p class="text-blue-600 text-sm">Comparación directa 2025 vs 2024 con análisis de variación porcentual</p>
+                </div>
+            </div>
+        </div>
+        <!-- Contenedor Principal -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            
+            <!-- Selector de Tipo -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">
+                        <span id="tituloIndicador">Indicadores</span>
+                    </h2>
+                    <div class="flex items-center space-x-4">
+                        <label class="text-sm font-medium text-gray-700">Tipo:</label>
+                        <select id="selectorTipo" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Seleccionar...</option>
+                        </select>
+                        <button 
+                            id="btnCargarDatos"
+                            onclick="cargarDatosGeneral()"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
+                        >
+                            Cargar Datos
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tabla Comparativa 2025 vs 2024 -->
+            <div id="contenedorTablaComparativa" class="mb-8 hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Comparación Anual</h3>
+                <div class="overflow-x-auto">
+                    <table class="tabla-comparativa min-w-full border-collapse border border-gray-300">
+                        <thead>
+                            <tr>
+                                <th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 w-24">Año</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Enero</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Febrero</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Marzo</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Abril</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Mayo</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Junio</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Julio</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Agosto</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Septiembre</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Octubre</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Noviembre</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Diciembre</th>
+                                <th class="border border-gray-300 px-3 py-2 text-center font-bold bg-gray-100">Total Anual</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyComparativa">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Gráfica -->
+            <div id="contenedorGrafica" class="mb-8 hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Gráfica Comparativa</h3>
+                    <label class="flex items-center space-x-2 cursor-pointer">
+                        <input type="checkbox" id="chkHistoricoCompleto" class="rounded">
+                        <span class="text-sm text-gray-700">Mostrar gráfica histórica completa</span>
+                    </label>
+                </div>
+                <div class="chart-container">
+                    <canvas id="chartGeneral"></canvas>
+                </div>
+            </div>
+            
+            <!-- Selector de Escenario de Meta -->
+            <div id="contenedorSelectorMeta" class="mb-6 hidden">
+                <div class="flex items-center justify-center space-x-4">
+                    <label class="text-sm font-medium text-gray-700">Escenario de Meta:</label>
+                    <select id="selectorEscenario" class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                        <option value="bajo">Escenario Bajo</option>
+                        <option value="mediano" selected>Escenario Mediano</option>
+                        <option value="alto">Escenario Alto</option>
+                    </select>
+                    <button 
+                        onclick="actualizarTablaMeta()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        Actualizar Meta
+                    </button>
+                </div>
+            </div>
+            <!-- Tabla de Meta vs Real -->
+            <div id="contenedorTablaMeta" class="hidden">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Comparación con Meta 2025</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border-collapse border border-gray-300">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 w-24"></th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Ene</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Feb</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Mar</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Abr</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">May</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Jun</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Jul</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Ago</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Sep</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Oct</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Nov</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold">Dic</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyMeta">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Botón de Descarga -->
+            <div id="contenedorDescarga" class="text-center mt-8 hidden">
+                <button 
+                    onclick="descargarDatosGeneral()"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors"
+                >
+                    📥 Descargar Información Completa
+                </button>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-6 flex items-center space-x-4">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span class="text-gray-700 font-medium">Cargando datos...</span>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="config.js"></script>
+    <script src="utils.js"></script>
+    <script src="navigation.js"></script>
+    <script src="auth.js"></script>
+    <script src="charts.js"></script>
+    
+    <script>
+        // Variables globales para Vista General
+        const vistaGeneralState = {
+            tipoVista: null, // 'pasajeros', 'operaciones', 'carga'
+            tipoSeleccionado: null, // 'comercial', 'general', 'toneladas', etc.
+            datos2025: [],
+            datos2024: [],
+            datosHistoricos: [],
+            metasEscenarios: [],
+            escenarioActual: 'mediano',
+            chartInstance: null
+        };
+        
+        // Obtener tipo de vista desde URL
+        function obtenerTipoVista() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tipo = urlParams.get('tipo') || sessionStorage.getItem('vista_general_tipo');
+            return tipo;
+        }
+        
+        // Configurar selectores según tipo de vista
+        function configurarSelectores() {
+            const tipo = vistaGeneralState.tipoVista;
+            const selector = document.getElementById('selectorTipo');
+            selector.innerHTML = '<option value="">Seleccionar...</option>';
+            
+            let opciones = [];
+            
+            if (tipo === 'pasajeros' || tipo === 'operaciones') {
+                opciones = [
+                    { value: 'comercial', text: 'Aviación Comercial' },
+                    { value: 'general', text: 'Aviación General' }
+                ];
+            } else if (tipo === 'carga') {
+                opciones = [
+                    { value: 'operaciones', text: 'Operaciones de Carga' },
+                    { value: 'toneladas', text: 'Toneladas Transportadas' }
+                ];
+            }
+            
+            opciones.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.textContent = opt.text;
+                selector.appendChild(option);
+            });
+            
+            // Actualizar títulos
+            const tituloMap = {
+                'pasajeros': 'Indicadores de Pasajeros',
+                'operaciones': 'Indicadores de Operaciones',
+                'carga': 'Indicadores de Carga'
+            };
+            
+            document.getElementById('tipoVista').textContent = tituloMap[tipo] || 'Indicadores';
+            document.getElementById('tituloIndicador').textContent = tituloMap[tipo] || 'Indicadores';
+        }
+      // Funciones principales
+        async function cargarDatosGeneral() {
+            const tipo = document.getElementById('selectorTipo').value;
+            if (!tipo) {
+                mostrarNotificacion('Por favor seleccione un tipo', 'warning');
+                return;
+            }
+            
+            vistaGeneralState.tipoSeleccionado = tipo;
+            mostrarLoading(true);
+            
+            try {
+                // Determinar área e indicador
+                let area, indicador;
+                if (vistaGeneralState.tipoVista === 'pasajeros') {
+                    area = tipo;
+                    indicador = 'pasajeros';
+                } else if (vistaGeneralState.tipoVista === 'operaciones') {
+                    area = tipo;
+                    indicador = 'operaciones';
+                } else if (vistaGeneralState.tipoVista === 'carga') {
+                    area = 'carga';
+                    indicador = tipo;
+                }
+                
+                // Cargar datos 2025
+                const { data: datos2025, error: error2025 } = await sb
+                    .from('v_medicion')
+                    .select('*')
+                    .eq('area', area)
+                    .eq('indicador', indicador)
+                    .eq('anio', 2025)
+                    .order('mes');
+                
+                // Cargar datos 2024
+                const { data: datos2024, error: error2024 } = await sb
+                    .from('v_medicion')
+                    .select('*')
+                    .eq('area', area)
+                    .eq('indicador', indicador)
+                    .eq('anio', 2024)
+                    .order('mes');
+                
+                // Cargar metas de escenarios para 2025
+                const { data: metas, error: errorMetas } = await sb
+                    .from('metas_escenarios')
+                    .select('*')
+                    .eq('area', area)
+                    .eq('indicador', indicador)
+                    .eq('anio', 2025)
+                    .order('mes');
+                
+                vistaGeneralState.datos2025 = datos2025 || [];
+                vistaGeneralState.datos2024 = datos2024 || [];
+                vistaGeneralState.metasEscenarios = metas || [];
+                
+                // Actualizar vistas
+                crearTablaComparativa();
+                crearGraficaGeneral();
+                actualizarTablaMeta();
+                
+                // Mostrar secciones
+                document.getElementById('contenedorTablaComparativa').classList.remove('hidden');
+                document.getElementById('contenedorGrafica').classList.remove('hidden');
+                document.getElementById('contenedorSelectorMeta').classList.remove('hidden');
+                document.getElementById('contenedorTablaMeta').classList.remove('hidden');
+                document.getElementById('contenedorDescarga').classList.remove('hidden');
+                
+                mostrarNotificacion('Datos cargados correctamente', 'success');
+                
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                mostrarNotificacion('Error al cargar los datos', 'error');
+            } finally {
+                mostrarLoading(false);
+            }
+        }
+        
+        function crearTablaComparativa() {
+            const tbody = document.getElementById('tbodyComparativa');
+            tbody.innerHTML = '';
+            
+            // Fila 2025
+            const row2025 = document.createElement('tr');
+            row2025.innerHTML = '<td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50">2025</td>';
+            let total2025 = 0;
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const dato = vistaGeneralState.datos2025.find(d => d.mes === mes);
+                const valor = dato?.valor || 0;
+                total2025 += valor;
+                row2025.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
+            }
+            row2025.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-blue-50">${formatearNumero(total2025)}</td>`;
+            
+            // Fila 2024
+            const row2024 = document.createElement('tr');
+            row2024.innerHTML = '<td class="border border-gray-300 px-3 py-2 font-bold bg-gray-50">2024</td>';
+            let total2024 = 0;
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const dato = vistaGeneralState.datos2024.find(d => d.mes === mes);
+                const valor = dato?.valor || 0;
+                total2024 += valor;
+                row2024.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
+            }
+            row2024.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-gray-50">${formatearNumero(total2024)}</td>`;
+            
+            // Fila % Variación
+            const rowVar = document.createElement('tr');
+            rowVar.innerHTML = '<td class="border border-gray-300 px-3 py-2 font-bold bg-green-50">% Var</td>';
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const dato2025 = vistaGeneralState.datos2025.find(d => d.mes === mes);
+                const dato2024 = vistaGeneralState.datos2024.find(d => d.mes === mes);
+                const valor2025 = dato2025?.valor || 0;
+                const valor2024 = dato2024?.valor || 0;
+                
+                let variacion = 0;
+                if (valor2024 > 0) {
+                    variacion = ((valor2025 - valor2024) / valor2024 * 100).toFixed(1);
+                }
+                
+                const claseColor = variacion > 0 ? 'valor-positivo' : variacion < 0 ? 'valor-negativo' : 'valor-neutro';
+                rowVar.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${claseColor}">${variacion}%</td>`;
+            }
+            
+            // Variación total
+            let varTotal = 0;
+            if (total2024 > 0) {
+                varTotal = ((total2025 - total2024) / total2024 * 100).toFixed(1);
+            }
+            const claseTotal = varTotal > 0 ? 'valor-positivo' : varTotal < 0 ? 'valor-negativo' : 'valor-neutro';
+            rowVar.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-green-50 ${claseTotal}">${varTotal}%</td>`;
+            
+            tbody.appendChild(row2025);
+            tbody.appendChild(row2024);
+            tbody.appendChild(rowVar);
+        }
+        
+        function crearGraficaGeneral() {
+            const ctx = document.getElementById('chartGeneral').getContext('2d');
+            
+            if (vistaGeneralState.chartInstance) {
+                vistaGeneralState.chartInstance.destroy();
+            }
+            
+            const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            
+            const data2025 = [];
+            const data2024 = [];
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const dato2025 = vistaGeneralState.datos2025.find(d => d.mes === mes);
+                const dato2024 = vistaGeneralState.datos2024.find(d => d.mes === mes);
+                data2025.push(dato2025?.valor || null);
+                data2024.push(dato2024?.valor || null);
+            }
+            
+            vistaGeneralState.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '2025',
+                            data: data2025,
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            tension: 0.1
+                        },
+                        {
+                            label: '2024',
+                            data: data2024,
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: {
+                            display: true,
+                            text: 'Comparación 2025 vs 2024'
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+        
+        function actualizarTablaMeta() {
+            const tbody = document.getElementById('tbodyMeta');
+            const escenario = document.getElementById('selectorEscenario').value;
+            tbody.innerHTML = '';
+            
+            // Fila Real 2025
+            const rowReal = document.createElement('tr');
+            rowReal.innerHTML = '<td class="border border-gray-300 px-3 py-2 font-bold bg-blue-100">Real 2025</td>';
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const dato = vistaGeneralState.datos2025.find(d => d.mes === mes);
+                const valor = dato?.valor || 0;
+                rowReal.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
+            }
+            
+            // Fila Meta
+            const rowMeta = document.createElement('tr');
+            rowMeta.innerHTML = '<td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-100">Meta</td>';
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const metaData = vistaGeneralState.metasEscenarios.find(m => m.mes === mes && m.escenario === escenario);
+                const meta = metaData?.meta || 0;
+                rowMeta.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm bg-yellow-50">${formatearNumero(meta)}</td>`;
+            }
+            
+            // Fila % Cumplimiento
+            const rowCump = document.createElement('tr');
+            rowCump.innerHTML = '<td class="border border-gray-300 px-3 py-2 font-bold bg-green-100">% Meta</td>';
+            
+            for (let mes = 1; mes <= 12; mes++) {
+                const dato = vistaGeneralState.datos2025.find(d => d.mes === mes);
+                const metaData = vistaGeneralState.metasEscenarios.find(m => m.mes === mes && m.escenario === escenario);
+                const valor = dato?.valor || 0;
+                const meta = metaData?.meta || 0;
+                
+                let cumplimiento = 0;
+                if (meta > 0) {
+                    cumplimiento = (valor / meta * 100).toFixed(1);
+                }
+                
+                const claseColor = cumplimiento >= 100 ? 'text-green-700 font-bold bg-green-100' 
+                                 : cumplimiento >= 80 ? 'text-yellow-700 font-semibold bg-yellow-100' 
+                                 : 'text-red-700 font-medium bg-red-100';
+                
+                rowCump.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${claseColor}">${cumplimiento}%</td>`;
+            }
+            
+            tbody.appendChild(rowReal);
+            tbody.appendChild(rowMeta);
+            tbody.appendChild(rowCump);
+        }
+        
+        // Funciones auxiliares
+        function mostrarLoading(show) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (show) {
+                overlay.classList.remove('hidden');
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+        
+        function volverAMenu() {
+            window.location.href = 'menu_general.html';
+        }
+        
+        async function descargarDatosGeneral() {
+            // Implementar descarga CSV
+            mostrarNotificacion('Preparando descarga...', 'info');
+        }
+        
+        // Evento checkbox histórico
+        
+// Evento checkbox histórico
+document.getElementById('chkHistoricoCompleto')?.addEventListener('change', async function() {
+    if (this.checked) {
+        // Cargar datos históricos completos
+        mostrarNotificacion('Cargando histórico completo...', 'info');
+        mostrarLoading(true);
+        
+        try {
+            // Determinar área e indicador
+            let area, indicador;
+            if (vistaGeneralState.tipoVista === 'pasajeros') {
+                area = vistaGeneralState.tipoSeleccionado;
+                indicador = 'pasajeros';
+            } else if (vistaGeneralState.tipoVista === 'operaciones') {
+                area = vistaGeneralState.tipoSeleccionado;
+                indicador = 'operaciones';
+            } else if (vistaGeneralState.tipoVista === 'carga') {
+                area = 'carga';
+                indicador = vistaGeneralState.tipoSeleccionado;
+            }
+            
+            // Cargar TODOS los años desde 2022
+            const { data: datosHistoricos, error } = await sb
+                .from('v_medicion')
+                .select('*')
+                .eq('area', area)
+                .eq('indicador', indicador)
+                .gte('anio', 2022)
+                .lte('anio', 2025)
+                .order('anio')
+                .order('mes');
+            
+            if (error) {
+                console.error('Error cargando histórico:', error);
+                mostrarNotificacion('Error al cargar datos históricos', 'error');
+                return;
+            }
+            
+            // Crear gráfica con todos los años
+            const ctx = document.getElementById('chartGeneral').getContext('2d');
+            
+            if (vistaGeneralState.chartInstance) {
+                vistaGeneralState.chartInstance.destroy();
+            }
+            
+            const labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const años = [...new Set(datosHistoricos.map(d => d.anio))].sort();
+            const colores = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
+            
+            const datasets = años.map((año, index) => {
+                const datosAño = [];
+                for (let mes = 1; mes <= 12; mes++) {
+                    const dato = datosHistoricos.find(d => d.anio === año && d.mes === mes);
+                    datosAño.push(dato?.valor || null);
+                }
+                
+                return {
+                    label: año.toString(),
+                    data: datosAño,
+                    borderColor: colores[index % colores.length],
+                    backgroundColor: `${colores[index % colores.length]}20`,
+                    tension: 0.1
+                };
+            });
+            
+            vistaGeneralState.chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        title: {
+                            display: true,
+                            text: `Histórico Completo ${años[0]} - ${años[años.length - 1]}`
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+            
+            mostrarNotificacion('Histórico completo cargado', 'success');
+            
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarNotificacion('Error al cargar histórico', 'error');
+        } finally {
+            mostrarLoading(false);
+        }
+        
+    } else {
+        // Volver a la vista de solo 2 años
+        crearGraficaGeneral();
+    }
+});
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            // Verificar autenticación
+            if (!currentUser.isAuthenticated || currentUser.rol !== 'general') {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            // Configurar vista
+            vistaGeneralState.tipoVista = obtenerTipoVista();
+            if (!vistaGeneralState.tipoVista) {
+                window.location.href = 'menu_general.html';
+                return;
+            }
+            
+            configurarSelectores();
+            console.log('Vista General inicializada:', vistaGeneralState.tipoVista);
+        });
+    </script>
+</body>
+</html>
