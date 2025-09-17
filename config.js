@@ -363,12 +363,21 @@ function obtenerConfiguracionIndicador(indicador) {
     return CONFIGURACION_INDICADORES[indicador] || CONFIGURACION_INDICADORES['operaciones'];
 }
 
+function normalizarEscenario(escenario) {
+    if (!escenario) {
+        return escenario;
+    }
+    return escenario === 'medio' ? 'mediano' : escenario;
+}
+
 function obtenerColorEscenario(escenario) {
-    return COLORES_ESCENARIOS[escenario] || COLORES_ESCENARIOS['mediano'];
+    const clave = normalizarEscenario(escenario);
+    return COLORES_ESCENARIOS[clave] || COLORES_ESCENARIOS['mediano'];
 }
 
 function obtenerDescripcionEscenario(escenario) {
-    return DESCRIPCION_ESCENARIOS[escenario] || '';
+    const clave = normalizarEscenario(escenario);
+    return DESCRIPCION_ESCENARIOS[clave] || '';
 }
 
 function esAnioValido(anio) {
