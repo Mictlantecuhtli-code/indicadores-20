@@ -382,7 +382,7 @@
                             <div class="text-center">
                                 <p class="text-gray-600 text-sm mb-2">Variación</p>
                                 <p class="text-3xl font-bold" id="variacionAnual">-</p>
-                                <p class="text-xs text-gray-500 mt-2" id="diferencia"Anual">Diferencia: -</p>
+                                <p class="text-xs text-gray-500 mt-2" id="diferenciaAnual">Diferencia: -</p>
                             </div>
                         </div>
                     </div>
@@ -1060,25 +1060,367 @@
             tablaContainer.appendChild(table);
         }
         
-        // Funciones de gráficas (simplificadas)
+        // Funciones de gráficas
+        function obtenerFormatoIndicador() {
+            const configuracion = obtenerConfiguracionIndicador(analisisState.indicador) || {};
+            return {
+                decimales: configuracion.decimales ?? 0,
+                sufijo: configuracion.sufijo || ''
+            };
+        }
+
+        function formatearValorGrafica(valor, decimales, sufijo) {
+            if (valor === null || valor === undefined) {
+                return '-';
+            }
+            return `${formatearNumero(valor, decimales)}${sufijo}`;
+        }
+
+        function destruirGrafica(tipo) {
+            const instancia = analisisState.chartInstances[tipo];
+            if (instancia) {
+                instancia.destroy();
+                analisisState.chartInstances[tipo] = null;
+            }
+        }
+
         function crearGraficaMensual() {
-            // Implementar con Chart.js
-            console.log('Crear gráfica mensual');
+            const canvas = document.getElementById('chartMensual');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            const labels = MESES.map(mes => mes.substring(0, 3));
+
+            const serie2025 = MESES.map((_, index) => {
+                const dato = analisisState.datos2025.find(d => d.mes === index + 1);
+                return dato?.valor ?? null;
+            });
+
+            const serie2024 = MESES.map((_, index) => {
+                const dato = analisisState.datos2024.find(d => d.mes === index + 1);
+                return dato?.valor ?? null;
+            });
+
+            destruirGrafica('mensual');
+
+            const color2025 = obtenerColorPorAnio(2025);
+            const color2024 = obtenerColorPorAnio(2024);
+
+            analisisState.chartInstances.mensual = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Real 2025',
+                            data: serie2025,
+                            borderColor: color2025,
+                            backgroundColor: obtenerColorConTransparencia(color2025, 0.15),
+                            spanGaps: true,
+                            tension: 0.2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        },
+                        {
+                            label: 'Real 2024',
+                            data: serie2024,
+                            borderColor: color2024,
+                            backgroundColor: obtenerColorConTransparencia(color2024, 0.15),
+                            spanGaps: true,
+                            tension: 0.2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Comparativo mensual 2025 vs 2024'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return `${context.dataset.label}: ${formatearValorGrafica(valor, decimales, sufijo)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
-        
+
         function crearGraficaTrimestral(trimestres) {
-            // Implementar con Chart.js
-            console.log('Crear gráfica trimestral');
+            const canvas = document.getElementById('chartTrimestral');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            const claves = ['q1', 'q2', 'q3', 'q4'].filter(clave => trimestres[clave]);
+            const labels = claves.map(clave => trimestres[clave].nombre);
+            const serie2025 = claves.map(clave => trimestres[clave].valor2025 || 0);
+            const serie2024 = claves.map(clave => trimestres[clave].valor2024 || 0);
+
+            destruirGrafica('trimestral');
+
+            const color2025 = obtenerColorPorAnio(2025);
+            const color2024 = obtenerColorPorAnio(2024);
+
+            analisisState.chartInstances.trimestral = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Real 2025',
+                            data: serie2025,
+                            backgroundColor: obtenerColorConTransparencia(color2025, 0.3),
+                            borderColor: color2025,
+                            borderWidth: 2,
+                            borderRadius: 8
+                        },
+                        {
+                            label: 'Real 2024',
+                            data: serie2024,
+                            backgroundColor: obtenerColorConTransparencia(color2024, 0.3),
+                            borderColor: color2024,
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Desempeño trimestral 2025 vs 2024'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return `${context.dataset.label}: ${formatearValorGrafica(valor, decimales, sufijo)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
-        
+
         function crearGraficaAnual(total2025, total2024) {
-            // Implementar con Chart.js
-            console.log('Crear gráfica anual');
+            const canvas = document.getElementById('chartAnual');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            destruirGrafica('anual');
+
+            const color2024 = obtenerColorPorAnio(2024);
+            const color2025 = obtenerColorPorAnio(2025);
+
+            analisisState.chartInstances.anual = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['2024', '2025'],
+                    datasets: [
+                        {
+                            label: 'Total anual',
+                            data: [total2024 || 0, total2025 || 0],
+                            backgroundColor: [
+                                obtenerColorConTransparencia(color2024, 0.35),
+                                obtenerColorConTransparencia(color2025, 0.35)
+                            ],
+                            borderColor: [color2024, color2025],
+                            borderWidth: 2,
+                            borderRadius: 10,
+                            maxBarThickness: 80
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Comparativo anual 2025 vs 2024'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return formatearValorGrafica(valor, decimales, sufijo);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
-        
+
         function crearGraficaMeta() {
-            // Implementar con Chart.js
-            console.log('Crear gráfica meta');
+            const canvas = document.getElementById('chartMeta');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            const labels = MESES.map(mes => mes.substring(0, 3));
+
+            const serieReal = MESES.map((_, index) => {
+                const dato = analisisState.datos2025.find(d => d.mes === index + 1);
+                return dato?.valor ?? null;
+            });
+
+            const serieMeta = MESES.map((_, index) => {
+                const dato = analisisState.datosMetas.find(d => d.mes === index + 1);
+                return dato?.meta ?? null;
+            });
+
+            destruirGrafica('meta');
+
+            const colorReal = obtenerColorPorAnio(2025);
+            const colorMeta = obtenerColorEscenario(analisisState.escenario || 'medio');
+            const etiquetaMeta = analisisState.escenario
+                ? `Meta ${analisisState.escenario.charAt(0).toUpperCase() + analisisState.escenario.slice(1)}`
+                : 'Meta';
+
+            analisisState.chartInstances.meta = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Real 2025',
+                            data: serieReal,
+                            borderColor: colorReal,
+                            backgroundColor: obtenerColorConTransparencia(colorReal, 0.2),
+                            spanGaps: true,
+                            tension: 0.2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        },
+                        {
+                            label: etiquetaMeta,
+                            data: serieMeta,
+                            borderColor: colorMeta,
+                            backgroundColor: obtenerColorConTransparencia(colorMeta, 0.1),
+                            spanGaps: true,
+                            tension: 0.2,
+                            borderDash: [6, 6],
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Seguimiento mensual vs meta 2025'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return `${context.dataset.label}: ${formatearValorGrafica(valor, decimales, sufijo)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
         
         // Funciones auxiliares
