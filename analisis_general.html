@@ -61,7 +61,7 @@
             border-left: 4px solid #EF4444;
         }
         
-        .info-card.meta-medio {
+        .info-card.meta-mediano {
             background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
             border-left: 4px solid #F59E0B;
         }
@@ -1351,7 +1351,7 @@
             destruirGrafica('meta');
 
             const colorReal = obtenerColorPorAnio(2025);
-            const colorMeta = obtenerColorEscenario(analisisState.escenario || 'medio');
+            const colorMeta = obtenerColorEscenario(analisisState.escenario || 'mediano');
             const etiquetaMeta = analisisState.escenario
                 ? `Meta ${analisisState.escenario.charAt(0).toUpperCase() + analisisState.escenario.slice(1)}`
                 : 'Meta';
