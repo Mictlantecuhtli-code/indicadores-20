@@ -382,7 +382,7 @@
                             <div class="text-center">
                                 <p class="text-gray-600 text-sm mb-2">Variación</p>
                                 <p class="text-3xl font-bold" id="variacionAnual">-</p>
-                                <p class="text-xs text-gray-500 mt-2" id="diferencia"Anual">Diferencia: -</p>
+                                <p class="text-xs text-gray-500 mt-2" id="diferenciaAnual">Diferencia: -</p>
                             </div>
                         </div>
                     </div>
@@ -518,8 +518,7 @@
             const infoCard = document.getElementById('infoCard');
             if (analisisState.escenario) {
                 infoCard.className = `info-card meta-${analisisState.escenario} rounded-lg p-4 mb-6 animate-fadeIn`;
-                document.getElementById('tipoEscenario').textContent = 
-                    analisisState.escenario.charAt(0).toUpperCase() + analisisState.escenario.slice(1);
+                document.getElementById('tipoEscenario').textContent = obtenerEtiquetaEscenario(analisisState.escenario);
             }
         }
         
@@ -538,13 +537,24 @@
         function obtenerDescripcionTipo() {
             const tipos = {
                 'mensual-2024': 'Cantidad real mensual del 2025 respecto al mismo periodo 2024',
-                'trimestral-2024': 'Cantidad real trimestral del 2025 respecto al mismo periodo 2024', 
+                'trimestral-2024': 'Cantidad real trimestral del 2025 respecto al mismo periodo 2024',
                 'anual-2024': 'Cantidad real anual del 2025 respecto al mismo periodo 2024',
                 'meta-bajo': 'Cantidad real mensual del 2025 respecto a la proyección de meta escenario bajo',
                 'meta-medio': 'Cantidad real mensual del 2025 respecto a la proyección de meta escenario medio',
                 'meta-alto': 'Cantidad real mensual del 2025 respecto a la proyección de meta escenario alto'
             };
             return tipos[analisisState.tipoAnalisis] || 'Análisis';
+        }
+
+        function obtenerEtiquetaEscenario(escenario) {
+            if (!escenario) {
+                return '-';
+            }
+            const normalizado = normalizarEscenario(escenario);
+            if (normalizado === 'mediano') {
+                return 'Medio';
+            }
+            return normalizado.charAt(0).toUpperCase() + normalizado.slice(1);
         }
                 
         // Cargar datos según tipo de análisis
@@ -586,9 +596,9 @@
                         .eq('area', analisisState.area)
                         .eq('indicador', analisisState.indicador)
                         .eq('anio', 2025)
-                        .eq('escenario', analisisState.escenario)
+                        .eq('escenario', normalizarEscenario(analisisState.escenario))
                         .order('mes');
-                    
+
                     if (errorMetas) throw errorMetas;
                     analisisState.datosMetas = metas || [];
                 }
@@ -638,8 +648,8 @@
                 const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
                 const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
                 
-                const valor2025 = dato2025?.valor || 0;
-                const valor2024 = dato2024?.valor || 0;
+                const valor2025 = obtenerCampoSeguro(dato2025, 'valor', 0);
+                const valor2024 = obtenerCampoSeguro(dato2024, 'valor', 0);
                 const diferencia = valor2025 - valor2024;
                 const variacion = valor2024 > 0 ? ((diferencia / valor2024) * 100).toFixed(1) : 0;
                 
@@ -687,8 +697,8 @@
                     trimestres[q].meses.forEach(mes => {
                         const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
                         const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                        trimestres[q].valor2025 += dato2025?.valor || 0;
-                        trimestres[q].valor2024 += dato2024?.valor || 0;
+                        trimestres[q].valor2025 += obtenerCampoSeguro(dato2025, 'valor', 0);
+                        trimestres[q].valor2024 += obtenerCampoSeguro(dato2024, 'valor', 0);
                     });
                     
                     const diferencia = trimestres[q].valor2025 - trimestres[q].valor2024;
@@ -841,8 +851,167 @@
         
             // Procesar Análisis de Meta
             function procesarAnalisisMeta() {
-                crearTablaMetaHorizontal();
+                actualizarTablaMetaMensual();
                 crearGraficaMeta();
+            }
+
+            function actualizarTablaMetaMensual() {
+                const tbody = document.getElementById('tbodyMeta');
+                const totalRealEl = document.getElementById('totalMetaReal');
+                const totalMetaEl = document.getElementById('totalMetaMeta');
+                const totalDifEl = document.getElementById('totalMetaDif');
+                const totalCumpEl = document.getElementById('totalMetaCump');
+                const totalEstadoEl = document.getElementById('totalMetaEstado');
+
+                if (!tbody) {
+                    return;
+                }
+
+                tbody.innerHTML = '';
+
+                const mesVigente = obtenerMesVigente();
+                const nombreMes = MESES[mesVigente - 1] || `Mes ${mesVigente}`;
+                const datoReal = analisisState.datos2025.find(d => d.mes === mesVigente);
+                const datoMeta = analisisState.datosMetas.find(d => d.mes === mesVigente);
+
+                const valorReal = obtenerCampoSeguro(datoReal, 'valor', null);
+                const valorMeta = obtenerCampoSeguro(datoMeta, 'meta', null);
+                const diferenciaDisponible = valorReal !== null && valorReal !== undefined
+                    && valorMeta !== null && valorMeta !== undefined;
+                const diferencia = diferenciaDisponible ? valorReal - valorMeta : null;
+
+                const evaluacion = evaluarCumplimientoMeta(valorMeta, valorReal);
+                const cumplimientoTexto = evaluacion.cumplimiento !== null
+                    ? `${evaluacion.cumplimiento.toFixed(1)}%`
+                    : '-';
+
+                const realTexto = valorReal !== null && valorReal !== undefined
+                    ? formatearNumero(valorReal)
+                    : '-';
+                const metaTexto = valorMeta !== null && valorMeta !== undefined
+                    ? formatearNumero(valorMeta)
+                    : '-';
+                const diferenciaTexto = diferencia !== null
+                    ? formatearNumero(diferencia)
+                    : '-';
+
+                const diferenciaClase = diferencia !== null
+                    ? obtenerClaseDiferencia(diferencia)
+                    : 'text-gray-500';
+
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td class="border border-gray-300 px-3 py-2 font-semibold bg-gray-50">${nombreMes}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${realTexto}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${metaTexto}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${diferenciaClase}">${diferenciaTexto}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${evaluacion.claseCumplimiento}">${cumplimientoTexto}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${evaluacion.claseEstado}">${evaluacion.estado}</td>
+                `;
+                tbody.appendChild(fila);
+
+                const claseBase = 'border border-gray-300 px-3 py-2 text-center';
+                totalRealEl.textContent = realTexto;
+                totalRealEl.className = claseBase;
+
+                totalMetaEl.textContent = metaTexto;
+                totalMetaEl.className = claseBase;
+
+                totalDifEl.textContent = diferenciaTexto;
+                totalDifEl.className = `${claseBase} ${diferenciaClase}`;
+
+                totalCumpEl.textContent = cumplimientoTexto;
+                totalCumpEl.className = `${claseBase} ${evaluacion.claseCumplimiento}`;
+
+                totalEstadoEl.textContent = evaluacion.estado;
+                totalEstadoEl.className = `${claseBase} ${evaluacion.claseEstado}`;
+            }
+
+            function obtenerMesVigente() {
+                const mesesConDatos = [
+                    ...analisisState.datos2025
+                        .filter(d => d && d.valor !== null && d.valor !== undefined)
+                        .map(d => d.mes),
+                    ...analisisState.datosMetas
+                        .filter(d => d && d.meta !== null && d.meta !== undefined)
+                        .map(d => d.mes)
+                ];
+
+                if (mesesConDatos.length === 0) {
+                    return obtenerMesActual();
+                }
+
+                return Math.max(...mesesConDatos);
+            }
+
+            function evaluarCumplimientoMeta(meta, valorReal) {
+                if (meta === null || meta === undefined) {
+                    return {
+                        cumplimiento: null,
+                        estado: 'Sin meta',
+                        claseCumplimiento: 'text-gray-500',
+                        claseEstado: 'text-gray-500'
+                    };
+                }
+
+                if (meta === 0) {
+                    return {
+                        cumplimiento: null,
+                        estado: 'Meta no definida',
+                        claseCumplimiento: 'text-gray-500',
+                        claseEstado: 'text-gray-500'
+                    };
+                }
+
+                if (valorReal === null || valorReal === undefined) {
+                    return {
+                        cumplimiento: null,
+                        estado: 'Sin dato',
+                        claseCumplimiento: 'text-gray-500',
+                        claseEstado: 'text-gray-500'
+                    };
+                }
+
+                const cumplimiento = (valorReal / meta) * 100;
+
+                if (cumplimiento >= 100) {
+                    return {
+                        cumplimiento,
+                        estado: 'Meta superada',
+                        claseCumplimiento: 'text-green-700 font-bold',
+                        claseEstado: 'text-green-700 font-semibold'
+                    };
+                }
+
+                if (cumplimiento >= 80) {
+                    return {
+                        cumplimiento,
+                        estado: 'En seguimiento',
+                        claseCumplimiento: 'text-yellow-700 font-semibold',
+                        claseEstado: 'text-yellow-700 font-semibold'
+                    };
+                }
+
+                return {
+                    cumplimiento,
+                    estado: 'Bajo objetivo',
+                    claseCumplimiento: 'text-red-700 font-semibold',
+                    claseEstado: 'text-red-700 font-semibold'
+                };
+            }
+
+            function obtenerClaseDiferencia(valor) {
+                if (valor === null || valor === undefined) {
+                    return 'text-gray-500';
+                }
+                return valor >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+            }
+
+            function obtenerCampoSeguro(objeto, campo, valorPredeterminado) {
+                if (!objeto || objeto[campo] === undefined || objeto[campo] === null) {
+                    return valorPredeterminado;
+                }
+                return objeto[campo];
             }
 
             // Crear Tabla Anual Horizontal
@@ -885,7 +1054,7 @@
                 let acum2025 = 0;
                 for (let mes = 1; mes <= 12; mes++) {
                     const dato = analisisState.datos2025.find(d => d.mes === mes);
-                    const valor = dato?.valor || 0;
+                    const valor = obtenerCampoSeguro(dato, 'valor', 0);
                     acum2025 += valor;
                     row2025 += `<td class="border border-gray-300 px-1 py-2 text-center text-xs">${formatearNumero(valor)}</td>`;
                 }
@@ -896,7 +1065,7 @@
                 let acum2024 = 0;
                 for (let mes = 1; mes <= 12; mes++) {
                     const dato = analisisState.datos2024.find(d => d.mes === mes);
-                    const valor = dato?.valor || 0;
+                    const valor = obtenerCampoSeguro(dato, 'valor', 0);
                     acum2024 += valor;
                     row2024 += `<td class="border border-gray-300 px-1 py-2 text-center text-xs">${formatearNumero(valor)}</td>`;
                 }
@@ -907,8 +1076,8 @@
                 for (let mes = 1; mes <= 12; mes++) {
                     const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
                     const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                    const valor2025 = dato2025?.valor || 0;
-                    const valor2024 = dato2024?.valor || 0;
+                    const valor2025 = obtenerCampoSeguro(dato2025, 'valor', 0);
+                    const valor2024 = obtenerCampoSeguro(dato2024, 'valor', 0);
                     const dif = valor2025 - valor2024;
                     
                     const claseColor = dif >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
@@ -922,8 +1091,8 @@
                 for (let mes = 1; mes <= 12; mes++) {
                     const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
                     const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                    const valor2025 = dato2025?.valor || 0;
-                    const valor2024 = dato2024?.valor || 0;
+                    const valor2025 = obtenerCampoSeguro(dato2025, 'valor', 0);
+                    const valor2024 = obtenerCampoSeguro(dato2024, 'valor', 0);
                     
                     let varMes = 0;
                     if (valor2024 > 0) {
@@ -946,131 +1115,367 @@
                 tablaContainer.appendChild(table);
             }
             
-            // Crear Tabla de Meta Horizontal
-        function crearTablaMetaHorizontal() {
-            // Buscar o crear contenedor para la tabla
-            let tablaContainer = document.getElementById('tablaMetaContainer');
-            if (!tablaContainer) {
-                tablaContainer = document.createElement('div');
-                tablaContainer.id = 'tablaMetaContainer';
-                tablaContainer.className = 'mb-8';
-                
-                // Insertar en la sección de análisis de meta
-                const metaSection = document.getElementById('analisisMeta');
-                if (metaSection) {
-                    metaSection.appendChild(tablaContainer);
-                }
-            }
-            
-            const titulo = document.createElement('h3');
-            titulo.textContent = `Real vs Meta Escenario ${analisisState.escenario.charAt(0).toUpperCase() + analisisState.escenario.slice(1)}`;
-            titulo.className = 'text-lg font-semibold text-gray-800 mb-4';
-            
-            const table = document.createElement('table');
-            table.className = 'tabla-analisis min-w-full border-collapse border border-gray-300';
-            
-            // Header con todos los meses
-            const thead = document.createElement('thead');
-            let headerHtml = '<tr><th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 bg-gray-50 w-24"></th>';
-            MESES.forEach(mes => {
-                headerHtml += `<th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold text-gray-700 bg-gray-50">${mes.substring(0,3)}</th>`;
-            });
-            headerHtml += '</tr>';
-            thead.innerHTML = headerHtml;
-            
-            const tbody = document.createElement('tbody');
-            
-            // Fila Real 2025
-            let realRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50">Real 2025</td>';
-            let totalReal = 0;
-            for (let mes = 1; mes <= 12; mes++) {
-                const dato = analisisState.datos2025.find(d => d.mes === mes);
-                const valor = dato?.valor || 0;
-                totalReal += valor;
-                realRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
-            }
-            realRow += '</tr>';
-            
-            // Fila Meta
-            let metaRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-50">Meta</td>';
-            let totalMeta = 0;
-            for (let mes = 1; mes <= 12; mes++) {
-                const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
-                const meta = datoMeta?.meta || 0;
-                totalMeta += meta;
-                metaRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm bg-yellow-25">${formatearNumero(meta)}</td>`;
-            }
-            metaRow += '</tr>';
-            
-            // Fila Diferencia
-            let difRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-purple-50">Diferencia</td>';
-            for (let mes = 1; mes <= 12; mes++) {
-                const datoReal = analisisState.datos2025.find(d => d.mes === mes);
-                const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
-                const valorReal = datoReal?.valor || 0;
-                const valorMeta = datoMeta?.meta || 0;
-                const diferencia = valorReal - valorMeta;
-                
-                const claseColor = diferencia >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
-                difRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${claseColor}">${formatearNumero(diferencia)}</td>`;
-            }
-            difRow += '</tr>';
-            
-            // Fila % Cumplimiento
-            let cumpRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-green-50">% Cumplimiento</td>';
-            for (let mes = 1; mes <= 12; mes++) {
-                const datoReal = analisisState.datos2025.find(d => d.mes === mes);
-                const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
-                const valorReal = datoReal?.valor || 0;
-                const valorMeta = datoMeta?.meta || 0;
-                
-                let cumplimiento = 0;
-                if (valorMeta > 0) {
-                    cumplimiento = (valorReal / valorMeta * 100).toFixed(1);
-                }
-                
-                let claseColor = 'bg-gray-50';
-                if (cumplimiento >= 100) {
-                    claseColor = 'text-green-700 font-bold bg-green-100';
-                } else if (cumplimiento >= 80) {
-                    claseColor = 'text-yellow-700 font-semibold bg-yellow-100';
-                } else if (cumplimiento > 0) {
-                    claseColor = 'text-red-700 font-medium bg-red-100';
-                }
-                
-                cumpRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${claseColor}">${cumplimiento}%</td>`;
-            }
-            cumpRow += '</tr>';
-            
-            tbody.innerHTML = realRow + metaRow + difRow + cumpRow;
-            
-            table.appendChild(thead);
-            table.appendChild(tbody);
-            
-            tablaContainer.innerHTML = '';
-            tablaContainer.appendChild(titulo);
-            tablaContainer.appendChild(table);
+        // Funciones de gráficas
+        function obtenerFormatoIndicador() {
+            const configuracion = obtenerConfiguracionIndicador(analisisState.indicador) || {};
+            return {
+                decimales: typeof configuracion.decimales === 'number' ? configuracion.decimales : 0,
+                sufijo: configuracion.sufijo || ''
+            };
         }
-        
-        // Funciones de gráficas (simplificadas)
+
+        function formatearValorGrafica(valor, decimales, sufijo) {
+            if (valor === null || valor === undefined) {
+                return '-';
+            }
+            return `${formatearNumero(valor, decimales)}${sufijo}`;
+        }
+
+        function destruirGrafica(tipo) {
+            const instancia = analisisState.chartInstances[tipo];
+            if (instancia) {
+                instancia.destroy();
+                analisisState.chartInstances[tipo] = null;
+            }
+        }
+
         function crearGraficaMensual() {
-            // Implementar con Chart.js
-            console.log('Crear gráfica mensual');
+            const canvas = document.getElementById('chartMensual');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            const labels = MESES.map(mes => mes.substring(0, 3));
+
+            const serie2025 = MESES.map((_, index) => {
+                const dato = analisisState.datos2025.find(d => d.mes === index + 1);
+                return obtenerCampoSeguro(dato, 'valor', null);
+            });
+
+            const serie2024 = MESES.map((_, index) => {
+                const dato = analisisState.datos2024.find(d => d.mes === index + 1);
+                return obtenerCampoSeguro(dato, 'valor', null);
+            });
+
+            destruirGrafica('mensual');
+
+            const color2025 = obtenerColorPorAnio(2025);
+            const color2024 = obtenerColorPorAnio(2024);
+
+            analisisState.chartInstances.mensual = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Real 2025',
+                            data: serie2025,
+                            borderColor: color2025,
+                            backgroundColor: obtenerColorConTransparencia(color2025, 0.15),
+                            spanGaps: true,
+                            tension: 0.2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        },
+                        {
+                            label: 'Real 2024',
+                            data: serie2024,
+                            borderColor: color2024,
+                            backgroundColor: obtenerColorConTransparencia(color2024, 0.15),
+                            spanGaps: true,
+                            tension: 0.2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Comparativo mensual 2025 vs 2024'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return `${context.dataset.label}: ${formatearValorGrafica(valor, decimales, sufijo)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
-        
+
         function crearGraficaTrimestral(trimestres) {
-            // Implementar con Chart.js
-            console.log('Crear gráfica trimestral');
+            const canvas = document.getElementById('chartTrimestral');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            const claves = ['q1', 'q2', 'q3', 'q4'].filter(clave => trimestres[clave]);
+            const labels = claves.map(clave => trimestres[clave].nombre);
+            const serie2025 = claves.map(clave => trimestres[clave].valor2025 || 0);
+            const serie2024 = claves.map(clave => trimestres[clave].valor2024 || 0);
+
+            destruirGrafica('trimestral');
+
+            const color2025 = obtenerColorPorAnio(2025);
+            const color2024 = obtenerColorPorAnio(2024);
+
+            analisisState.chartInstances.trimestral = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Real 2025',
+                            data: serie2025,
+                            backgroundColor: obtenerColorConTransparencia(color2025, 0.3),
+                            borderColor: color2025,
+                            borderWidth: 2,
+                            borderRadius: 8
+                        },
+                        {
+                            label: 'Real 2024',
+                            data: serie2024,
+                            backgroundColor: obtenerColorConTransparencia(color2024, 0.3),
+                            borderColor: color2024,
+                            borderWidth: 2,
+                            borderRadius: 8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Desempeño trimestral 2025 vs 2024'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return `${context.dataset.label}: ${formatearValorGrafica(valor, decimales, sufijo)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
-        
+
         function crearGraficaAnual(total2025, total2024) {
-            // Implementar con Chart.js
-            console.log('Crear gráfica anual');
+            const canvas = document.getElementById('chartAnual');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            destruirGrafica('anual');
+
+            const color2024 = obtenerColorPorAnio(2024);
+            const color2025 = obtenerColorPorAnio(2025);
+
+            analisisState.chartInstances.anual = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['2024', '2025'],
+                    datasets: [
+                        {
+                            label: 'Total anual',
+                            data: [total2024 || 0, total2025 || 0],
+                            backgroundColor: [
+                                obtenerColorConTransparencia(color2024, 0.35),
+                                obtenerColorConTransparencia(color2025, 0.35)
+                            ],
+                            borderColor: [color2024, color2025],
+                            borderWidth: 2,
+                            borderRadius: 10,
+                            maxBarThickness: 80
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: true,
+                            text: 'Comparativo anual 2025 vs 2024'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return formatearValorGrafica(valor, decimales, sufijo);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
-        
+
         function crearGraficaMeta() {
-            // Implementar con Chart.js
-            console.log('Crear gráfica meta');
+            const canvas = document.getElementById('chartMeta');
+            if (!canvas) {
+                return;
+            }
+
+            const { decimales, sufijo } = obtenerFormatoIndicador();
+            const labels = MESES.map(mes => mes.substring(0, 3));
+
+            const serieReal = MESES.map((_, index) => {
+                const dato = analisisState.datos2025.find(d => d.mes === index + 1);
+                return obtenerCampoSeguro(dato, 'valor', null);
+            });
+
+            const serieMeta = MESES.map((_, index) => {
+                const dato = analisisState.datosMetas.find(d => d.mes === index + 1);
+                return obtenerCampoSeguro(dato, 'meta', null);
+            });
+
+            destruirGrafica('meta');
+
+            const colorReal = obtenerColorPorAnio(2025);
+            const colorMeta = obtenerColorEscenario(analisisState.escenario || 'medio');
+            const etiquetaMeta = analisisState.escenario
+                ? `Meta ${obtenerEtiquetaEscenario(analisisState.escenario)}`
+                : 'Meta';
+
+            analisisState.chartInstances.meta = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Real 2025',
+                            data: serieReal,
+                            borderColor: colorReal,
+                            backgroundColor: obtenerColorConTransparencia(colorReal, 0.2),
+                            spanGaps: true,
+                            tension: 0.2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        },
+                        {
+                            label: etiquetaMeta,
+                            data: serieMeta,
+                            borderColor: colorMeta,
+                            backgroundColor: obtenerColorConTransparencia(colorMeta, 0.1),
+                            spanGaps: true,
+                            tension: 0.2,
+                            borderDash: [6, 6],
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Seguimiento mensual vs meta 2025'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const valor = context.parsed.y;
+                                    return `${context.dataset.label}: ${formatearValorGrafica(valor, decimales, sufijo)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatearValorGrafica(value, decimales, sufijo);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
         
         // Funciones auxiliares
