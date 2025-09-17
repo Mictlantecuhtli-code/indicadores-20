@@ -710,6 +710,102 @@
                 // Crear gráfica trimestral
                 crearGraficaTrimestral(trimestres);
             }
+
+        function crearTablaTrimestral(trimestres) {
+                // Crear contenedor para la tabla si no existe
+                let tablaContainer = document.getElementById('tablaTrimestralContainer');
+                if (!tablaContainer) {
+                    tablaContainer = document.createElement('div');
+                    tablaContainer.id = 'tablaTrimestralContainer';
+                    tablaContainer.className = 'mb-6';
+                    
+                    // Insertar después de las cards trimestrales
+                    const cardsContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4.gap-4.mb-6');
+                    if (cardsContainer && cardsContainer.parentNode) {
+                        cardsContainer.parentNode.insertBefore(tablaContainer, cardsContainer.nextSibling);
+                    }
+                }
+                
+                const table = document.createElement('table');
+                table.className = 'tabla-analisis min-w-full border-collapse border border-gray-300';
+                
+                const titulo = document.createElement('h4');
+                titulo.textContent = 'Resumen Trimestral Comparativo';
+                titulo.className = 'text-lg font-semibold text-gray-800 mb-4';
+                
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 bg-gray-50"></th>
+                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q1 (Ene-Mar)</th>
+                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q2 (Abr-Jun)</th>
+                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q3 (Jul-Sep)</th>
+                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q4 (Oct-Dic)</th>
+                    </tr>
+                `;
+                
+                const tbody = document.createElement('tbody');
+                
+                // Fila 2025
+                const row2025 = document.createElement('tr');
+                row2025.innerHTML = `
+                    <td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50">2025</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q1.valor2025)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q2.valor2025)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q3.valor2025)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q4.valor2025)}</td>
+                `;
+                
+                // Fila 2024
+                const row2024 = document.createElement('tr');
+                row2024.innerHTML = `
+                    <td class="border border-gray-300 px-3 py-2 font-bold bg-gray-50">2024</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q1.valor2024)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q2.valor2024)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q3.valor2024)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q4.valor2024)}</td>
+                `;
+                
+                // Fila Diferencia
+                const rowDif = document.createElement('tr');
+                const clasesColor = ['q1', 'q2', 'q3', 'q4'].map(q => 
+                    trimestres[q].diferencia >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
+                );
+                
+                rowDif.innerHTML = `
+                    <td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-50">Diferencia</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[0]}">${formatearNumero(trimestres.q1.diferencia)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[1]}">${formatearNumero(trimestres.q2.diferencia)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[2]}">${formatearNumero(trimestres.q3.diferencia)}</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[3]}">${formatearNumero(trimestres.q4.diferencia)}</td>
+                `;
+                
+                // Fila % Variación
+                const rowVar = document.createElement('tr');
+                const clasesVar = ['q1', 'q2', 'q3', 'q4'].map(q => 
+                    parseFloat(trimestres[q].variacion) >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'
+                );
+                
+                rowVar.innerHTML = `
+                    <td class="border border-gray-300 px-3 py-2 font-bold bg-green-50">% Variación</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[0]}">${trimestres.q1.variacion}%</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[1]}">${trimestres.q2.variacion}%</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[2]}">${trimestres.q3.variacion}%</td>
+                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[3]}">${trimestres.q4.variacion}%</td>
+                `;
+                
+                tbody.appendChild(row2025);
+                tbody.appendChild(row2024);
+                tbody.appendChild(rowDif);
+                tbody.appendChild(rowVar);
+                
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                
+                tablaContainer.innerHTML = '';
+                tablaContainer.appendChild(titulo);
+                tablaContainer.appendChild(table);
+        }
         
         // Procesar Análisis Anual
         function procesarAnalisisAnual() {
@@ -735,69 +831,115 @@
         }
         
         // Procesar Análisis de Meta
-        function procesarAnalisisMeta() {
-            const tbody = document.getElementById('tbodyMeta');
-            tbody.innerHTML = '';
+            function procesarAnalisisMeta() {
+                crearTablaMetaHorizontal();
+                crearGraficaMeta();
+            }
             
-            let totalReal = 0, totalMeta = 0;
+            // Crear Tabla de Meta Horizontal
+        function crearTablaMetaHorizontal() {
+            // Buscar o crear contenedor para la tabla
+            let tablaContainer = document.getElementById('tablaMetaContainer');
+            if (!tablaContainer) {
+                tablaContainer = document.createElement('div');
+                tablaContainer.id = 'tablaMetaContainer';
+                tablaContainer.className = 'mb-8';
+                
+                // Insertar en la sección de análisis de meta
+                const metaSection = document.getElementById('analisisMeta');
+                if (metaSection) {
+                    metaSection.appendChild(tablaContainer);
+                }
+            }
             
+            const titulo = document.createElement('h3');
+            titulo.textContent = `Real vs Meta Escenario ${analisisState.escenario.charAt(0).toUpperCase() + analisisState.escenario.slice(1)}`;
+            titulo.className = 'text-lg font-semibold text-gray-800 mb-4';
+            
+            const table = document.createElement('table');
+            table.className = 'tabla-analisis min-w-full border-collapse border border-gray-300';
+            
+            // Header con todos los meses
+            const thead = document.createElement('thead');
+            let headerHtml = '<tr><th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 bg-gray-50 w-24"></th>';
+            MESES.forEach(mes => {
+                headerHtml += `<th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold text-gray-700 bg-gray-50">${mes.substring(0,3)}</th>`;
+            });
+            headerHtml += '</tr>';
+            thead.innerHTML = headerHtml;
+            
+            const tbody = document.createElement('tbody');
+            
+            // Fila Real 2025
+            let realRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50">Real 2025</td>';
+            let totalReal = 0;
+            for (let mes = 1; mes <= 12; mes++) {
+                const dato = analisisState.datos2025.find(d => d.mes === mes);
+                const valor = dato?.valor || 0;
+                totalReal += valor;
+                realRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
+            }
+            realRow += '</tr>';
+            
+            // Fila Meta
+            let metaRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-50">Meta</td>';
+            let totalMeta = 0;
+            for (let mes = 1; mes <= 12; mes++) {
+                const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
+                const meta = datoMeta?.meta || 0;
+                totalMeta += meta;
+                metaRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm bg-yellow-25">${formatearNumero(meta)}</td>`;
+            }
+            metaRow += '</tr>';
+            
+            // Fila Diferencia
+            let difRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-purple-50">Diferencia</td>';
             for (let mes = 1; mes <= 12; mes++) {
                 const datoReal = analisisState.datos2025.find(d => d.mes === mes);
                 const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
-                
                 const valorReal = datoReal?.valor || 0;
                 const valorMeta = datoMeta?.meta || 0;
                 const diferencia = valorReal - valorMeta;
-                const cumplimiento = valorMeta > 0 ? ((valorReal / valorMeta) * 100).toFixed(1) : 0;
                 
-                totalReal += valorReal;
-                totalMeta += valorMeta;
+                const claseColor = diferencia >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                difRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${claseColor}">${formatearNumero(diferencia)}</td>`;
+            }
+            difRow += '</tr>';
+            
+            // Fila % Cumplimiento
+            let cumpRow = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-green-50">% Cumplimiento</td>';
+            for (let mes = 1; mes <= 12; mes++) {
+                const datoReal = analisisState.datos2025.find(d => d.mes === mes);
+                const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
+                const valorReal = datoReal?.valor || 0;
+                const valorMeta = datoMeta?.meta || 0;
                 
-                let estado = '-';
-                let claseEstado = '';
-                if (valorReal > 0 && valorMeta > 0) {
-                    if (cumplimiento >= 100) {
-                        estado = '✅ Cumplido';
-                        claseEstado = 'text-green-600 font-semibold';
-                    } else if (cumplimiento >= 80) {
-                        estado = '⚠️ Parcial';
-                        claseEstado = 'text-yellow-600';
-                    } else {
-                        estado = '❌ No cumplido';
-                        claseEstado = 'text-red-600';
-                    }
+                let cumplimiento = 0;
+                if (valorMeta > 0) {
+                    cumplimiento = (valorReal / valorMeta * 100).toFixed(1);
                 }
                 
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="border border-gray-300 px-3 py-2">${MESES[mes-1]}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(valorReal)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(valorMeta)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${diferencia >= 0 ? 'valor-positivo' : 'valor-negativo'}">${formatearNumero(diferencia)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${cumplimiento}%</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${claseEstado}">${estado}</td>
-                `;
-                tbody.appendChild(row);
+                let claseColor = 'bg-gray-50';
+                if (cumplimiento >= 100) {
+                    claseColor = 'text-green-700 font-bold bg-green-100';
+                } else if (cumplimiento >= 80) {
+                    claseColor = 'text-yellow-700 font-semibold bg-yellow-100';
+                } else if (cumplimiento > 0) {
+                    claseColor = 'text-red-700 font-medium bg-red-100';
+                }
+                
+                cumpRow += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${claseColor}">${cumplimiento}%</td>`;
             }
+            cumpRow += '</tr>';
             
-            // Actualizar totales
-            const totalDif = totalReal - totalMeta;
-            const totalCump = totalMeta > 0 ? ((totalReal / totalMeta) * 100).toFixed(1) : 0;
+            tbody.innerHTML = realRow + metaRow + difRow + cumpRow;
             
-            document.getElementById('totalMetaReal').textContent = formatearNumero(totalReal);
-            document.getElementById('totalMetaMeta').textContent = formatearNumero(totalMeta);
-            document.getElementById('totalMetaDif').textContent = formatearNumero(totalDif);
-            document.getElementById('totalMetaDif').className = totalDif >= 0 ? 'valor-positivo' : 'valor-negativo';
-            document.getElementById('totalMetaCump').textContent = totalCump + '%';
+            table.appendChild(thead);
+            table.appendChild(tbody);
             
-            let estadoTotal = '-';
-            if (totalCump >= 100) estadoTotal = '✅';
-            else if (totalCump >= 80) estadoTotal = '⚠️';
-            else estadoTotal = '❌';
-            document.getElementById('totalMetaEstado').textContent = estadoTotal;
-            
-            // Crear gráfica de meta
-            crearGraficaMeta();
+            tablaContainer.innerHTML = '';
+            tablaContainer.appendChild(titulo);
+            tablaContainer.appendChild(table);
         }
         
         // Funciones de gráficas (simplificadas)
