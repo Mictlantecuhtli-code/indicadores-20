@@ -651,39 +651,49 @@
             crearGraficaMensual();
         }
         
-        // Procesar Análisis Trimestral
-        function procesarAnalisisTrimestral() {
-            const trimestres = {
-                q1: { meses: [1,2,3], valor2025: 0, valor2024: 0 },
-                q2: { meses: [4,5,6], valor2025: 0, valor2024: 0 },
-                q3: { meses: [7,8,9], valor2025: 0, valor2024: 0 },
-                q4: { meses: [10,11,12], valor2025: 0, valor2024: 0 }
-            };
-            
-            // Calcular totales por trimestre
-            Object.keys(trimestres).forEach(q => {
-                trimestres[q].meses.forEach(mes => {
-                    const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
-                    const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                    trimestres[q].valor2025 += dato2025?.valor || 0;
-                    trimestres[q].valor2024 += dato2024?.valor || 0;
+            // Procesar Análisis Trimestral
+            function procesarAnalisisTrimestral() {
+                const trimestres = {
+                    q1: { meses: [1,2,3], valor2025: 0, valor2024: 0, nombre: 'Q1 (Ene-Mar)' },
+                    q2: { meses: [4,5,6], valor2025: 0, valor2024: 0, nombre: 'Q2 (Abr-Jun)' },
+                    q3: { meses: [7,8,9], valor2025: 0, valor2024: 0, nombre: 'Q3 (Jul-Sep)' },
+                    q4: { meses: [10,11,12], valor2025: 0, valor2024: 0, nombre: 'Q4 (Oct-Dic)' }
+                };
+                
+                // Calcular totales por trimestre sumando los meses
+                Object.keys(trimestres).forEach(q => {
+                    trimestres[q].meses.forEach(mes => {
+                        const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
+                        const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
+                        trimestres[q].valor2025 += dato2025?.valor || 0;
+                        trimestres[q].valor2024 += dato2024?.valor || 0;
+                    });
+                    
+                    const diferencia = trimestres[q].valor2025 - trimestres[q].valor2024;
+                    const variacion = trimestres[q].valor2024 > 0 
+                        ? ((diferencia / trimestres[q].valor2024) * 100).toFixed(1) 
+                        : 0;
+                    
+                    trimestres[q].diferencia = diferencia;
+                    trimestres[q].variacion = variacion;
+                    
+                    // Actualizar UI
+                    document.getElementById(`${q}-2025`).textContent = formatearNumero(trimestres[q].valor2025);
+                    document.getElementById(`${q}-2024`).textContent = formatearNumero(trimestres[q].valor2024);
+                    document.getElementById(`${q}-diferencia`).textContent = formatearNumero(diferencia);
+                    document.getElementById(`${q}-diferencia`).className = diferencia >= 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+                    
+                    const varElement = document.getElementById(`${q}-var`);
+                    varElement.textContent = `${variacion}%`;
+                    varElement.className = parseFloat(variacion) >= 0 ? 'font-bold valor-positivo' : 'font-bold valor-negativo';
                 });
                 
-                const variacion = trimestres[q].valor2024 > 0 
-                    ? ((trimestres[q].valor2025 - trimestres[q].valor2024) / trimestres[q].valor2024 * 100).toFixed(1) 
-                    : 0;
+                // Crear tabla trimestral
+                crearTablaTrimestral(trimestres);
                 
-                // Actualizar UI
-                document.getElementById(`${q}-2025`).textContent = formatearNumero(trimestres[q].valor2025);
-                document.getElementById(`${q}-2024`).textContent = formatearNumero(trimestres[q].valor2024);
-                const varElement = document.getElementById(`${q}-var`);
-                varElement.textContent = `${variacion}%`;
-                varElement.className = parseFloat(variacion) >= 0 ? 'font-bold valor-positivo' : 'font-bold valor-negativo';
-            });
-            
-            // Crear gráfica trimestral
-            crearGraficaTrimestral(trimestres);
-        }
+                // Crear gráfica trimestral
+                crearGraficaTrimestral(trimestres);
+            }
         
         // Procesar Análisis Anual
         function procesarAnalisisAnual() {
