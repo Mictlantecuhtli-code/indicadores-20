@@ -341,7 +341,7 @@ const CONFIGURACION_GENERAL = {
 const TABLA_CONFIG = {
     colores: {
         cumplimiento_alto: 'text-green-600 font-semibold',
-        cumplimiento_medio: 'text-yellow-600 font-medium',
+        cumplimiento_mediano: 'text-yellow-600 font-medium',
         cumplimiento_bajo: 'text-red-600',
         variacion_positiva: 'text-green-600 font-medium',
         variacion_negativa: 'text-red-600',
@@ -349,7 +349,7 @@ const TABLA_CONFIG = {
     },
     umbrales: {
         cumplimiento_alto: 100,
-        cumplimiento_medio: 80,
+        cumplimiento_mediano: 80,
         variacion_significativa: 5
     }
 };
