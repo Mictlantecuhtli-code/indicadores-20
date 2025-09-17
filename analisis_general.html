@@ -489,14 +489,25 @@
                 meta: null
             }
         };
+
+        function asegurarArreglo(valor) {
+            return Array.isArray(valor) ? valor : [];
+        }
+
+        function obtenerValorMensual(datos, mes, campo, valorPredeterminado) {
+            const conjunto = asegurarArreglo(datos);
+            const registro = conjunto.find(item => item && item.mes === mes);
+            return obtenerCampoSeguro(registro, campo, valorPredeterminado);
+        }
         
         // Obtener parámetros de la URL
         function obtenerParametros() {
             const urlParams = new URLSearchParams(window.location.search);
             analisisState.indicador = urlParams.get('indicador') || sessionStorage.getItem('analisis_indicador');
             analisisState.area = urlParams.get('area') || sessionStorage.getItem('analisis_area');
-            analisisState.tipoAnalisis = urlParams.get('tipo') || sessionStorage.getItem('analisis_tipo');
-            
+            const tipo = urlParams.get('tipo') || sessionStorage.getItem('analisis_tipo');
+            analisisState.tipoAnalisis = tipo ? tipo.toString() : '';
+
             // Determinar escenario si es análisis de meta
             if (analisisState.tipoAnalisis && analisisState.tipoAnalisis.includes('meta-')) {
                 analisisState.escenario = analisisState.tipoAnalisis.split('-')[1];
@@ -572,7 +583,7 @@
                     .order('mes');
                 
                 if (error2025) throw error2025;
-                analisisState.datos2025 = datos2025 || [];
+                analisisState.datos2025 = asegurarArreglo(datos2025);
                 
                 // Si es comparación vs 2024, cargar esos datos
                 if (analisisState.tipoAnalisis.includes('2024')) {
@@ -585,7 +596,7 @@
                         .order('mes');
                     
                     if (error2024) throw error2024;
-                    analisisState.datos2024 = datos2024 || [];
+                    analisisState.datos2024 = asegurarArreglo(datos2024);
                 }
                 
                 // Si es análisis de meta, cargar escenarios
@@ -600,7 +611,7 @@
                         .order('mes');
 
                     if (errorMetas) throw errorMetas;
-                    analisisState.datosMetas = metas || [];
+                    analisisState.datosMetas = asegurarArreglo(metas);
                 }
                 
                 // Procesar y mostrar según tipo
@@ -645,11 +656,8 @@
             let total2025 = 0, total2024 = 0;
             
             for (let mes = 1; mes <= 12; mes++) {
-                const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
-                const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                
-                const valor2025 = obtenerCampoSeguro(dato2025, 'valor', 0);
-                const valor2024 = obtenerCampoSeguro(dato2024, 'valor', 0);
+                const valor2025 = obtenerValorMensual(analisisState.datos2025, mes, 'valor', 0);
+                const valor2024 = obtenerValorMensual(analisisState.datos2024, mes, 'valor', 0);
                 const diferencia = valor2025 - valor2024;
                 const variacion = valor2024 > 0 ? ((diferencia / valor2024) * 100).toFixed(1) : 0;
                 
@@ -695,10 +703,8 @@
                 // Calcular totales por trimestre sumando los meses
                 Object.keys(trimestres).forEach(q => {
                     trimestres[q].meses.forEach(mes => {
-                        const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
-                        const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                        trimestres[q].valor2025 += obtenerCampoSeguro(dato2025, 'valor', 0);
-                        trimestres[q].valor2024 += obtenerCampoSeguro(dato2024, 'valor', 0);
+                        trimestres[q].valor2025 += obtenerValorMensual(analisisState.datos2025, mes, 'valor', 0);
+                        trimestres[q].valor2024 += obtenerValorMensual(analisisState.datos2024, mes, 'valor', 0);
                     });
                     
                     const diferencia = trimestres[q].valor2025 - trimestres[q].valor2024;
@@ -827,8 +833,12 @@
         function procesarAnalisisAnual() {
             let total2025 = 0, total2024 = 0;
             
-            analisisState.datos2025.forEach(d => total2025 += d.valor || 0);
-            analisisState.datos2024.forEach(d => total2024 += d.valor || 0);
+            asegurarArreglo(analisisState.datos2025).forEach(d => {
+                total2025 += obtenerCampoSeguro(d, 'valor', 0);
+            });
+            asegurarArreglo(analisisState.datos2024).forEach(d => {
+                total2024 += obtenerCampoSeguro(d, 'valor', 0);
+            });
             
             const diferencia = total2025 - total2024;
             const variacion = total2024 > 0 ? ((diferencia / total2024) * 100).toFixed(1) : 0;
@@ -871,11 +881,8 @@
 
                 const mesVigente = obtenerMesVigente();
                 const nombreMes = MESES[mesVigente - 1] || `Mes ${mesVigente}`;
-                const datoReal = analisisState.datos2025.find(d => d.mes === mesVigente);
-                const datoMeta = analisisState.datosMetas.find(d => d.mes === mesVigente);
-
-                const valorReal = obtenerCampoSeguro(datoReal, 'valor', null);
-                const valorMeta = obtenerCampoSeguro(datoMeta, 'meta', null);
+                const valorReal = obtenerValorMensual(analisisState.datos2025, mesVigente, 'valor', null);
+                const valorMeta = obtenerValorMensual(analisisState.datosMetas, mesVigente, 'meta', null);
                 const diferenciaDisponible = valorReal !== null && valorReal !== undefined
                     && valorMeta !== null && valorMeta !== undefined;
                 const diferencia = diferenciaDisponible ? valorReal - valorMeta : null;
@@ -929,10 +936,10 @@
 
             function obtenerMesVigente() {
                 const mesesConDatos = [
-                    ...analisisState.datos2025
+                    ...asegurarArreglo(analisisState.datos2025)
                         .filter(d => d && d.valor !== null && d.valor !== undefined)
                         .map(d => d.mes),
-                    ...analisisState.datosMetas
+                    ...asegurarArreglo(analisisState.datosMetas)
                         .filter(d => d && d.meta !== null && d.meta !== undefined)
                         .map(d => d.mes)
                 ];
@@ -1053,8 +1060,7 @@
                 let row2025 = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50 text-center">2025</td>';
                 let acum2025 = 0;
                 for (let mes = 1; mes <= 12; mes++) {
-                    const dato = analisisState.datos2025.find(d => d.mes === mes);
-                    const valor = obtenerCampoSeguro(dato, 'valor', 0);
+                    const valor = obtenerValorMensual(analisisState.datos2025, mes, 'valor', 0);
                     acum2025 += valor;
                     row2025 += `<td class="border border-gray-300 px-1 py-2 text-center text-xs">${formatearNumero(valor)}</td>`;
                 }
@@ -1064,8 +1070,7 @@
                 let row2024 = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-gray-50 text-center">2024</td>';
                 let acum2024 = 0;
                 for (let mes = 1; mes <= 12; mes++) {
-                    const dato = analisisState.datos2024.find(d => d.mes === mes);
-                    const valor = obtenerCampoSeguro(dato, 'valor', 0);
+                    const valor = obtenerValorMensual(analisisState.datos2024, mes, 'valor', 0);
                     acum2024 += valor;
                     row2024 += `<td class="border border-gray-300 px-1 py-2 text-center text-xs">${formatearNumero(valor)}</td>`;
                 }
@@ -1074,10 +1079,8 @@
                 // Fila Diferencia
                 let rowDif = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-50 text-center">Diferencia</td>';
                 for (let mes = 1; mes <= 12; mes++) {
-                    const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
-                    const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                    const valor2025 = obtenerCampoSeguro(dato2025, 'valor', 0);
-                    const valor2024 = obtenerCampoSeguro(dato2024, 'valor', 0);
+                    const valor2025 = obtenerValorMensual(analisisState.datos2025, mes, 'valor', 0);
+                    const valor2024 = obtenerValorMensual(analisisState.datos2024, mes, 'valor', 0);
                     const dif = valor2025 - valor2024;
                     
                     const claseColor = dif >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
@@ -1089,11 +1092,9 @@
                 // Fila % Variación  
                 let rowVar = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-green-50 text-center">% Var</td>';
                 for (let mes = 1; mes <= 12; mes++) {
-                    const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
-                    const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                    const valor2025 = obtenerCampoSeguro(dato2025, 'valor', 0);
-                    const valor2024 = obtenerCampoSeguro(dato2024, 'valor', 0);
-                    
+                    const valor2025 = obtenerValorMensual(analisisState.datos2025, mes, 'valor', 0);
+                    const valor2024 = obtenerValorMensual(analisisState.datos2024, mes, 'valor', 0);
+
                     let varMes = 0;
                     if (valor2024 > 0) {
                         varMes = ((valor2025 - valor2024) / valor2024 * 100).toFixed(1);
@@ -1148,15 +1149,9 @@
             const { decimales, sufijo } = obtenerFormatoIndicador();
             const labels = MESES.map(mes => mes.substring(0, 3));
 
-            const serie2025 = MESES.map((_, index) => {
-                const dato = analisisState.datos2025.find(d => d.mes === index + 1);
-                return obtenerCampoSeguro(dato, 'valor', null);
-            });
+            const serie2025 = MESES.map((_, index) => obtenerValorMensual(analisisState.datos2025, index + 1, 'valor', null));
 
-            const serie2024 = MESES.map((_, index) => {
-                const dato = analisisState.datos2024.find(d => d.mes === index + 1);
-                return obtenerCampoSeguro(dato, 'valor', null);
-            });
+            const serie2024 = MESES.map((_, index) => obtenerValorMensual(analisisState.datos2024, index + 1, 'valor', null));
 
             destruirGrafica('mensual');
 
@@ -1392,15 +1387,9 @@
             const { decimales, sufijo } = obtenerFormatoIndicador();
             const labels = MESES.map(mes => mes.substring(0, 3));
 
-            const serieReal = MESES.map((_, index) => {
-                const dato = analisisState.datos2025.find(d => d.mes === index + 1);
-                return obtenerCampoSeguro(dato, 'valor', null);
-            });
+            const serieReal = MESES.map((_, index) => obtenerValorMensual(analisisState.datos2025, index + 1, 'valor', null));
 
-            const serieMeta = MESES.map((_, index) => {
-                const dato = analisisState.datosMetas.find(d => d.mes === index + 1);
-                return obtenerCampoSeguro(dato, 'meta', null);
-            });
+            const serieMeta = MESES.map((_, index) => obtenerValorMensual(analisisState.datosMetas, index + 1, 'meta', null));
 
             destruirGrafica('meta');
 
@@ -1504,7 +1493,9 @@
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
             // Verificar autenticación
-            if (!currentUser.isAuthenticated || currentUser.rol !== 'general') {
+            const usuarioActual = typeof currentUser === 'object' && currentUser ? currentUser : null;
+
+            if (!usuarioActual || !usuarioActual.isAuthenticated || usuarioActual.rol !== 'general') {
                 window.location.href = 'login.html';
                 return;
             }
