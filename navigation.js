@@ -149,6 +149,112 @@ function checkPageAccess() {
     }
 
 /**
+ * Mostrar u ocultar una sección por ID de forma segura
+ * @param {string} sectionId - ID del elemento a modificar
+ * @param {boolean} shouldShow - true para mostrar, false para ocultar
+ */
+function toggleSection(sectionId, shouldShow) {
+    const element = document.getElementById(sectionId);
+    if (!element) {
+        return;
+    }
+
+    if (shouldShow) {
+        element.classList.remove('hidden');
+    } else {
+        element.classList.add('hidden');
+    }
+}
+
+/**
+ * Mostrar el menú principal ocultando otros módulos
+ */
+function showMenu() {
+    const sections = ['moduloCaptura', 'menuVisualizacion', 'visualizacionDetalle'];
+    sections.forEach(id => toggleSection(id, false));
+    toggleSection('menuPrincipal', true);
+
+    console.log('Mostrando menú principal');
+}
+
+/**
+ * Mostrar el módulo de captura desde el menú principal
+ */
+function showCaptura() {
+    toggleSection('menuPrincipal', false);
+    toggleSection('menuVisualizacion', false);
+    toggleSection('visualizacionDetalle', false);
+    toggleSection('moduloCaptura', true);
+
+    if (typeof inicializarModuloCaptura === 'function') {
+        try {
+            inicializarModuloCaptura();
+        } catch (error) {
+            console.error('Error inicializando módulo de captura:', error);
+        }
+    }
+
+    console.log('Mostrando módulo de captura');
+}
+
+/**
+ * Mostrar el menú del módulo de visualización
+ */
+function showVisualizacion() {
+    toggleSection('menuPrincipal', false);
+    toggleSection('moduloCaptura', false);
+    toggleSection('visualizacionDetalle', false);
+    toggleSection('menuVisualizacion', true);
+
+    console.log('Mostrando menú de visualización');
+}
+
+/**
+ * Mostrar el detalle del módulo de visualización
+ * @param {string} tipo - Tipo de visualización ('pasajeros', 'operaciones', 'carga')
+ */
+function showVisualizacionDetalle(tipo) {
+    toggleSection('menuPrincipal', false);
+    toggleSection('moduloCaptura', false);
+    toggleSection('menuVisualizacion', false);
+    toggleSection('visualizacionDetalle', true);
+
+    if (typeof window.vContext === 'undefined') {
+        window.vContext = {};
+    }
+    window.vContext.modo = tipo;
+
+    if (typeof limpiarDatosVisualizacion === 'function') {
+        try {
+            limpiarDatosVisualizacion();
+        } catch (error) {
+            console.warn('Error limpiando datos de visualización:', error);
+        }
+    }
+
+    if (typeof inicializarFiltrosVisualizacion === 'function') {
+        try {
+            inicializarFiltrosVisualizacion();
+        } catch (error) {
+            console.error('Error inicializando filtros de visualización:', error);
+        }
+    }
+
+    const titles = {
+        pasajeros: 'Visualización - Pasajeros',
+        operaciones: 'Visualización - Operaciones',
+        carga: 'Visualización - Carga'
+    };
+
+    const titulo = document.getElementById('tituloDetalle');
+    if (titulo) {
+        titulo.textContent = titles[tipo] || 'Visualización';
+    }
+
+    console.log('Mostrando detalle de visualización:', tipo);
+}
+
+/**
  * Redirigir al usuario según su rol
  * @param {string} rol - Rol del usuario
  */
@@ -434,3 +540,7 @@ window.checkAreaPermission = checkAreaPermission;
 window.getCurrentUser = getCurrentUser;
 window.canAccess = canAccess;
 window.mostrarInformacionUsuario = mostrarInformacionUsuario;
+window.showMenu = showMenu;
+window.showCaptura = showCaptura;
+window.showVisualizacion = showVisualizacion;
+window.showVisualizacionDetalle = showVisualizacionDetalle;
