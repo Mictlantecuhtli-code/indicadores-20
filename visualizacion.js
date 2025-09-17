@@ -15,6 +15,17 @@ let visualizacionData = {
     datosHistoricos: []
 };
 
+function obtenerCampoSeguro(objeto, campo, valorPredeterminado) {
+    if (!objeto || objeto[campo] === undefined || objeto[campo] === null) {
+        return valorPredeterminado;
+    }
+    return objeto[campo];
+}
+
+function obtenerLongitudSeguro(valor) {
+    return Array.isArray(valor) ? valor.length : 0;
+}
+
 /**
  * Inicializar filtros de visualización
  */
@@ -280,9 +291,9 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
         };
         
         log('Datos de comparación cargados', {
-            actuales: datosActuales?.length || 0,
-            comparacion: datosComparacion?.length || 0,
-            escenarios: metasEscenarios?.length || 0
+            actuales: obtenerLongitudSeguro(datosActuales),
+            comparacion: obtenerLongitudSeguro(datosComparacion),
+            escenarios: obtenerLongitudSeguro(metasEscenarios)
         });
         
     } catch (error) {
@@ -323,7 +334,8 @@ function crearTablaHorizontalCorrecta() {
     valorRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-blue-100 text-center">${datos.anioActual}</td>`;
     for (let mes = 1; mes <= 12; mes++) {
         const datoMes = datos.actuales.find(d => d.mes === mes);
-        const valor = datoMes?.valor ? formatearNumero(datoMes.valor) : '-';
+        const valorMes = obtenerCampoSeguro(datoMes, 'valor', null);
+        const valor = valorMes === null ? '-' : formatearNumero(valorMes);
         valorRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${valor}</td>`;
     }
     tbody.appendChild(valorRow);
@@ -333,7 +345,7 @@ function crearTablaHorizontalCorrecta() {
     metaRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-100 text-center">META</td>`;
     for (let mes = 1; mes <= 12; mes++) {
         const datoMes = datos.actuales.find(d => d.mes === mes);
-        let meta = datoMes?.meta || '';
+        let meta = obtenerCampoSeguro(datoMes, 'meta', '');
         
         // USAR METAS DE ESCENARIOS SI ESTÁN DISPONIBLES
         if (datos.metasEscenarios.length > 0) {
@@ -353,9 +365,9 @@ function crearTablaHorizontalCorrecta() {
     porcentajeRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-green-100 text-center">%META</td>`;
     for (let mes = 1; mes <= 12; mes++) {
         const datoMes = datos.actuales.find(d => d.mes === mes);
-        const valor = datoMes?.valor || 0;
-        
-        let meta = datoMes?.meta || 0;
+        const valor = obtenerCampoSeguro(datoMes, 'valor', 0);
+
+        let meta = obtenerCampoSeguro(datoMes, 'meta', 0);
         if (datos.metasEscenarios.length > 0) {
             const metaEscenario = datos.metasEscenarios.find(m => m.mes === mes && m.escenario === visualizacionData.escenarioSeleccionado);
             if (metaEscenario) {

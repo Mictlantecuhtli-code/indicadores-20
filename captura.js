@@ -43,9 +43,8 @@ window.MENSAJES = window.MENSAJES || {
 };
 
 // ---- Helpers mínimos (por si utils.js no está)
-//function $(sel) { return document.querySelector(sel); }
 function llenarSelect(sel, opciones, valorPorDefecto) {
-  const el = $(sel); if (!el) return;
+  const el = document.querySelector(sel); if (!el) return;
   el.innerHTML = "";
   for (const opt of opciones) {
     const o = document.createElement("option");
@@ -66,6 +65,23 @@ function mostrarCargando(btn, on){
 function formatearNumero(n){ return (n===0 || n) ? Number(n).toLocaleString("es-MX") : ""; }
 function formatearPorcentaje(p){ return (p===0 || p) ? `${Number(p).toFixed(1)}%` : ""; }
 function limpiarNumero(v){ if (v===null || v===undefined || v==="") return null; const x = Number(String(v).replace(/,/g,"")); return isNaN(x)? null : x; }
+
+function obtenerRolActual(){
+  return currentUser && currentUser.rol ? currentUser.rol : null;
+}
+
+function agregarEvento(selector, evento, handler){
+  const elemento = document.querySelector(selector);
+  if (elemento) {
+    elemento.addEventListener(evento, handler);
+  }
+  return elemento;
+}
+
+function obtenerValorCampo(selector){
+  const elemento = document.querySelector(selector);
+  return elemento ? elemento.value : '';
+}
 
 // ====================================
 // Estado
@@ -89,8 +105,10 @@ function inicializarModuloCaptura(){
   configurarEventos();
   limpiarFormulario();
   // Disparar si ya hay valores prefijados
-  if ($("#fArea")?.value) manejarCambioArea();
-  if ($("#fIndicador")?.value) manejarCambioIndicador();
+  const areaSelect = document.querySelector("#fArea");
+  if (areaSelect && areaSelect.value) { manejarCambioArea(); }
+  const indicadorSelect = document.querySelector("#fIndicador");
+  if (indicadorSelect && indicadorSelect.value) { manejarCambioIndicador(); }
   actualizarEstadoBotonGuardar();
 }
 
@@ -102,8 +120,9 @@ function llenarSelectorAnios(){
   llenarSelect("#fAnio", [{valor: ANO_ACTUAL, texto: String(ANO_ACTUAL)}], ANO_ACTUAL);
 
   // Capturista no puede cambiar año
-  const anioSel = $("#fAnio");
-  if (anioSel && currentUser?.rol === ROLES.CAPTURISTA){
+  const anioSel = document.querySelector("#fAnio");
+  const rolActual = obtenerRolActual();
+  if (anioSel && rolActual === ROLES.CAPTURISTA){
     anioSel.disabled = true; anioSel.classList.add("disabled-by-role");
   }
 }
@@ -116,8 +135,9 @@ function llenarSelectorMeses(){
   llenarSelect("#fMes", opciones, mesActual);
 
   // Capturista no puede cambiar mes (vigente)
-  const mesSel = $("#fMes");
-  if (mesSel && currentUser?.rol === ROLES.CAPTURISTA){
+  const mesSel = document.querySelector("#fMes");
+  const rolActual = obtenerRolActual();
+  if (mesSel && rolActual === ROLES.CAPTURISTA){
     mesSel.disabled = true; mesSel.classList.add("disabled-by-role");
   }
 }
@@ -129,7 +149,7 @@ function llenarSelectorAreas(){
 }
 
 function llenarSelectorIndicadores(area){
-  const sel = $("#fIndicador"); if (!sel) return;
+  const sel = document.querySelector("#fIndicador"); if (!sel) return;
   sel.innerHTML = '<option value="">Seleccionar...</option>';
 
   // Mapa por área (ajústalo si tu lógica difiere)
@@ -153,31 +173,33 @@ function llenarSelectorIndicadores(area){
 // Eventos
 // ====================================
 function configurarEventos(){
-  $("#fArea")?.addEventListener("change", manejarCambioArea);
-  $("#fIndicador")?.addEventListener("change", manejarCambioIndicador);
-  $("#fAnio")?.addEventListener("change", manejarCambioAnio);
-  $("#fMes")?.addEventListener("change", ()=> actualizarEstadoBotonGuardar());
+  agregarEvento("#fArea", "change", manejarCambioArea);
+  agregarEvento("#fIndicador", "change", manejarCambioIndicador);
+  agregarEvento("#fAnio", "change", manejarCambioAnio);
+  agregarEvento("#fMes", "change", () => actualizarEstadoBotonGuardar());
 
-  $("#fValor")?.addEventListener("input", validarEntradaNumerica);
-  $("#fValor")?.addEventListener("blur", formatearEntradaNumerica);
-  $("#fMeta")?.addEventListener("input", validarEntradaNumerica);
-  $("#fMeta")?.addEventListener("blur", formatearEntradaNumerica);
+  agregarEvento("#fValor", "input", validarEntradaNumerica);
+  agregarEvento("#fValor", "blur", formatearEntradaNumerica);
+  agregarEvento("#fMeta", "input", validarEntradaNumerica);
+  agregarEvento("#fMeta", "blur", formatearEntradaNumerica);
 }
 
 function manejarCambioArea(){
-  const area = $("#fArea").value;
+  const areaSelect = document.querySelector("#fArea");
+  const area = areaSelect ? areaSelect.value : '';
   capturaData.selectedArea = area || null;
   log("Cambio de área", { area });
 
   llenarSelectorIndicadores(area);
   limpiarDatos();
-  const indicador = $("#fIndicador")?.value;
+  const indicador = obtenerValorCampo("#fIndicador");
   if (area && indicador) cargarDatos();
   actualizarEstadoBotonGuardar();
 }
 
 function manejarCambioIndicador(){
-  capturaData.selectedIndicador = $("#fIndicador").value || null;
+  const indicadorSelect = document.querySelector("#fIndicador");
+  capturaData.selectedIndicador = indicadorSelect ? indicadorSelect.value || null : null;
   if (capturaData.selectedIndicador && capturaData.selectedArea) cargarDatos();
   else limpiarDatos();
   actualizarEstadoBotonGuardar();
@@ -185,11 +207,16 @@ function manejarCambioIndicador(){
 
 function manejarCambioAnio(){
   // Capturista: siempre forzar año actual en UI/estado
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
-    $("#fAnio").value = String(ANO_ACTUAL);
+  const rolActual = obtenerRolActual();
+  const anioSelect = document.querySelector("#fAnio");
+  if (rolActual === ROLES.CAPTURISTA) {
+    if (anioSelect) {
+      anioSelect.value = String(ANO_ACTUAL);
+    }
     capturaData.currentYear = ANO_ACTUAL;
   } else {
-    capturaData.currentYear = parseInt($("#fAnio").value) || ANO_ACTUAL;
+    const anioValor = anioSelect ? parseInt(anioSelect.value) : NaN;
+    capturaData.currentYear = Number.isNaN(anioValor) ? ANO_ACTUAL : anioValor;
   }
   if (capturaData.selectedArea && capturaData.selectedIndicador) cargarDatos();
   actualizarEstadoBotonGuardar();
@@ -223,9 +250,10 @@ async function cargarDatos(){
   if (!area || !indicador || !anio) return;
 
   // Capturista: ancla año al actual siempre
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
+  const rolActual = obtenerRolActual();
+  if (rolActual === ROLES.CAPTURISTA) {
     anio = ANO_ACTUAL;
-    const anioSel = $("#fAnio"); if (anioSel) anioSel.value = String(ANO_ACTUAL);
+    const anioSel = document.querySelector("#fAnio"); if (anioSel) anioSel.value = String(ANO_ACTUAL);
   }
 
   try{
@@ -256,7 +284,7 @@ async function cargarDatos(){
 // Tabla
 // ====================================
 function actualizarTabla(datos){
-  const tbody = $("#tbodyCaptura"); if (!tbody) return;
+  const tbody = document.querySelector("#tbodyCaptura"); if (!tbody) return;
   tbody.innerHTML = "";
   for (let mes=1; mes<=12; mes++){
     const d = datos.find(x=>x.mes===mes) || {};
@@ -289,17 +317,18 @@ function actualizarTabla(datos){
 // Form y guardado
 // ====================================
 function validarFormulario(){
-  const area = $("#fArea")?.value;
-  const indicador = $("#fIndicador")?.value;
-  const anio = parseInt($("#fAnio")?.value);
-  const mes  = parseInt($("#fMes")?.value);
+  const area = obtenerValorCampo("#fArea");
+  const indicador = obtenerValorCampo("#fIndicador");
+  const anio = parseInt(obtenerValorCampo("#fAnio"), 10);
+  const mes  = parseInt(obtenerValorCampo("#fMes"), 10);
 
   if (!area || !indicador || !anio || !mes){
     mostrarNotificacion("Seleccione área, indicador, año y mes", "error"); return false;
   }
 
   // Restricción SOLO para capturista:
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
+  const rolActual = obtenerRolActual();
+  if (rolActual === ROLES.CAPTURISTA) {
     if (anio !== ANO_ACTUAL){
       mostrarNotificacion(`Solo puede capturarse el año ${ANO_ACTUAL}`, "error"); return false;
     }
@@ -310,8 +339,8 @@ function validarFormulario(){
   }
 
   // Validar números
-  const valor = limpiarNumero($("#fValor")?.value);
-  const meta  = limpiarNumero($("#fMeta")?.value);
+  const valor = limpiarNumero(obtenerValorCampo("#fValor"));
+  const meta  = limpiarNumero(obtenerValorCampo("#fMeta"));
   if (valor===null || isNaN(valor)){ mostrarNotificacion("Ingrese un valor válido", "error"); return false; }
   if (meta===null  || isNaN(meta)) { mostrarNotificacion("Ingrese una meta válida",  "error"); return false; }
   if (valor < VALIDACIONES.VALOR_MINIMO || valor > VALIDACIONES.VALOR_MAXIMO){
@@ -326,12 +355,13 @@ function validarFormulario(){
 async function guardarMedicion(){
   if (!validarFormulario()){ actualizarEstadoBotonGuardar(); return; }
 
-  const area = $("#fArea").value;
-  const indicador = $("#fIndicador").value;
-  const anio = (currentUser?.rol === ROLES.CAPTURISTA) ? ANO_ACTUAL : (parseInt($("#fAnio").value) || ANO_ACTUAL);
-  const mes  = (currentUser?.rol === ROLES.CAPTURISTA) ? capturaData.currentMonth : parseInt($("#fMes").value);
-  let valor = limpiarNumero($("#fValor").value) || 0;
-  let meta  = limpiarNumero($("#fMeta").value)  || 0;
+  const area = obtenerValorCampo("#fArea");
+  const indicador = obtenerValorCampo("#fIndicador");
+  const rolActual = obtenerRolActual();
+  const anio = rolActual === ROLES.CAPTURISTA ? ANO_ACTUAL : (parseInt(obtenerValorCampo("#fAnio"), 10) || ANO_ACTUAL);
+  const mes  = rolActual === ROLES.CAPTURISTA ? capturaData.currentMonth : parseInt(obtenerValorCampo("#fMes"), 10);
+  let valor = limpiarNumero(obtenerValorCampo("#fValor")) || 0;
+  let meta  = limpiarNumero(obtenerValorCampo("#fMeta"))  || 0;
 
   // Validación extra desde auth.js si existe
   if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function"){
@@ -360,17 +390,18 @@ async function guardarMedicion(){
 function actualizarEstadoBotonGuardar(){
   const btn = document.querySelector('button[onclick="guardarMedicion()"]');
   if (!btn) return;
-  const anio = parseInt($("#fAnio")?.value);
-  const mes  = parseInt($("#fMes")?.value);
-  const area = $("#fArea")?.value;
-  const indicador = $("#fIndicador")?.value;
+  const anio = parseInt(obtenerValorCampo("#fAnio"), 10);
+  const mes  = parseInt(obtenerValorCampo("#fMes"), 10);
+  const area = obtenerValorCampo("#fArea");
+  const indicador = obtenerValorCampo("#fIndicador");
 
   let ok = true;
   if (typeof verificarPermisos === "function" ? !verificarPermisos("capturar") : false) ok = false;
   if (!area || !indicador) ok = false;
 
   // Solo capturista está restringido por mes/año vigente
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
+  const rolActual = obtenerRolActual();
+  if (rolActual === ROLES.CAPTURISTA) {
     if (anio !== ANO_ACTUAL) ok = false;
     if (mes  !== capturaData.currentMonth) ok = false;
   }
@@ -384,20 +415,20 @@ function actualizarEstadoBotonGuardar(){
 // Limpiezas y utilidades
 // ====================================
 function limpiarFormulario(){
-  const indSel = $("#fIndicador"); if (indSel) indSel.innerHTML = '<option value="">Seleccionar...</option>';
+  const indSel = document.querySelector("#fIndicador"); if (indSel) indSel.innerHTML = '<option value="">Seleccionar...</option>';
   limpiarCampos();
   limpiarDatos();
   actualizarEstadoBotonGuardar();
 }
 
 function limpiarCampos(){
-  const v = $("#fValor"); if (v){ v.value = ""; v.classList.remove("border-red-500"); }
-  const m = $("#fMeta");  if (m){ m.value = ""; m.classList.remove("border-red-500"); }
+  const v = document.querySelector("#fValor"); if (v){ v.value = ""; v.classList.remove("border-red-500"); }
+  const m = document.querySelector("#fMeta");  if (m){ m.value = ""; m.classList.remove("border-red-500"); }
 }
 
 function limpiarDatos(){
   capturaData.datosActuales = [];
-  const tbody = $("#tbodyCaptura"); if (tbody) tbody.innerHTML = "";
+  const tbody = document.querySelector("#tbodyCaptura"); if (tbody) tbody.innerHTML = "";
   if (typeof window.currentChart !== "undefined" && window.currentChart){
     try{ window.currentChart.destroy(); }catch{}
     window.currentChart = null;
@@ -407,15 +438,20 @@ function limpiarDatos(){
 function prellenarMesVigente(){
   const d = capturaData.datosActuales.find(x=>x.mes === capturaData.currentMonth);
   if (!d) return;
-  if ($("#fValor")) $("#fValor").value = (d.valor===0 || d.valor) ? d.valor : "";
-  if ($("#fMeta"))  $("#fMeta").value  = (d.meta===0  || d.meta)  ? d.meta  : "";
+  const valorInput = document.querySelector("#fValor");
+  if (valorInput) { valorInput.value = (d.valor===0 || d.valor) ? d.valor : ""; }
+  const metaInput = document.querySelector("#fMeta");
+  if (metaInput) { metaInput.value  = (d.meta===0  || d.meta)  ? d.meta  : ""; }
 }
 
 // ====================================
 // Export simple CSV
 // ====================================
 function exportarDatosCaptura(){
-  if (!capturaData.datosActuales?.length){ mostrarNotificacion("No hay datos para exportar","warning"); return; }
+  if (!Array.isArray(capturaData.datosActuales) || capturaData.datosActuales.length === 0){
+    mostrarNotificacion("No hay datos para exportar","warning");
+    return;
+  }
   const filas = capturaData.datosActuales.map(d => [
     AREAS[d.area] || d.area,
     INDICADORES[d.indicador] || d.indicador,
