@@ -314,6 +314,108 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
         mostrarNotificacion('Error al crear la gráfica histórica', 'error');
     }
 }
+/**
+ * Crear gráfica trimestral (SOLO 2 AÑOS)
+ */
+
+function crearGraficaTrimestral(trimestres) {
+    const ctx = $('#chartTrimestral');
+    if (!ctx) {
+        console.error('Canvas trimestral no encontrado');
+        return;
+    }
+
+    // Destruir gráfica existente si hay una
+    if (window.chartTrimestralInstance) {
+        window.chartTrimestralInstance.destroy();
+    }
+
+    const labels = ['Q1 (Ene-Mar)', 'Q2 (Abr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dic)'];
+    
+    const data2025 = [
+        trimestres.q1.valor2025,
+        trimestres.q2.valor2025,
+        trimestres.q3.valor2025,
+        trimestres.q4.valor2025
+    ];
+    
+    const data2024 = [
+        trimestres.q1.valor2024,
+        trimestres.q2.valor2024,
+        trimestres.q3.valor2024,
+        trimestres.q4.valor2024
+    ];
+
+    const config = {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '2025',
+                    data: data2025,
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: '#3B82F6',
+                    borderWidth: 2
+                },
+                {
+                    label: '2024',
+                    data: data2024,
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderColor: '#EF4444',
+                    borderWidth: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Comparación Trimestral 2025 vs 2024',
+                    font: { size: 16, weight: 'bold' }
+                },
+                legend: {
+                    position: 'bottom',
+                    labels: { usePointStyle: true, padding: 15 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${formatearNumero(context.parsed.y)}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return formatearNumero(value);
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Cantidad'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Trimestres'
+                    }
+                }
+            }
+        }
+    };
+
+    window.chartTrimestralInstance = new Chart(ctx.getContext('2d'), config);
+    
+    console.log('Gráfica trimestral creada exitosamente');
+}
+
 
 /**
  * NUEVA: Crear gráfica comparativa (SOLO 2 AÑOS)
