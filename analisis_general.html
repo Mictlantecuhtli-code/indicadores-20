@@ -525,28 +525,28 @@
         
         function obtenerNombreIndicador() {
             const nombres = {
-                'pasajeros-comercial': 'Pasajeros Comercial',
-                'pasajeros-general': 'Pasajeros FBO',
-                'operaciones-comercial': 'Operaciones Comercial',
-                'operaciones-general': 'Operaciones FBO',
-                'operaciones-carga': 'Carga - Operaciones',
-                'toneladas-carga': 'Carga - Toneladas'
+                'pasajeros-comercial': 'Pasajeros de Aviación Comercial',
+                'pasajeros-general': 'Pasajeros de Aviación General (FBO)',
+                'operaciones-comercial': 'Operaciones de Aviación Comercial', 
+                'operaciones-general': 'Operaciones de Aviación General (FBO)',
+                'operaciones-carga': 'Operaciones de Carga',
+                'toneladas-carga': 'Toneladas Transportadas de Carga'
             };
             return nombres[`${analisisState.indicador}-${analisisState.area}`] || 'Indicador';
         }
         
         function obtenerDescripcionTipo() {
             const tipos = {
-                'mensual-2024': 'Comparativo Mensual 2025 vs 2024',
-                'trimestral-2024': 'Comparativo Trimestral 2025 vs 2024',
-                'anual-2024': 'Comparativo Anual 2025 vs 2024',
-                'meta-bajo': 'Real vs Meta Escenario Bajo',
-                'meta-medio': 'Real vs Meta Escenario Medio',
-                'meta-alto': 'Real vs Meta Escenario Alto'
+                'mensual-2024': 'Cantidad real mensual del 2025 respecto al mismo periodo 2024',
+                'trimestral-2024': 'Cantidad real trimestral del 2025 respecto al mismo periodo 2024', 
+                'anual-2024': 'Cantidad real anual del 2025 respecto al mismo periodo 2024',
+                'meta-bajo': 'Cantidad real mensual del 2025 respecto a la proyección de meta escenario bajo',
+                'meta-medio': 'Cantidad real mensual del 2025 respecto a la proyección de meta escenario medio',
+                'meta-alto': 'Cantidad real mensual del 2025 respecto a la proyección de meta escenario alto'
             };
             return tipos[analisisState.tipoAnalisis] || 'Análisis';
         }
-        
+                
         // Cargar datos según tipo de análisis
         async function cargarDatos() {
             mostrarLoading(true);
