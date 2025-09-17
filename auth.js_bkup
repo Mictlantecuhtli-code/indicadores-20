@@ -1214,9 +1214,13 @@ function configurarEventosLogin() {
  * Manejar submit del formulario de login
  */
 async function manejarSubmitLogin() {
-    const username = document.getElementById('username')?.value.trim();
-    const password = document.getElementById('password')?.value;
-    const recordarme = document.getElementById('recordarme')?.checked || false;
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const recordarmeInput = document.getElementById('recordarme');
+
+    const username = usernameInput ? usernameInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
+    const recordarme = recordarmeInput ? !!recordarmeInput.checked : false;
     
     if (!username || !password) {
         mostrarNotificacion('Por favor complete todos los campos', 'error');

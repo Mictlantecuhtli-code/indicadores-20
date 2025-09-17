@@ -111,6 +111,13 @@ const CHART_CONFIGS = {
     }
 };
 
+function obtenerCampoSeguro(objeto, campo, valorPredeterminado) {
+    if (!objeto || objeto[campo] === undefined || objeto[campo] === null) {
+        return valorPredeterminado;
+    }
+    return objeto[campo];
+}
+
 /**
  * Crear gráfica para el módulo de captura
  */
@@ -318,7 +325,7 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
  * Crear gráfica Meta
  */
     function crearGraficaMeta() {
-        const ctx = $('#chartMeta');
+        const ctx = document.getElementById('chartMeta');
         if (!ctx) {
             console.error('Canvas de meta no encontrado');
             return;
@@ -337,9 +344,9 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
         for (let mes = 1; mes <= 12; mes++) {
             const datoReal = analisisState.datos2025.find(d => d.mes === mes);
             const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
-            
-            dataReal.push(datoReal?.valor || null);
-            dataMeta.push(datoMeta?.meta || null);
+
+            dataReal.push(obtenerCampoSeguro(datoReal, 'valor', null));
+            dataMeta.push(obtenerCampoSeguro(datoMeta, 'meta', null));
         }
     
         const config = {
@@ -405,8 +412,9 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
                                 if (context.datasetIndex === 0 && context.parsed.y !== null) {
                                     const mes = context.dataIndex + 1;
                                     const datoMeta = analisisState.datosMetas.find(d => d.mes === mes);
-                                    if (datoMeta?.meta) {
-                                        const cumplimiento = (context.parsed.y / datoMeta.meta * 100).toFixed(1);
+                                    const metaEscenario = obtenerCampoSeguro(datoMeta, 'meta', null);
+                                    if (metaEscenario) {
+                                        const cumplimiento = (context.parsed.y / metaEscenario * 100).toFixed(1);
                                         return `Cumplimiento: ${cumplimiento}%`;
                                     }
                                 }
@@ -570,7 +578,8 @@ async function crearGraficaComparativa(area, indicador, tipo) {
     }
     
     // Verificar si mostrar histórico
-    const mostrarHistorico = $('#chkMostrarHistorico')?.checked || false;
+    const chkHistorico = document.getElementById('chkMostrarHistorico');
+    const mostrarHistorico = chkHistorico ? !!chkHistorico.checked : false;
     
     if (mostrarHistorico) {
         log('Mostrando gráfica histórica completa por checkbox');

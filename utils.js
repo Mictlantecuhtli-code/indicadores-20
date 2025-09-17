@@ -7,6 +7,13 @@
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => document.querySelectorAll(selector);
 
+function obtenerCampoSeguro(objeto, campo, valorPredeterminado) {
+    if (!objeto || objeto[campo] === undefined || objeto[campo] === null) {
+        return valorPredeterminado;
+    }
+    return objeto[campo];
+}
+
 /**
  * Funciones de formato y validación
  */
@@ -93,9 +100,9 @@ function crearPivotMeses(datos, anios) {
         const fila = { mes: mes, mesNumero: index + 1 };
         anios.forEach(anio => {
             const dato = datos.find(d => d.anio === anio && d.mes === index + 1);
-            fila[`valor_${anio}`] = dato?.valor || null;
-            fila[`meta_${anio}`] = dato?.meta || null;
-            fila[`cumplimiento_${anio}`] = dato?.cumplimiento || null;
+            fila[`valor_${anio}`] = obtenerCampoSeguro(dato, 'valor', null);
+            fila[`meta_${anio}`] = obtenerCampoSeguro(dato, 'meta', null);
+            fila[`cumplimiento_${anio}`] = obtenerCampoSeguro(dato, 'cumplimiento', null);
         });
         return fila;
     });

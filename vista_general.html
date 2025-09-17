@@ -299,6 +299,13 @@
             escenarioActual: 'mediano',
             chartInstance: null
         };
+
+        function obtenerCampoSeguro(objeto, campo, valorPredeterminado) {
+            if (!objeto || objeto[campo] === undefined || objeto[campo] === null) {
+                return valorPredeterminado;
+            }
+            return objeto[campo];
+        }
         
         // Obtener tipo de vista desde URL
         function obtenerTipoVista() {
@@ -433,7 +440,7 @@
             
             for (let mes = 1; mes <= 12; mes++) {
                 const dato = vistaGeneralState.datos2025.find(d => d.mes === mes);
-                const valor = dato?.valor || 0;
+                const valor = obtenerCampoSeguro(dato, 'valor', 0);
                 total2025 += valor;
                 row2025.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
             }
@@ -446,7 +453,7 @@
             
             for (let mes = 1; mes <= 12; mes++) {
                 const dato = vistaGeneralState.datos2024.find(d => d.mes === mes);
-                const valor = dato?.valor || 0;
+                const valor = obtenerCampoSeguro(dato, 'valor', 0);
                 total2024 += valor;
                 row2024.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
             }
@@ -459,8 +466,8 @@
             for (let mes = 1; mes <= 12; mes++) {
                 const dato2025 = vistaGeneralState.datos2025.find(d => d.mes === mes);
                 const dato2024 = vistaGeneralState.datos2024.find(d => d.mes === mes);
-                const valor2025 = dato2025?.valor || 0;
-                const valor2024 = dato2024?.valor || 0;
+                const valor2025 = obtenerCampoSeguro(dato2025, 'valor', 0);
+                const valor2024 = obtenerCampoSeguro(dato2024, 'valor', 0);
                 
                 let variacion = 0;
                 if (valor2024 > 0) {
@@ -499,8 +506,8 @@
             for (let mes = 1; mes <= 12; mes++) {
                 const dato2025 = vistaGeneralState.datos2025.find(d => d.mes === mes);
                 const dato2024 = vistaGeneralState.datos2024.find(d => d.mes === mes);
-                data2025.push(dato2025?.valor || null);
-                data2024.push(dato2024?.valor || null);
+                data2025.push(obtenerCampoSeguro(dato2025, 'valor', null));
+                data2024.push(obtenerCampoSeguro(dato2024, 'valor', null));
             }
             
             vistaGeneralState.chartInstance = new Chart(ctx, {
@@ -552,7 +559,7 @@
             
             for (let mes = 1; mes <= 12; mes++) {
                 const dato = vistaGeneralState.datos2025.find(d => d.mes === mes);
-                const valor = dato?.valor || 0;
+                const valor = obtenerCampoSeguro(dato, 'valor', 0);
                 rowReal.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${formatearNumero(valor)}</td>`;
             }
             
@@ -562,7 +569,7 @@
             
             for (let mes = 1; mes <= 12; mes++) {
                 const metaData = vistaGeneralState.metasEscenarios.find(m => m.mes === mes && m.escenario === escenario);
-                const meta = metaData?.meta || 0;
+                const meta = obtenerCampoSeguro(metaData, 'meta', 0);
                 rowMeta.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm bg-yellow-50">${formatearNumero(meta)}</td>`;
             }
             
@@ -573,8 +580,8 @@
             for (let mes = 1; mes <= 12; mes++) {
                 const dato = vistaGeneralState.datos2025.find(d => d.mes === mes);
                 const metaData = vistaGeneralState.metasEscenarios.find(m => m.mes === mes && m.escenario === escenario);
-                const valor = dato?.valor || 0;
-                const meta = metaData?.meta || 0;
+                const valor = obtenerCampoSeguro(dato, 'valor', 0);
+                const meta = obtenerCampoSeguro(metaData, 'meta', 0);
                 
                 let cumplimiento = 0;
                 if (meta > 0) {
@@ -615,8 +622,10 @@
         // Evento checkbox histórico
         
 // Evento checkbox histórico
-document.getElementById('chkHistoricoCompleto')?.addEventListener('change', async function() {
-    if (this.checked) {
+const chkHistoricoCompleto = document.getElementById('chkHistoricoCompleto');
+if (chkHistoricoCompleto) {
+    chkHistoricoCompleto.addEventListener('change', async function() {
+        if (this.checked) {
         // Cargar datos históricos completos
         mostrarNotificacion('Cargando histórico completo...', 'info');
         mostrarLoading(true);
@@ -667,7 +676,7 @@ document.getElementById('chkHistoricoCompleto')?.addEventListener('change', asyn
                 const datosAño = [];
                 for (let mes = 1; mes <= 12; mes++) {
                     const dato = datosHistoricos.find(d => d.anio === año && d.mes === mes);
-                    datosAño.push(dato?.valor || null);
+                    datosAño.push(obtenerCampoSeguro(dato, 'valor', null));
                 }
                 
                 return {
@@ -710,11 +719,12 @@ document.getElementById('chkHistoricoCompleto')?.addEventListener('change', asyn
             mostrarLoading(false);
         }
         
-    } else {
-        // Volver a la vista de solo 2 años
-        crearGraficaGeneral();
-    }
-});
+        } else {
+            // Volver a la vista de solo 2 años
+            crearGraficaGeneral();
+        }
+    });
+}
         
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
