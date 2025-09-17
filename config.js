@@ -379,6 +379,18 @@ function esMesValido(mes) {
     return mes >= VALIDACIONES.MES_MINIMO && mes <= VALIDACIONES.MES_MAXIMO;
 }
 
+function obtenerNombreIndicadorCompleto(indicador, area) {
+    const nombres = {
+        'pasajeros-comercial': 'Pasajeros de Aviación Comercial',
+        'pasajeros-general': 'Pasajeros de Aviación General (FBO)',
+        'operaciones-comercial': 'Operaciones de Aviación Comercial',
+        'operaciones-general': 'Operaciones de Aviación General (FBO)',
+        'operaciones-carga': 'Operaciones de Carga',
+        'toneladas-carga': 'Toneladas Transportadas de Carga'
+    };
+    return nombres[`${indicador}-${area}`] || `${indicador} - ${area}`;
+}
+
 // ====================================
 // FUNCIONES DE AUTENTICACIÓN
 // ====================================
