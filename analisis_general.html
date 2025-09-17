@@ -831,14 +831,118 @@
             
             document.getElementById('diferenciaAnual').textContent = `Diferencia: ${formatearNumero(diferencia)}`;
             
+            // Crear tabla horizontal detallada
+            crearTablaAnualHorizontal(total2025, total2024, diferencia, variacion);
+            
             // Crear gráfica anual
             crearGraficaAnual(total2025, total2024);
         }
         
-        // Procesar Análisis de Meta
+            // Procesar Análisis de Meta
             function procesarAnalisisMeta() {
                 crearTablaMetaHorizontal();
                 crearGraficaMeta();
+            }
+
+            // Crear Tabla Anual Horizontal
+
+            function crearTablaAnualHorizontal(total2025, total2024, diferencia, variacion) {
+                // Buscar o crear contenedor para la tabla
+                let tablaContainer = document.getElementById('tablaAnualContainer');
+                if (!tablaContainer) {
+                    tablaContainer = document.createElement('div');
+                    tablaContainer.id = 'tablaAnualContainer';
+                    tablaContainer.className = 'mb-8';
+                    
+                    // Insertar después de las cards anuales
+                    const cardsContainer = document.querySelector('#analisisAnual .grid.grid-cols-1.md\\:grid-cols-3.gap-6.mb-6');
+                    if (cardsContainer && cardsContainer.parentNode) {
+                        cardsContainer.parentNode.insertBefore(tablaContainer, cardsContainer.nextSibling);
+                    }
+                }
+                
+                const titulo = document.createElement('h4');
+                titulo.textContent = 'Detalle Mensual - Comparativo Anual';
+                titulo.className = 'text-lg font-semibold text-gray-800 mb-4';
+                
+                const table = document.createElement('table');
+                table.className = 'tabla-analisis min-w-full border-collapse border border-gray-300';
+                
+                // Header con todos los meses + Total
+                const thead = document.createElement('thead');
+                let headerHtml = '<tr><th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 bg-gray-50 w-20"></th>';
+                MESES.forEach(mes => {
+                    headerHtml += `<th class="border border-gray-300 px-2 py-2 text-center text-xs font-bold text-gray-700 bg-gray-50">${mes.substring(0,3)}</th>`;
+                });
+                headerHtml += '<th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-100">Total Anual</th></tr>';
+                thead.innerHTML = headerHtml;
+                
+                const tbody = document.createElement('tbody');
+                
+                // Fila 2025
+                let row2025 = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50 text-center">2025</td>';
+                let acum2025 = 0;
+                for (let mes = 1; mes <= 12; mes++) {
+                    const dato = analisisState.datos2025.find(d => d.mes === mes);
+                    const valor = dato?.valor || 0;
+                    acum2025 += valor;
+                    row2025 += `<td class="border border-gray-300 px-1 py-2 text-center text-xs">${formatearNumero(valor)}</td>`;
+                }
+                row2025 += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-blue-50">${formatearNumero(acum2025)}</td></tr>`;
+                
+                // Fila 2024
+                let row2024 = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-gray-50 text-center">2024</td>';
+                let acum2024 = 0;
+                for (let mes = 1; mes <= 12; mes++) {
+                    const dato = analisisState.datos2024.find(d => d.mes === mes);
+                    const valor = dato?.valor || 0;
+                    acum2024 += valor;
+                    row2024 += `<td class="border border-gray-300 px-1 py-2 text-center text-xs">${formatearNumero(valor)}</td>`;
+                }
+                row2024 += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-gray-50">${formatearNumero(acum2024)}</td></tr>`;
+                
+                // Fila Diferencia
+                let rowDif = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-50 text-center">Diferencia</td>';
+                for (let mes = 1; mes <= 12; mes++) {
+                    const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
+                    const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
+                    const valor2025 = dato2025?.valor || 0;
+                    const valor2024 = dato2024?.valor || 0;
+                    const dif = valor2025 - valor2024;
+                    
+                    const claseColor = dif >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                    rowDif += `<td class="border border-gray-300 px-1 py-2 text-center text-xs ${claseColor}">${formatearNumero(dif)}</td>`;
+                }
+                const claseTotalDif = diferencia >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                rowDif += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-yellow-50 ${claseTotalDif}">${formatearNumero(diferencia)}</td></tr>`;
+                
+                // Fila % Variación  
+                let rowVar = '<tr><td class="border border-gray-300 px-3 py-2 font-bold bg-green-50 text-center">% Var</td>';
+                for (let mes = 1; mes <= 12; mes++) {
+                    const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
+                    const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
+                    const valor2025 = dato2025?.valor || 0;
+                    const valor2024 = dato2024?.valor || 0;
+                    
+                    let varMes = 0;
+                    if (valor2024 > 0) {
+                        varMes = ((valor2025 - valor2024) / valor2024 * 100).toFixed(1);
+                    }
+                    
+                    const claseVar = parseFloat(varMes) >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                    rowVar += `<td class="border border-gray-300 px-1 py-2 text-center text-xs ${claseVar}">${varMes}%</td>`;
+                }
+                const claseTotalVar = parseFloat(variacion) >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                rowVar += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-green-50 ${claseTotalVar}">${variacion}%</td></tr>`;
+                
+                tbody.innerHTML = row2025 + row2024 + rowDif + rowVar;
+                
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                
+                tablaContainer.innerHTML = '';
+                tablaContainer.appendChild(titulo);
+                tablaContainer.appendChild(table);
             }
             
             // Crear Tabla de Meta Horizontal
