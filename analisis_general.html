@@ -669,9 +669,8 @@
             document.getElementById('totalMensualVar').className = totalVar >= 0 ? 'valor-positivo' : 'valor-negativo';
             
             // Crear gráfica
-            setTimeout(() => {
-                crearGraficaMensual();
-            }, 100);
+            crearGraficaMensual();
+            
         }
         
             // Procesar Análisis Trimestral
@@ -715,9 +714,7 @@
                 crearTablaTrimestral(trimestres);
                 
                 // Crear gráfica trimestral
-                setTimeout(() => {
                     crearGraficaTrimestral(trimestres);
-                }, 100);
             }
 
         function crearTablaTrimestral(trimestres) {
@@ -839,17 +836,13 @@
             crearTablaAnualHorizontal(total2025, total2024, diferencia, variacion);
             
             // Crear gráfica anual
-            setTimeout(() => {
                 crearGraficaAnual(total2025, total2024);
-            }, 100);
         }
         
             // Procesar Análisis de Meta
             function procesarAnalisisMeta() {
                 crearTablaMetaHorizontal();
-                setTimeout(() => {
-                    crearGraficaMeta();
-                }, 100);
+                crearGraficaMeta();
             }
 
             // Crear Tabla Anual Horizontal
