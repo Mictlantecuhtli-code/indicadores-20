@@ -405,8 +405,7 @@ async function guardarMedicion(){
         const { data, error } = await sb
             .from("medicion")
             .upsert(datosGuardar, { 
-                onConflict: "area,indicador,anio,mes",
-                returning: "representation"
+                onConflict: "area,indicador,anio,mes"
             });
         
         if (error) { 
