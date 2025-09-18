@@ -386,11 +386,14 @@ function validarFormulario(){
     if (mesYaCapturado) {
         const nombreMes = MESES[mes - 1];
         const valorActual = formatearNumero(mesYaCapturado.valor);
-        
+
         mostrarNotificacion(
-            `${nombreMes} ya está capturado con valor: ${valorActual}. Use el botón "Editar" en la tabla para modificarlo.`, 
+            `${nombreMes} ya está capturado con valor: ${valorActual}. Use el botón "Editar" en la tabla para modificarlo.`,
             "info"
         );
+
+        return false;
+    }
       
     // Validación específica para CAPTURISTA
     if (currentUser?.rol === ROLES.CAPTURISTA) {
