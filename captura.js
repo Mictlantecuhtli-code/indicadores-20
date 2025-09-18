@@ -336,28 +336,28 @@ function validarFormulario(){
 
     // Validación de valores numéricos
     const valor = limpiarNumero($("#fValor")?.value);
-    const meta = limpiarNumero($("#fMeta")?.value);
+    //const meta = limpiarNumero($("#fMeta")?.value);
     
     if (valor === null || isNaN(valor) || valor < 0) { 
         mostrarNotificacion("Ingrese un valor válido (mayor o igual a 0)", "error"); 
         return false; 
     }
-    
+    /*
     if (meta === null || isNaN(meta) || meta < 0) { 
         mostrarNotificacion("Ingrese una meta válida (mayor o igual a 0)", "error"); 
         return false; 
-    }
+    }*/
     
     // Validación de rangos
     if (valor > VALIDACIONES.VALOR_MAXIMO){
         mostrarNotificacion(`El valor no puede ser mayor a ${formatearNumero(VALIDACIONES.VALOR_MAXIMO)}`, "error"); 
         return false;
     }
-    
+    /*
     if (meta > VALIDACIONES.VALOR_MAXIMO){
         mostrarNotificacion(`La meta no puede ser mayor a ${formatearNumero(VALIDACIONES.VALOR_MAXIMO)}`, "error"); 
         return false;
-    }
+    }*/
     
     return true;
 }
@@ -374,7 +374,7 @@ async function guardarMedicion(){
     const anio = (currentUser?.rol === ROLES.CAPTURISTA) ? ANO_ACTUAL : (parseInt($("#fAnio").value) || ANO_ACTUAL);
     const mes = (currentUser?.rol === ROLES.CAPTURISTA) ? capturaData.currentMonth : parseInt($("#fMes").value);
     let valor = limpiarNumero($("#fValor").value) || 0;
-    let meta = limpiarNumero($("#fMeta").value) || 0;
+    //let meta = limpiarNumero($("#fMeta").value) || 0;
 
     // Validación adicional desde auth.js si existe
     if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function"){
