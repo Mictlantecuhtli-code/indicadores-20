@@ -318,6 +318,48 @@ function actualizarTabla(datos){
 // ====================================
 // Form y guardado
 // ====================================
+function validarMesesConsecutivos(mesSeleccionado) {
+    // Solo aplicar validación si hay datos cargados
+    if (!capturaData.datosActuales || capturaData.datosActuales.length === 0) {
+        return { valido: true }; // Si no hay datos, permitir cualquier mes
+    }
+
+    // Obtener meses que ya tienen datos
+    const mesesConDatos = capturaData.datosActuales
+        .filter(d => d.valor !== null && d.valor !== undefined)
+        .map(d => d.mes)
+        .sort((a, b) => a - b);
+
+    console.log('Meses con datos:', mesesConDatos);
+    console.log('Mes seleccionado:', mesSeleccionado);
+
+    // Si no hay meses capturados, permitir cualquier mes
+    if (mesesConDatos.length === 0) {
+        return { valido: true };
+    }
+
+    // Si el mes ya está capturado, no validar consecutivo (se maneja en PARTE 3)
+    if (mesesConDatos.includes(mesSeleccionado)) {
+        return { valido: true }; // Permitir, pero PARTE 3 mostrará opción de editar
+    }
+
+    // Obtener el último mes capturado
+    const ultimoMesCapturado = Math.max(...mesesConDatos);
+    
+    // Validar que el nuevo mes sea consecutivo
+    const mesEsperado = ultimoMesCapturado + 1;
+    
+    if (mesSeleccionado === mesEsperado || mesSeleccionado <= ultimoMesCapturado) {
+        return { valido: true };
+    } else {
+        return { 
+            valido: false, 
+            mensaje: `Debe capturar los meses consecutivamente. El siguiente mes a capturar es ${MESES[mesEsperado - 1]} (${mesEsperado}).`,
+            mesEsperado: mesEsperado
+        };
+    }
+}
+
 function validarFormulario(){
     const area = $("#fArea")?.value;
     const indicador = $("#fIndicador")?.value;
@@ -329,6 +371,27 @@ function validarFormulario(){
         return false;
     }
 
+      // Validar meses consecutivos
+    const validacionConsecutiva = validarMesesConsecutivos(mes);
+    if (!validacionConsecutiva.valido) {
+        mostrarNotificacion(validacionConsecutiva.mensaje, "warning");
+        return false;
+    }
+
+      // Verificar si el mes ya está capturado
+    const mesYaCapturado = capturaData.datosActuales.find(d => 
+        d.mes === mes && (d.valor !== null && d.valor !== undefined)
+    );
+    
+    if (mesYaCapturado) {
+        const nombreMes = MESES[mes - 1];
+        const valorActual = formatearNumero(mesYaCapturado.valor);
+        
+        mostrarNotificacion(
+            `${nombreMes} ya está capturado con valor: ${valorActual}. Use el botón "Editar" en la tabla para modificarlo.`, 
+            "info"
+        );
+      
     // Validación específica para CAPTURISTA
     if (currentUser?.rol === ROLES.CAPTURISTA) {
         // Solo puede capturar el año actual
@@ -480,6 +543,53 @@ function limpiarFormulario(){
   limpiarDatos();
   actualizarEstadoBotonGuardar();
 }
+
+  function resaltarFilaMes(mes) {
+    // Remover resaltados previos
+    const todasLasFilas = document.querySelectorAll('#tbodyCaptura tr');
+    todasLasFilas.forEach(fila => {
+        fila.classList.remove('bg-red-100', 'animate-pulse');
+    });
+    
+    // Resaltar la fila del mes específico (mes - 1 porque es índice 0)
+    setTimeout(() => {
+        const filaTarget = document.querySelector(`#tbodyCaptura tr:nth-child(${mes})`);
+        if (filaTarget) {
+            filaTarget.classList.add('bg-red-100', 'animate-pulse');
+            
+            // Scroll hacia la fila
+            filaTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Quitar resaltado después de 3 segundos
+            setTimeout(() => {
+                filaTarget.classList.remove('bg-red-100', 'animate-pulse');
+            }, 3000);
+        }
+    }, 100);
+}
+
+  function editarMes(mes, valorActual) {
+    const nombreMes = MESES[mes - 1];
+    const confirmar = confirm(`¿Desea editar los datos de ${nombreMes}?\n\nValor actual: ${formatearNumero(valorActual)}`);
+    
+    if (confirmar) {
+        // Precargar el formulario con los datos existentes
+        $("#fMes").value = mes;
+        $("#fValor").value = valorActual;
+        
+        // Scroll hacia el formulario
+        document.getElementById('moduloCaptura').scrollIntoView({ behavior: 'smooth' });
+        
+        // Focus en el campo valor
+        setTimeout(() => {
+            $("#fValor").focus();
+            $("#fValor").select(); // Seleccionar todo el texto
+        }, 500);
+        
+        mostrarNotificacion(`Editando datos de ${nombreMes}. Modifique el valor y presione Guardar.`, "info");
+    }
+}
+  
 
 function limpiarCampos(){
     const valorInput = $("#fValor"); 
