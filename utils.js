@@ -20,7 +20,7 @@ function formatearNumero(numero, decimales = 0) {
 
 function formatearPorcentaje(porcentaje) {
     if (porcentaje === null || porcentaje === undefined) return '-';
-    return `${porcentaje}%`;
+    return `${Number(porcentaje).toFixed(1)}%`;
 }
 
 function validarNumero(valor, minimo = VALIDACIONES.VALOR_MINIMO, maximo = VALIDACIONES.VALOR_MAXIMO) {
