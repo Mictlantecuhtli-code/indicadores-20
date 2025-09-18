@@ -394,7 +394,7 @@ async function guardarMedicion(){
             anio: anio,
             mes: mes,
             valor: valor,
-            meta: meta,
+            //meta: meta,
             created_by: currentUser?.username || 'sistema'
             //updated_at: new Date().toISOString()
         };
