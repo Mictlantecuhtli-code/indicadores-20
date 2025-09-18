@@ -395,8 +395,8 @@ async function guardarMedicion(){
             mes: mes,
             valor: valor,
             meta: meta,
-            created_by: currentUser?.username || 'sistema',
-            updated_at: new Date().toISOString()
+            created_by: currentUser?.username || 'sistema'
+            //updated_at: new Date().toISOString()
         };
         
         console.log('Guardando datos:', datosGuardar);
