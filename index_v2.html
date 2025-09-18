@@ -193,24 +193,45 @@
                 </div>
             </div>
             <!-- Formulario de captura -->
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div>
                     <label class="block text-sm font-medium mb-1">Valor</label>
-                    <input type="number" id="fValor" class="w-full border rounded px-3 py-2" step="0.01">
+                    <input 
+                        type="number" 
+                        id="fValor" 
+                        class="w-full border rounded px-3 py-2" 
+                        step="0.01"
+                        min="0"
+                        placeholder="Ingrese el valor"
+                    >
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Meta</label>
-                    <input type="number" id="fMeta" class="w-full border rounded px-3 py-2" step="0.01">
+                    <input 
+                        type="number" 
+                        id="fMeta" 
+                        class="w-full border rounded px-3 py-2" 
+                        step="0.01"
+                        min="0"
+                        placeholder="Ingrese la meta"
+                    >
                     <div id="metaReadOnly" class="hidden text-sm text-gray-600 mt-1">
                         Meta automática desde escenarios
                     </div>
                 </div>
                 <div class="flex items-end">
-                    <button onclick="guardarMedicion()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full" data-require="capturar">
+                    <button 
+                        id="btnGuardarMedicion"
+                        onclick="guardarMedicion()" 
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded w-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                        data-require="capturar"
+                    >
                         Guardar
                     </button>
                 </div>
             </div>
+            
             
             <!-- Gráfica de líneas -->
             <div class="mb-6">
@@ -767,6 +788,13 @@
         window.irAMenuAreas = irAMenuAreas;
         window.cerrarSesion = cerrarSesion;
         window.verificarPermisos = verificarPermisos;
+
+        // Función helper para selección de elementos (si no está ya definida)
+        if (typeof window.$ === 'undefined') {
+            window.$ = function(selector) {
+                return document.querySelector(selector);
+            };
+        }
         
         /**
          * Inicialización cuando carga la página (SIN VERIFICACIONES AUTOMÁTICAS)
@@ -783,6 +811,7 @@
                 console.log('No es la página principal, saltando inicialización');
             }
         });
+        
         
         // Log final
         console.log('index_v2.html con autenticación simplificada cargado correctamente');
