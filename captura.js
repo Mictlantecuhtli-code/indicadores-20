@@ -402,12 +402,9 @@ async function guardarMedicion(){
         console.log('Guardando datos:', datosGuardar);
         
         // Usar UPSERT para insertar o actualizar si ya existe
-        const { data, error } = await sb
-            .from("medicion")
-            .upsert(datosGuardar, { 
-                onConflict: "area,indicador,anio,mes"
-            });
-        
+           const { data, error } = await sb
+          .from("medicion")
+          .upsert(datosGuardar);
         if (error) { 
             console.error('Error de Supabase:', error);
             mostrarNotificacion(`${MENSAJES.ERROR_GUARDAR}: ${error.message}`, "error"); 
