@@ -280,11 +280,28 @@ function actualizarTabla(datos){
         const val  = (d.valor===0 || d.valor) ? formatearNumero(d.valor) : "";
         const meta = (d.meta===0  || d.meta)  ? formatearNumero(d.meta)  : "";
 
+        // Botón de edición
+        let accionesHtml = '';
+        if (d.valor || d.valor === 0) { // Si hay datos capturados
+            accionesHtml = `
+                <button 
+                    onclick="editarMes(${mes}, ${d.valor || 0})" 
+                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs"
+                    title="Editar ${MESES[mes-1]}"
+                >
+                    ✏️ Editar
+                </button>
+            `;
+        } else {
+            accionesHtml = '<span class="text-gray-400 text-xs">Sin datos</span>';
+        }
+
         tr.innerHTML = `
             <td class="border border-gray-300 px-4 py-2 font-medium">${MESES[mes-1]}</td>
             <td class="border border-gray-300 px-4 py-2 text-right">${val}</td>
             <td class="border border-gray-300 px-4 py-2 text-right">${meta}</td>
             <td class="border border-gray-300 px-4 py-2 text-right ${clase}">${cumplimiento}</td>
+            <td class="border border-gray-300 px-2 py-2 text-center">${accionesHtml}</td>
         `;
         
         // Resaltar mes actual
