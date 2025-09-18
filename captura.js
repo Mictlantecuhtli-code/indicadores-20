@@ -256,33 +256,46 @@ async function cargarDatos(){
 // Tabla
 // ====================================
 function actualizarTabla(datos){
-  const tbody = $("#tbodyCaptura"); if (!tbody) return;
-  tbody.innerHTML = "";
-  for (let mes=1; mes<=12; mes++){
-    const d = datos.find(x=>x.mes===mes) || {};
-    const tr = document.createElement("tr");
-
-    let cumplimiento = "-"; let clase = "";
-    if (d.cumplimiento===0 || d.cumplimiento){ 
-      cumplimiento = formatearPorcentaje(d.cumplimiento);
-      clase = d.cumplimiento >= 100 ? "text-green-600 font-semibold"
-           : d.cumplimiento >= 80 ? "text-yellow-600 font-medium"
-           : "text-red-600";
+    const tbody = $("#tbodyCaptura"); 
+    if (!tbody) {
+        console.warn('Tabla de captura no encontrada');
+        return;
     }
-    const val  = (d.valor===0 || d.valor) ? formatearNumero(d.valor) : "";
-    const meta = (d.meta===0  || d.meta)  ? formatearNumero(d.meta)  : "";
+    
+    tbody.innerHTML = "";
+    
+    for (let mes=1; mes<=12; mes++){
+        const d = datos.find(x=>x.mes===mes) || {};
+        const tr = document.createElement("tr");
 
-    tr.innerHTML = `
-      <td class="border border-gray-300 px-4 py-2 font-medium">${MESES[mes-1]}</td>
-      <td class="border border-gray-300 px-4 py-2 text-right">${val}</td>
-      <td class="border border-gray-300 px-4 py-2 text-right">${meta}</td>
-      <td class="border border-gray-300 px-4 py-2 text-right ${clase}">${cumplimiento}</td>
-    `;
-    if (mes === capturaData.currentMonth && capturaData.currentYear === ANO_ACTUAL){
-      tr.classList.add("bg-blue-50");
+        let cumplimiento = "-"; 
+        let clase = "";
+        if (d.cumplimiento===0 || d.cumplimiento){ 
+            cumplimiento = formatearPorcentaje(d.cumplimiento);
+            clase = d.cumplimiento >= 100 ? "text-green-600 font-semibold"
+                 : d.cumplimiento >= 80 ? "text-yellow-600 font-medium"
+                 : "text-red-600";
+        }
+        
+        const val  = (d.valor===0 || d.valor) ? formatearNumero(d.valor) : "";
+        const meta = (d.meta===0  || d.meta)  ? formatearNumero(d.meta)  : "";
+
+        tr.innerHTML = `
+            <td class="border border-gray-300 px-4 py-2 font-medium">${MESES[mes-1]}</td>
+            <td class="border border-gray-300 px-4 py-2 text-right">${val}</td>
+            <td class="border border-gray-300 px-4 py-2 text-right">${meta}</td>
+            <td class="border border-gray-300 px-4 py-2 text-right ${clase}">${cumplimiento}</td>
+        `;
+        
+        // Resaltar mes actual
+        if (mes === capturaData.currentMonth && capturaData.currentYear === ANO_ACTUAL){
+            tr.classList.add("bg-blue-50");
+        }
+        
+        tbody.appendChild(tr);
     }
-    tbody.appendChild(tr);
-  }
+    
+    console.log('Tabla actualizada con', datos.length, 'registros');
 }
 
 // ====================================
