@@ -289,38 +289,64 @@ function actualizarTabla(datos){
 // Form y guardado
 // ====================================
 function validarFormulario(){
-  const area = $("#fArea")?.value;
-  const indicador = $("#fIndicador")?.value;
-  const anio = parseInt($("#fAnio")?.value);
-  const mes  = parseInt($("#fMes")?.value);
+    const area = $("#fArea")?.value;
+    const indicador = $("#fIndicador")?.value;
+    const anio = parseInt($("#fAnio")?.value);
+    const mes = parseInt($("#fMes")?.value);
 
-  if (!area || !indicador || !anio || !mes){
-    mostrarNotificacion("Seleccione área, indicador, año y mes", "error"); return false;
-  }
-
-  // Restricción SOLO para capturista:
-  if (currentUser?.rol === ROLES.CAPTURISTA) {
-    if (anio !== ANO_ACTUAL){
-      mostrarNotificacion(`Solo puede capturarse el año ${ANO_ACTUAL}`, "error"); return false;
+    if (!area || !indicador || !anio || !mes){
+        mostrarNotificacion("Seleccione área, indicador, año y mes", "error"); 
+        return false;
     }
-    if (mes !== capturaData.currentMonth){
-      const mesTxt = MESES[capturaData.currentMonth-1];
-      mostrarNotificacion(`Solo puede capturarse el mes vigente (${mesTxt})`, "error"); return false;
-    }
-  }
 
-  // Validar números
-  const valor = limpiarNumero($("#fValor")?.value);
-  const meta  = limpiarNumero($("#fMeta")?.value);
-  if (valor===null || isNaN(valor)){ mostrarNotificacion("Ingrese un valor válido", "error"); return false; }
-  if (meta===null  || isNaN(meta)) { mostrarNotificacion("Ingrese una meta válida",  "error"); return false; }
-  if (valor < VALIDACIONES.VALOR_MINIMO || valor > VALIDACIONES.VALOR_MAXIMO){
-    mostrarNotificacion("El valor está fuera de rango permitido", "error"); return false;
-  }
-  if (meta  < VALIDACIONES.VALOR_MINIMO || meta  > VALIDACIONES.VALOR_MAXIMO){
-    mostrarNotificacion("La meta está fuera de rango permitido", "error"); return false;
-  }
-  return true;
+    // Validación específica para CAPTURISTA
+    if (currentUser?.rol === ROLES.CAPTURISTA) {
+        // Solo puede capturar el año actual
+        if (anio !== ANO_ACTUAL){
+            mostrarNotificacion(`Los capturistas solo pueden capturar el año ${ANO_ACTUAL}`, "error"); 
+            return false;
+        }
+        
+        // Solo puede capturar el mes vigente
+        if (mes !== capturaData.currentMonth){
+            const mesTxt = MESES[capturaData.currentMonth-1];
+            mostrarNotificacion(`Los capturistas solo pueden capturar el mes vigente (${mesTxt})`, "error"); 
+            return false;
+        }
+        
+        // Verificar que el área coincida con su área asignada
+        if (currentUser.area && currentUser.area !== 'operaciones' && area !== currentUser.area) {
+            mostrarNotificacion(`Solo puede capturar en su área asignada: ${currentUser.area}`, "error");
+            return false;
+        }
+    }
+
+    // Validación de valores numéricos
+    const valor = limpiarNumero($("#fValor")?.value);
+    const meta = limpiarNumero($("#fMeta")?.value);
+    
+    if (valor === null || isNaN(valor) || valor < 0) { 
+        mostrarNotificacion("Ingrese un valor válido (mayor o igual a 0)", "error"); 
+        return false; 
+    }
+    
+    if (meta === null || isNaN(meta) || meta < 0) { 
+        mostrarNotificacion("Ingrese una meta válida (mayor o igual a 0)", "error"); 
+        return false; 
+    }
+    
+    // Validación de rangos
+    if (valor > VALIDACIONES.VALOR_MAXIMO){
+        mostrarNotificacion(`El valor no puede ser mayor a ${formatearNumero(VALIDACIONES.VALOR_MAXIMO)}`, "error"); 
+        return false;
+    }
+    
+    if (meta > VALIDACIONES.VALOR_MAXIMO){
+        mostrarNotificacion(`La meta no puede ser mayor a ${formatearNumero(VALIDACIONES.VALOR_MAXIMO)}`, "error"); 
+        return false;
+    }
+    
+    return true;
 }
 
 async function guardarMedicion(){
@@ -430,8 +456,21 @@ function limpiarFormulario(){
 }
 
 function limpiarCampos(){
-  const v = $("#fValor"); if (v){ v.value = ""; v.classList.remove("border-red-500"); }
-  const m = $("#fMeta");  if (m){ m.value = ""; m.classList.remove("border-red-500"); }
+    const valorInput = $("#fValor"); 
+    const metaInput = $("#fMeta");
+    
+    if (valorInput){ 
+        valorInput.value = ""; 
+        valorInput.classList.remove("border-red-500"); 
+    }
+    
+    if (metaInput){ 
+        metaInput.value = ""; 
+        metaInput.classList.remove("border-red-500"); 
+    }
+    
+    // Opcional: Mostrar mensaje de confirmación
+    console.log('Campos limpiados después del guardado exitoso');
 }
 
 function limpiarDatos(){
