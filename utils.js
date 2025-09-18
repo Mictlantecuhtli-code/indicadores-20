@@ -29,8 +29,13 @@ function validarNumero(valor, minimo = VALIDACIONES.VALOR_MINIMO, maximo = VALID
 }
 
 function limpiarNumero(valor) {
-    if (!valor) return 0;
-    return parseFloat(valor.toString().replace(/[^\d.-]/g, '')) || 0;
+    if (valor === null || valor === undefined || valor === '') return null;
+    
+    // Remover comas y caracteres no numéricos excepto punto decimal y signo negativo
+    const limpio = String(valor).replace(/[^-\d.]/g, '');
+    const numero = parseFloat(limpio);
+    
+    return isNaN(numero) ? null : numero;
 }
 
 /**
@@ -187,14 +192,26 @@ function mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
 }
 
 function mostrarCargando(elemento, mostrar = true) {
-    if (!elemento) return;
+    if (!elemento) {
+        console.warn('Elemento no encontrado para mostrarCargando');
+        return;
+    }
     
     if (mostrar) {
+        // Guardar el texto original
+        if (!elemento.dataset.originalText) {
+            elemento.dataset.originalText = elemento.innerHTML;
+        }
         elemento.disabled = true;
-        elemento.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Cargando...';
+        elemento.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Guardando...';
     } else {
         elemento.disabled = false;
-        // Restaurar texto original (esto se puede mejorar guardando el texto original)
+        // Restaurar texto original
+        if (elemento.dataset.originalText) {
+            elemento.innerHTML = elemento.dataset.originalText;
+        } else {
+            elemento.innerHTML = 'Guardar'; // fallback
+        }
     }
 }
 
