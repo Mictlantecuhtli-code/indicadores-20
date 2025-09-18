@@ -324,37 +324,76 @@ function validarFormulario(){
 }
 
 async function guardarMedicion(){
-  if (!validarFormulario()){ actualizarEstadoBotonGuardar(); return; }
 
-  const area = $("#fArea").value;
-  const indicador = $("#fIndicador").value;
-  const anio = (currentUser?.rol === ROLES.CAPTURISTA) ? ANO_ACTUAL : (parseInt($("#fAnio").value) || ANO_ACTUAL);
-  const mes  = (currentUser?.rol === ROLES.CAPTURISTA) ? capturaData.currentMonth : parseInt($("#fMes").value);
-  let valor = limpiarNumero($("#fValor").value) || 0;
-  let meta  = limpiarNumero($("#fMeta").value)  || 0;
+      if (!validarFormulario()){ 
+        actualizarEstadoBotonGuardar(); 
+        return; 
+    }
 
-  // Validación extra desde auth.js si existe
-  if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function"){
-    const ok = authSystem.validarOperacionEscritura("upsert_medicion", { area, anio, mes });
-    if (!ok) return;
-  }
+    const area = $("#fArea").value;
+    const indicador = $("#fIndicador").value;
+    const anio = (currentUser?.rol === ROLES.CAPTURISTA) ? ANO_ACTUAL : (parseInt($("#fAnio").value) || ANO_ACTUAL);
+    const mes = (currentUser?.rol === ROLES.CAPTURISTA) ? capturaData.currentMonth : parseInt($("#fMes").value);
+    let valor = limpiarNumero($("#fValor").value) || 0;
+    let meta = limpiarNumero($("#fMeta").value) || 0;
 
-  const btn = document.querySelector('button[onclick="guardarMedicion()"]');
-  try{
-    mostrarCargando(btn, true);
-    const { data, error } = await sb
-      .from("medicion")
-      .upsert({ area, indicador, anio, mes, valor, meta }, { onConflict: "area,indicador,anio,mes" });
-    if (error){ logError(error); mostrarNotificacion(`${MENSAJES.ERROR_GUARDAR}: ${error.message}`, "error"); return; }
-    mostrarNotificacion(MENSAJES.EXITO_GUARDAR, "success");
-    limpiarCampos();
-    await cargarDatos();
-  } catch(err){
-    logError(err); mostrarNotificacion("Error inesperado al guardar", "error");
-  } finally {
-    mostrarCargando(btn, false);
-    actualizarEstadoBotonGuardar();
-  }
+    // Validación adicional desde auth.js si existe
+    if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function"){
+        const ok = authSystem.validarOperacionEscritura("upsert_medicion", { area, anio, mes });
+        if (!ok) return;
+    }
+
+    const btn = document.querySelector('button[onclick="guardarMedicion()"]');
+    
+    try {
+        mostrarCargando(btn, true);
+        
+        // Preparar datos para inserción/actualización
+        const datosGuardar = {
+            area: area,
+            indicador: indicador,
+            anio: anio,
+            mes: mes,
+            valor: valor,
+            meta: meta,
+            created_by: currentUser?.username || 'sistema',
+            updated_at: new Date().toISOString()
+        };
+        
+        console.log('Guardando datos:', datosGuardar);
+        
+        // Usar UPSERT para insertar o actualizar si ya existe
+        const { data, error } = await sb
+            .from("medicion")
+            .upsert(datosGuardar, { 
+                onConflict: "area,indicador,anio,mes",
+                returning: "representation"
+            });
+        
+        if (error) { 
+            console.error('Error de Supabase:', error);
+            mostrarNotificacion(`${MENSAJES.ERROR_GUARDAR}: ${error.message}`, "error"); 
+            return; 
+        }
+        
+        console.log('Datos guardados exitosamente:', data);
+        mostrarNotificacion(MENSAJES.EXITO_GUARDAR, "success");
+        
+        // Limpiar campos después del guardado exitoso
+        limpiarCampos();
+        
+        // Recargar datos para mostrar la actualización
+        setTimeout(async () => {
+            await cargarDatos();
+        }, 500);
+        
+    } catch(err) {
+        console.error('Error inesperado:', err);
+        mostrarNotificacion("Error inesperado al guardar: " + err.message, "error");
+    } finally {
+        mostrarCargando(btn, false);
+        actualizarEstadoBotonGuardar();
+    }
 }
 
 function actualizarEstadoBotonGuardar(){
