@@ -200,7 +200,9 @@ function mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
     }, duracion);
 }
 
+
 function mostrarCargando(elemento, mostrar = true) {
+
     if (!elemento) {
         console.warn('Elemento no encontrado para mostrarCargando');
         return;
@@ -212,9 +214,11 @@ function mostrarCargando(elemento, mostrar = true) {
             elemento.dataset.originalText = elemento.innerHTML;
         }
         elemento.disabled = true;
-        elemento.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Guardando...';
+        elemento.style.opacity = '0.7';
+        elemento.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Procesando...';
     } else {
         elemento.disabled = false;
+        elemento.style.opacity = '1';
         // Restaurar texto original
         if (elemento.dataset.originalText) {
             elemento.innerHTML = elemento.dataset.originalText;
@@ -222,7 +226,9 @@ function mostrarCargando(elemento, mostrar = true) {
             elemento.innerHTML = 'Guardar'; // fallback
         }
     }
+    
 }
+
 
 function limpiarFormulario(formularioId) {
     const formulario = $(formularioId);
