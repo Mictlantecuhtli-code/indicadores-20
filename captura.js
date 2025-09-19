@@ -281,24 +281,28 @@ function actualizarTabla(datos){
         const meta = (d.meta===0  || d.meta)  ? formatearNumero(d.meta)  : "";
 
         // Botón de edición
+
         let accionesHtml = '';
         if (d.valor || d.valor === 0) { // Si hay datos capturados
+            const fechaCaptura = d.created_at ? new Date(d.created_at).toLocaleDateString() : '';
             accionesHtml = `
-                <button 
-                    onclick="editarMes(${mes}, ${d.valor || 0})" 
-                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs"
-                    title="Editar ${MESES[mes-1]}"
-                >
-                    ✏️ Editar
-                </button>
+                <div class="flex flex-col items-center space-y-1">
+                    <button 
+                        onclick="editarMes(${mes}, ${d.valor || 0})" 
+                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs transition-colors"
+                        title="Editar ${MESES[mes-1]} - Capturado: ${fechaCaptura}"
+                    >
+                        ✏️ Editar
+                    </button>
+                    <span class="text-xs text-green-600 font-medium">✓ Capturado</span>
+                </div>
             `;
         } else {
             accionesHtml = '<span class="text-gray-400 text-xs">Sin datos</span>';
         }
-
-        tr.innerHTML = `
+      tr.innerHTML = `
             <td class="border border-gray-300 px-4 py-2 font-medium">${MESES[mes-1]}</td>
-            <td class="border border-gray-300 px-4 py-2 text-right">${val}</td>
+            <td class="border border-gray-300 px-4 py-2 text-right ${val ? 'font-semibold text-blue-600' : ''}">${val}</td>
             <td class="border border-gray-300 px-4 py-2 text-right">${meta}</td>
             <td class="border border-gray-300 px-4 py-2 text-right ${clase}">${cumplimiento}</td>
             <td class="border border-gray-300 px-2 py-2 text-center">${accionesHtml}</td>
@@ -383,17 +387,27 @@ function validarFormulario(){
         d.mes === mes && (d.valor !== null && d.valor !== undefined)
     );
     
+
     if (mesYaCapturado) {
         const nombreMes = MESES[mes - 1];
         const valorActual = formatearNumero(mesYaCapturado.valor);
-
-        mostrarNotificacion(
-            `${nombreMes} ya está capturado con valor: ${valorActual}. Use el botón "Editar" en la tabla para modificarlo.`,
-            "info"
-        );
-
-        return false;
+        
+        // Verificar si el valor es diferente al actual (modo edición)
+        const valorNuevo = limpiarNumero($("#fValor")?.value) || 0;
+        
+        if (valorNuevo === mesYaCapturado.valor) {
+            mostrarNotificacion(
+                `${nombreMes}: el valor no ha cambiado (${valorActual})`,
+                "warning"
+            );
+            return false;
+        }
+        
+        // Si estamos editando y el valor es diferente, permitir continuar
+        console.log(`Editando ${nombreMes}: ${valorActual} → ${formatearNumero(valorNuevo)}`);
+        return true; // Permitir la edición
     }
+  
       
     // Validación específica para CAPTURISTA
     if (currentUser?.rol === ROLES.CAPTURISTA) {
