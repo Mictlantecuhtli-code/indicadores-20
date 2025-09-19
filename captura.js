@@ -738,6 +738,7 @@ window.guardarMedicion = guardarMedicion;
 window.exportarDatosCaptura = exportarDatosCaptura;
 window.cargarDatosCaptura = cargarDatos;            // alias
 window.limpiarDatosCaptura = limpiarDatos;          // alias
+window.editarMes = editarMes;
 
 // ====================================
 // Safe boot (arranca cuando hay catálogos)
