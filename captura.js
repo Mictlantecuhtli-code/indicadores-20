@@ -250,7 +250,7 @@ async function cargarDatos(){
     mostrarNotificacion("Error al cargar datos", "error");
   } finally {
     actualizarEstadoBotonGuardar();
-    
+
     // Mostrar información de datos cargados
     if (capturaData.datosActuales && capturaData.datosActuales.length > 0) {
       const mesesConDatos = capturaData.datosActuales.filter(d => d.valor && d.valor > 0).length;
@@ -258,8 +258,8 @@ async function cargarDatos(){
         mostrarNotificacion(`${mesesConDatos} meses con datos cargados`, "info", 2000);
       }, 500);
     }
-  
-  
+  }
+
 }
 
 // ====================================
