@@ -796,99 +796,119 @@
 }
 
         function crearTablaTrimestral(trimestres) {
-                // Crear contenedor para la tabla si no existe
+            // Verificar si hay trimestres para mostrar
+            if (!trimestres || Object.keys(trimestres).length === 0) {
+                console.log('No hay trimestres completos para mostrar tabla');
+                
+                // Crear o actualizar contenedor con mensaje
                 let tablaContainer = document.getElementById('tablaTrimestralContainer');
                 if (!tablaContainer) {
                     tablaContainer = document.createElement('div');
                     tablaContainer.id = 'tablaTrimestralContainer';
                     tablaContainer.className = 'mb-6';
                     
-                    // Insertar después de las cards trimestrales
                     const cardsContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4.gap-4.mb-6');
                     if (cardsContainer && cardsContainer.parentNode) {
                         cardsContainer.parentNode.insertBefore(tablaContainer, cardsContainer.nextSibling);
                     }
                 }
                 
-                const table = document.createElement('table');
-                table.className = 'tabla-analisis min-w-full border-collapse border border-gray-300';
-                
-                const titulo = document.createElement('h4');
-                titulo.textContent = 'Resumen Trimestral Comparativo';
-                titulo.className = 'text-lg font-semibold text-gray-800 mb-4';
-                
-                const thead = document.createElement('thead');
-                thead.innerHTML = `
-                    <tr>
-                        <th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 bg-gray-50"></th>
-                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q1 (Ene-Mar)</th>
-                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q2 (Abr-Jun)</th>
-                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q3 (Jul-Sep)</th>
-                        <th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">Q4 (Oct-Dic)</th>
-                    </tr>
+                tablaContainer.innerHTML = `
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Resumen Trimestral Comparativo</h4>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="text-yellow-800 font-medium">Trimestres Incompletos</p>
+                                <p class="text-yellow-700 text-sm">No hay trimestres completos para comparar. Se requieren los 3 meses de datos para mostrar el análisis trimestral.</p>
+                            </div>
+                        </div>
+                    </div>
                 `;
+                return;
+            }
+            
+            // Crear contenedor para la tabla si no existe
+            let tablaContainer = document.getElementById('tablaTrimestralContainer');
+            if (!tablaContainer) {
+                tablaContainer = document.createElement('div');
+                tablaContainer.id = 'tablaTrimestralContainer';
+                tablaContainer.className = 'mb-6';
                 
-                const tbody = document.createElement('tbody');
-                
-                // Fila 2025
-                const row2025 = document.createElement('tr');
-                row2025.innerHTML = `
-                    <td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50">2025</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q1.valor2025)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q2.valor2025)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q3.valor2025)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q4.valor2025)}</td>
-                `;
-                
-                // Fila 2024
-                const row2024 = document.createElement('tr');
-                row2024.innerHTML = `
-                    <td class="border border-gray-300 px-3 py-2 font-bold bg-gray-50">2024</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q1.valor2024)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q2.valor2024)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q3.valor2024)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres.q4.valor2024)}</td>
-                `;
-                
-                // Fila Diferencia
-                const rowDif = document.createElement('tr');
-                const clasesColor = ['q1', 'q2', 'q3', 'q4'].map(q => 
-                    trimestres[q].diferencia >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'
-                );
-                
-                rowDif.innerHTML = `
-                    <td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-50">Diferencia</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[0]}">${formatearNumero(trimestres.q1.diferencia)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[1]}">${formatearNumero(trimestres.q2.diferencia)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[2]}">${formatearNumero(trimestres.q3.diferencia)}</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesColor[3]}">${formatearNumero(trimestres.q4.diferencia)}</td>
-                `;
-                
-                // Fila % Variación
-                const rowVar = document.createElement('tr');
-                const clasesVar = ['q1', 'q2', 'q3', 'q4'].map(q => 
-                    parseFloat(trimestres[q].variacion) >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'
-                );
-                
-                rowVar.innerHTML = `
-                    <td class="border border-gray-300 px-3 py-2 font-bold bg-green-50">% Variación</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[0]}">${trimestres.q1.variacion}%</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[1]}">${trimestres.q2.variacion}%</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[2]}">${trimestres.q3.variacion}%</td>
-                    <td class="border border-gray-300 px-3 py-2 text-center ${clasesVar[3]}">${trimestres.q4.variacion}%</td>
-                `;
-                
-                tbody.appendChild(row2025);
-                tbody.appendChild(row2024);
-                tbody.appendChild(rowDif);
-                tbody.appendChild(rowVar);
-                
-                table.appendChild(thead);
-                table.appendChild(tbody);
-                
-                tablaContainer.innerHTML = '';
-                tablaContainer.appendChild(titulo);
-                tablaContainer.appendChild(table);
+                // Insertar después de las cards trimestrales
+                const cardsContainer = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.lg\\:grid-cols-4.gap-4.mb-6');
+                if (cardsContainer && cardsContainer.parentNode) {
+                    cardsContainer.parentNode.insertBefore(tablaContainer, cardsContainer.nextSibling);
+                }
+            }
+            
+            const table = document.createElement('table');
+            table.className = 'tabla-analisis min-w-full border-collapse border border-gray-300';
+            
+            const titulo = document.createElement('h4');
+            titulo.textContent = 'Resumen Trimestral Comparativo';
+            titulo.className = 'text-lg font-semibold text-gray-800 mb-4';
+            
+            const thead = document.createElement('thead');
+            const trimestresKeys = Object.keys(trimestres);
+            let headerHtml = '<tr><th class="border border-gray-300 px-3 py-2 text-left font-bold text-gray-700 bg-gray-50"></th>';
+            
+            trimestresKeys.forEach(q => {
+                headerHtml += `<th class="border border-gray-300 px-3 py-2 text-center font-bold text-gray-700 bg-gray-50">${trimestres[q].nombre}</th>`;
+            });
+            headerHtml += '</tr>';
+            thead.innerHTML = headerHtml;
+            
+            const tbody = document.createElement('tbody');
+            
+            // Fila 2025
+            const row2025 = document.createElement('tr');
+            let row2025Html = '<td class="border border-gray-300 px-3 py-2 font-bold bg-blue-50">2025</td>';
+            trimestresKeys.forEach(q => {
+                row2025Html += `<td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres[q].valor2025)}</td>`;
+            });
+            row2025.innerHTML = row2025Html;
+            
+            // Fila 2024
+            const row2024 = document.createElement('tr');
+            let row2024Html = '<td class="border border-gray-300 px-3 py-2 font-bold bg-gray-50">2024</td>';
+            trimestresKeys.forEach(q => {
+                row2024Html += `<td class="border border-gray-300 px-3 py-2 text-center">${formatearNumero(trimestres[q].valor2024)}</td>`;
+            });
+            row2024.innerHTML = row2024Html;
+            
+            // Fila Diferencia
+            const rowDif = document.createElement('tr');
+            let rowDifHtml = '<td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-50">Diferencia</td>';
+            trimestresKeys.forEach(q => {
+                const claseColor = trimestres[q].diferencia >= 0 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                rowDifHtml += `<td class="border border-gray-300 px-3 py-2 text-center ${claseColor}">${formatearNumero(trimestres[q].diferencia)}</td>`;
+            });
+            rowDif.innerHTML = rowDifHtml;
+            
+            // Fila % Variación
+            const rowVar = document.createElement('tr');
+            let rowVarHtml = '<td class="border border-gray-300 px-3 py-2 font-bold bg-green-50">% Variación</td>';
+            trimestresKeys.forEach(q => {
+                const claseVar = parseFloat(trimestres[q].variacion) >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold';
+                rowVarHtml += `<td class="border border-gray-300 px-3 py-2 text-center ${claseVar}">${trimestres[q].variacion}%</td>`;
+            });
+            rowVar.innerHTML = rowVarHtml;
+            
+            tbody.appendChild(row2025);
+            tbody.appendChild(row2024);
+            tbody.appendChild(rowDif);
+            tbody.appendChild(rowVar);
+            
+            table.appendChild(thead);
+            table.appendChild(tbody);
+            
+            tablaContainer.innerHTML = '';
+            tablaContainer.appendChild(titulo);
+            tablaContainer.appendChild(table);
+            
         }
         
         // Procesar Análisis Anual
