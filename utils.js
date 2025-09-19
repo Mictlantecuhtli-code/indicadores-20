@@ -155,24 +155,33 @@ function convertirACSV(datos) {
 function mostrarNotificacion(mensaje, tipo = 'info', duracion = 3000) {
     // Crear elemento de notificación
     const notificacion = document.createElement('div');
-    notificacion.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full`;
+    notificacion.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 transform transition-all duration-300 translate-x-full max-w-sm`;
     
     // Aplicar estilos según el tipo
+    let icono = '';
     switch (tipo) {
         case 'success':
             notificacion.classList.add('bg-green-500', 'text-white');
+            icono = '✅ ';
             break;
         case 'error':
             notificacion.classList.add('bg-red-500', 'text-white');
+            icono = '❌ ';
             break;
         case 'warning':
             notificacion.classList.add('bg-yellow-500', 'text-white');
+            icono = '⚠️ ';
+            break;
+        case 'info':
+            notificacion.classList.add('bg-blue-500', 'text-white');
+            icono = 'ℹ️ ';
             break;
         default:
             notificacion.classList.add('bg-blue-500', 'text-white');
+            icono = 'ℹ️ ';
     }
     
-    notificacion.textContent = mensaje;
+    notificacion.innerHTML = `<div class="flex items-center"><span class="mr-2">${icono}</span><span>${mensaje}</span></div>`;
     document.body.appendChild(notificacion);
     
     // Animar entrada
