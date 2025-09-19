@@ -446,71 +446,120 @@ function validarFormulario(){
 }
 
 async function guardarMedicion(){
-
-      if (!validarFormulario()){ 
-        actualizarEstadoBotonGuardar(); 
-        return; 
-    }
-
-    const area = $("#fArea").value;
-    const indicador = $("#fIndicador").value;
-    const anio = (currentUser?.rol === ROLES.CAPTURISTA) ? ANO_ACTUAL : (parseInt($("#fAnio").value) || ANO_ACTUAL);
-    const mes = (currentUser?.rol === ROLES.CAPTURISTA) ? capturaData.currentMonth : parseInt($("#fMes").value);
-    let valor = limpiarNumero($("#fValor").value) || 0;
-    //let meta = limpiarNumero($("#fMeta").value) || 0;
-
-    // Validación adicional desde auth.js si existe
-    if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function"){
-        const ok = authSystem.validarOperacionEscritura("upsert_medicion", { area, anio, mes });
-        if (!ok) return;
-    }
-
-    const btn = document.querySelector('button[onclick="guardarMedicion()"]');
-    
-    try {
-        mostrarCargando(btn, true);
-        
-        // Preparar datos para inserción/actualización
-        const datosGuardar = {
-            area: area,
-            indicador: indicador,
-            anio: anio,
-            mes: mes,
-            valor: valor,
-            //meta: meta,
-            //created_by: currentUser?.username || 'sistema'
-            //updated_at: new Date().toISOString()
-        };
-        
-        console.log('Guardando datos:', datosGuardar);
-        
-        // Usar UPSERT para insertar o actualizar si ya existe
-           const { data, error } = await sb
-          .from("medicion")
-          .upsert(datosGuardar);
-        if (error) { 
-            console.error('Error de Supabase:', error);
-            mostrarNotificacion(`${MENSAJES.ERROR_GUARDAR}: ${error.message}`, "error"); 
+          if (!validarFormulario()){ 
+            actualizarEstadoBotonGuardar(); 
             return; 
         }
+    
+        const area = $("#fArea").value;
+        const indicador = $("#fIndicador").value;
+        const anio = (currentUser?.rol === ROLES.CAPTURISTA) ? ANO_ACTUAL : (parseInt($("#fAnio").value) || ANO_ACTUAL);
+        const mes = (currentUser?.rol === ROLES.CAPTURISTA) ? capturaData.currentMonth : parseInt($("#fMes").value);
+        let valor = limpiarNumero($("#fValor").value) || 0;
+    
+        // Validación adicional desde auth.js si existe
+        if (window.authSystem && typeof authSystem.validarOperacionEscritura === "function"){
+            const ok = authSystem.validarOperacionEscritura("upsert_medicion", { area, anio, mes });
+            if (!ok) return;
+        }
+    
+        const btn = document.querySelector('button[onclick="guardarMedicion()"]');
         
-        console.log('Datos guardados exitosamente:', data);
-        mostrarNotificacion(MENSAJES.EXITO_GUARDAR, "success");
-        
-        // Limpiar campos después del guardado exitoso
-        limpiarCampos();
-        
-        // Recargar datos para mostrar la actualización
-        setTimeout(async () => {
-            await cargarDatos();
-        }, 500);
-        
-    } catch(err) {
-        console.error('Error inesperado:', err);
-        mostrarNotificacion("Error inesperado al guardar: " + err.message, "error");
-    } finally {
-        mostrarCargando(btn, false);
-        actualizarEstadoBotonGuardar();
+        try {
+            mostrarCargando(btn, true);
+            
+            // Verificar si ya existe el registro
+            const { data: existingData, error: checkError } = await sb
+                .from("medicion")
+                .select("id")
+                .eq("area", area)
+                .eq("indicador", indicador)
+                .eq("anio", anio)
+                .eq("mes", mes)
+                .single();
+    
+            if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found
+                console.error('Error verificando registro existente:', checkError);
+                mostrarNotificacion("Error al verificar datos existentes", "error");
+                return;
+            }
+    
+            let operationResult;
+            
+            if (existingData) {
+                // ACTUALIZAR registro existente
+                console.log('Actualizando registro existente con ID:', existingData.id);
+                
+                const { data: updateData, error: updateError } = await sb
+                    .from("medicion")
+                    .update({
+                        valor: valor,
+                        updated_at: new Date().toISOString(),
+                        updated_by: currentUser?.username || 'sistema'
+                    })
+                    .eq("id", existingData.id)
+                    .select();
+    
+                if (updateError) {
+                    console.error('Error actualizando:', updateError);
+                    mostrarNotificacion(`Error al actualizar: ${updateError.message}`, "error");
+                    return;
+                }
+    
+                operationResult = updateData;
+                console.log('Registro actualizado exitosamente:', operationResult);
+                mostrarNotificacion("Datos actualizados correctamente ✅", "success");
+                
+            } else {
+                // INSERTAR nuevo registro
+                console.log('Insertando nuevo registro');
+                
+                const datosNuevos = {
+                    area: area,
+                    indicador: indicador,
+                    anio: anio,
+                    mes: mes,
+                    valor: valor,
+                    created_at: new Date().toISOString(),
+                    created_by: currentUser?.username || 'sistema'
+                };
+    
+                const { data: insertData, error: insertError } = await sb
+                    .from("medicion")
+                    .insert(datosNuevos)
+                    .select();
+    
+                if (insertError) {
+                    console.error('Error insertando:', insertError);
+                    mostrarNotificacion(`Error al guardar: ${insertError.message}`, "error");
+                    return;
+                }
+    
+                operationResult = insertData;
+                console.log('Registro insertado exitosamente:', operationResult);
+                mostrarNotificacion("Datos guardados correctamente ✅", "success");
+            }
+            
+            // Limpiar campos después del guardado exitoso
+            limpiarCampos();
+            
+            // Mostrar notificación adicional de éxito con detalles
+            const nombreMes = MESES[mes - 1];
+            setTimeout(() => {
+                mostrarNotificacion(`${nombreMes} ${anio}: ${formatearNumero(valor)} registrado`, "info", 2000);
+            }, 1500);
+            
+            // Recargar datos para mostrar la actualización
+            setTimeout(async () => {
+                await cargarDatos();
+            }, 800);
+            
+        } catch(err) {
+            console.error('Error inesperado:', err);
+            mostrarNotificacion("Error inesperado al guardar: " + err.message, "error");
+        } finally {
+            mostrarCargando(btn, false);
+            actualizarEstadoBotonGuardar();
     }
 }
 
@@ -597,10 +646,14 @@ function limpiarFormulario(){
 function limpiarCampos(){
     const valorInput = $("#fValor"); 
     const metaInput = $("#fMeta");
+    const btnGuardar = document.querySelector('button[onclick="guardarMedicion()"]');
     
     if (valorInput){ 
         valorInput.value = ""; 
-        valorInput.classList.remove("border-red-500"); 
+        valorInput.classList.remove("border-red-500");
+        // Resetear estilos de edición
+        valorInput.style.borderColor = '';
+        valorInput.style.backgroundColor = '';
     }
     
     if (metaInput){ 
@@ -608,8 +661,13 @@ function limpiarCampos(){
         metaInput.classList.remove("border-red-500"); 
     }
     
-    // Opcional: Mostrar mensaje de confirmación
-    console.log('Campos limpiados después del guardado exitoso');
+    // Resetear botón de guardar
+    if (btnGuardar) {
+        btnGuardar.textContent = 'Guardar';
+        btnGuardar.style.backgroundColor = '';
+    }
+    
+    console.log('Campos limpiados y modo edición reseteado');
 }
 
 function limpiarDatos(){
