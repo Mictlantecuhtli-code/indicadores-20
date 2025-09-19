@@ -458,11 +458,46 @@ async function crearGraficaVisualizacion(area, indicador, tipo) {
  * Crear gráfica trimestral (SOLO 2 AÑOS)
  */
 function crearGraficaTrimestral(trimestres) {
-    const ctx = $('#chartTrimestral');
+   /* const ctx = $('#chartTrimestral');
     if (!ctx) {
         console.error('Canvas trimestral no encontrado');
         return;
-    }
+    } */
+
+                // Validar que hay trimestres para mostrar
+            if (!trimestres || Object.keys(trimestres).length === 0) {
+                console.log('No hay trimestres completos para mostrar gráfica');
+                const ctx = $('#chartTrimestral');
+                if (ctx) {
+                    // Ocultar el canvas y mostrar mensaje
+                    ctx.style.display = 'none';
+                    let mensaje = ctx.parentNode.querySelector('.no-data-message');
+                    if (!mensaje) {
+                        mensaje = document.createElement('div');
+                        mensaje.className = 'no-data-message text-center text-gray-500 py-8';
+                        mensaje.innerHTML = `
+                            <p class="text-lg mb-2">📊</p>
+                            <p>No hay trimestres completos para mostrar gráfica</p>
+                            <p class="text-sm mt-1">Se requieren los 3 meses de cada trimestre con datos</p>
+                        `;
+                        ctx.parentNode.appendChild(mensaje);
+                    }
+                }
+                return;
+            }
+            
+            const ctx = $('#chartTrimestral');
+            if (!ctx) {
+                console.error('Canvas trimestral no encontrado');
+                return;
+            }
+            
+            // Mostrar canvas y ocultar mensaje si existe
+            ctx.style.display = 'block';
+            const mensaje = ctx.parentNode.querySelector('.no-data-message');
+            if (mensaje) {
+                mensaje.remove();
+            }
 
     // Destruir gráfica existente si hay una
     if (window.chartTrimestralInstance) {
