@@ -682,50 +682,118 @@
                 }
   
             // Procesar Análisis Trimestral
-            function procesarAnalisisTrimestral() {
+
+        function procesarAnalisisTrimestral() {
                 const trimestres = {
-                    q1: { meses: [1,2,3], valor2025: 0, valor2024: 0, nombre: 'Q1 (Ene-Mar)' },
-                    q2: { meses: [4,5,6], valor2025: 0, valor2024: 0, nombre: 'Q2 (Abr-Jun)' },
-                    q3: { meses: [7,8,9], valor2025: 0, valor2024: 0, nombre: 'Q3 (Jul-Sep)' },
-                    q4: { meses: [10,11,12], valor2025: 0, valor2024: 0, nombre: 'Q4 (Oct-Dic)' }
+                    q1: { meses: [1,2,3], valor2025: 0, valor2024: 0, nombre: 'Q1 (Ene-Mar)', completo2025: false, completo2024: false },
+                    q2: { meses: [4,5,6], valor2025: 0, valor2024: 0, nombre: 'Q2 (Abr-Jun)', completo2025: false, completo2024: false },
+                    q3: { meses: [7,8,9], valor2025: 0, valor2024: 0, nombre: 'Q3 (Jul-Sep)', completo2025: false, completo2024: false },
+                    q4: { meses: [10,11,12], valor2025: 0, valor2024: 0, nombre: 'Q4 (Oct-Dic)', completo2025: false, completo2024: false }
                 };
                 
-                // Calcular totales por trimestre sumando los meses
+                // Verificar completitud de trimestres y calcular totales
                 Object.keys(trimestres).forEach(q => {
+                    let mesesConDatos2025 = 0;
+                    let mesesConDatos2024 = 0;
+                    
                     trimestres[q].meses.forEach(mes => {
                         const dato2025 = analisisState.datos2025.find(d => d.mes === mes);
                         const dato2024 = analisisState.datos2024.find(d => d.mes === mes);
-                        trimestres[q].valor2025 += dato2025?.valor || 0;
-                        trimestres[q].valor2024 += dato2024?.valor || 0;
+                        
+                        // Solo contar si hay valor mayor a 0
+                        if (dato2025?.valor && dato2025.valor > 0) {
+                            trimestres[q].valor2025 += dato2025.valor;
+                            mesesConDatos2025++;
+                        }
+                        
+                        if (dato2024?.valor && dato2024.valor > 0) {
+                            trimestres[q].valor2024 += dato2024.valor;
+                            mesesConDatos2024++;
+                        }
                     });
                     
-                    const diferencia = trimestres[q].valor2025 - trimestres[q].valor2024;
-                    const variacion = trimestres[q].valor2024 > 0 
-                        ? ((diferencia / trimestres[q].valor2024) * 100).toFixed(1) 
-                        : 0;
+                    // Un trimestre está completo si tiene los 3 meses con datos
+                    trimestres[q].completo2025 = mesesConDatos2025 === 3;
+                    trimestres[q].completo2024 = mesesConDatos2024 === 3;
                     
-                    trimestres[q].diferencia = diferencia;
-                    trimestres[q].variacion = variacion;
+                    // Calcular diferencia y variación solo si ambos trimestres están completos
+                    if (trimestres[q].completo2025 && trimestres[q].completo2024) {
+                        const diferencia = trimestres[q].valor2025 - trimestres[q].valor2024;
+                        const variacion = trimestres[q].valor2024 > 0 
+                            ? ((diferencia / trimestres[q].valor2024) * 100).toFixed(1) 
+                            : 0;
+                        
+                        trimestres[q].diferencia = diferencia;
+                        trimestres[q].variacion = variacion;
+                    } else {
+                        trimestres[q].diferencia = null;
+                        trimestres[q].variacion = null;
+                    }
                     
-                    // Actualizar UI
-                    document.getElementById(`${q}-2025`).textContent = formatearNumero(trimestres[q].valor2025);
-                    document.getElementById(`${q}-2024`).textContent = formatearNumero(trimestres[q].valor2024);
-                    document.getElementById(`${q}-diferencia`).textContent = formatearNumero(diferencia);
-                    document.getElementById(`${q}-diferencia`).className = diferencia >= 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+                    // Actualizar UI solo para trimestres completos
+                    const elemento2025 = document.getElementById(`${q}-2025`);
+                    const elemento2024 = document.getElementById(`${q}-2024`);
+                    const elementoDif = document.getElementById(`${q}-diferencia`);
+                    const elementoVar = document.getElementById(`${q}-var`);
                     
-                    const varElement = document.getElementById(`${q}-var`);
-                    varElement.textContent = `${variacion}%`;
-                    varElement.className = parseFloat(variacion) >= 0 ? 'font-bold valor-positivo' : 'font-bold valor-negativo';
+                    if (trimestres[q].completo2025 && trimestres[q].completo2024) {
+                        // Mostrar datos normalmente
+                        if (elemento2025) elemento2025.textContent = formatearNumero(trimestres[q].valor2025);
+                        if (elemento2024) elemento2024.textContent = formatearNumero(trimestres[q].valor2024);
+                        if (elementoDif) {
+                            elementoDif.textContent = formatearNumero(trimestres[q].diferencia);
+                            elementoDif.className = trimestres[q].diferencia >= 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+                        }
+                        if (elementoVar) {
+                            elementoVar.textContent = `${trimestres[q].variacion}%`;
+                            elementoVar.className = parseFloat(trimestres[q].variacion) >= 0 ? 'font-bold valor-positivo' : 'font-bold valor-negativo';
+                        }
+                    } else {
+                        // Mostrar como incompleto
+                        const textoIncompleto = trimestres[q].completo2025 ? 'Parcial' : trimestres[q].completo2024 ? 'Parcial' : 'Sin datos';
+                        
+                        if (elemento2025) elemento2025.textContent = trimestres[q].completo2025 ? formatearNumero(trimestres[q].valor2025) : textoIncompleto;
+                        if (elemento2024) elemento2024.textContent = trimestres[q].completo2024 ? formatearNumero(trimestres[q].valor2024) : textoIncompleto;
+                        if (elementoDif) {
+                            elementoDif.textContent = 'N/A';
+                            elementoDif.className = 'font-medium text-gray-500';
+                        }
+                        if (elementoVar) {
+                            elementoVar.textContent = 'N/A';
+                            elementoVar.className = 'font-medium text-gray-500';
+                        }
+                    }
                 });
                 
-                // Crear tabla trimestral
-                crearTablaTrimestral(trimestres);
+                // Crear tabla trimestral solo con trimestres completos
+                const trimestresCompletos = Object.fromEntries(
+                    Object.entries(trimestres).filter(([key, trimestre]) => 
+                        trimestre.completo2025 && trimestre.completo2024
+                    )
+                );
                 
-                // Crear gráfica trimestral
+                crearTablaTrimestral(trimestresCompletos);
+                
+                // Crear gráfica trimestral solo con trimestres completos
                 setTimeout(() => {
-                    crearGraficaTrimestral(trimestres);
+                    crearGraficaTrimestral(trimestresCompletos);
                 }, 100);
-            }
+                
+                // Mostrar información sobre trimestres incompletos
+                const trimestresIncompletos = Object.entries(trimestres)
+                    .filter(([key, trimestre]) => !(trimestre.completo2025 && trimestre.completo2024))
+                    .map(([key, trimestre]) => trimestre.nombre);
+                
+                if (trimestresIncompletos.length > 0) {
+                    setTimeout(() => {
+                        mostrarNotificacion(
+                            `Trimestres incompletos: ${trimestresIncompletos.join(', ')} (se omiten del análisis)`, 
+                            'info', 
+                            4000
+                        );
+                    }, 1000);
+                }
+}
 
         function crearTablaTrimestral(trimestres) {
                 // Crear contenedor para la tabla si no existe
