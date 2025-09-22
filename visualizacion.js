@@ -292,10 +292,11 @@ async function cargarDatosComparacion(area, indicador, anioActual, tipoComparaci
 }
 
 /**
- * CREAR TABLA HORIZONTAL CORRECTA - LA PUTA TABLA QUE QUIERES
+ * CREAR TABLA HORIZONTAL CORRECTA 
  */
 function crearTablaHorizontalCorrecta() {
-    const container = $('#tablaVisualizacion');
+
+        const container = $('#tablaVisualizacion');
     if (!container) return;
     
     const datos = visualizacionData.datosComparacion;
@@ -310,15 +311,17 @@ function crearTablaHorizontalCorrecta() {
     
     const tbody = document.createElement('tbody');
     
-    // FILA 1: HEADERS - |ENERO|FEBRERO|MARZO|...|DICIEMBRE|
+    // FILA 1: HEADERS - |ENERO|FEBRERO|MARZO|...|DICIEMBRE|TOTAL ANUAL|VARIACIÓN %|
     const headerRow = document.createElement('tr');
     headerRow.innerHTML = `<th class="border border-gray-300 px-3 py-2 bg-gray-100 font-bold text-center w-20"></th>`;
     for (let mes = 1; mes <= 12; mes++) {
         headerRow.innerHTML += `<th class="border border-gray-300 px-2 py-2 bg-gray-100 text-center text-sm font-bold">${MESES[mes-1]}</th>`;
     }
+    headerRow.innerHTML += `<th class="border border-gray-300 px-3 py-2 bg-gray-100 text-center font-bold">Total Anual</th>`;
+    headerRow.innerHTML += `<th class="border border-gray-300 px-3 py-2 bg-gray-100 text-center font-bold">Variación %</th>`;
     tbody.appendChild(headerRow);
     
-    // FILA 2: AÑO ACTUAL - 2025 | VALOR1 | VALOR2 |....| VALOR N|
+    // FILA 2: AÑO ACTUAL - 2025 | VALOR1 | VALOR2 |....| VALOR N| TOTAL | VARIACIÓN |
     const valorRow = document.createElement('tr');
     valorRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-blue-100 text-center">${datos.anioActual}</td>`;
     for (let mes = 1; mes <= 12; mes++) {
@@ -326,9 +329,13 @@ function crearTablaHorizontalCorrecta() {
         const valor = datoMes?.valor ? formatearNumero(datoMes.valor) : '-';
         valorRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm">${valor}</td>`;
     }
+    // CALCULAR TOTAL ANUAL ACTUAL
+    const totalActual = datos.actuales.reduce((sum, d) => sum + (d.valor || 0), 0);
+    valorRow.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center font-bold">${formatearNumero(totalActual)}</td>`;
+    valorRow.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center"></td>`; // Celda vacía para variación
     tbody.appendChild(valorRow);
     
-    // FILA 3: META - META | VALORX | VALORY|.....|VALOR H|
+    // FILA 3: META - META | VALORX | VALORY|.....|VALOR H| TOTAL META | VARIACIÓN META |
     const metaRow = document.createElement('tr');
     metaRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-yellow-100 text-center">META</td>`;
     for (let mes = 1; mes <= 12; mes++) {
@@ -346,9 +353,15 @@ function crearTablaHorizontalCorrecta() {
         const metaFormateada = meta ? formatearNumero(meta) : '-';
         metaRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm bg-yellow-50">${metaFormateada}</td>`;
     }
+    // CALCULAR TOTAL META ANUAL
+    const totalMeta = datos.metasEscenarios.length > 0 
+        ? datos.metasEscenarios.filter(m => m.escenario === visualizacionData.escenarioSeleccionado).reduce((sum, m) => sum + (m.meta || 0), 0)
+        : datos.actuales.reduce((sum, d) => sum + (d.meta || 0), 0);
+    metaRow.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center font-bold bg-yellow-50">${formatearNumero(totalMeta)}</td>`;
+    metaRow.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center"></td>`; // Celda vacía para variación
     tbody.appendChild(metaRow);
     
-    // FILA 4: %META - %META | PORCENTAJE | PORCENTAJE | ... |
+    // FILA 4: %META - %META | PORCENTAJE | PORCENTAJE | ... | TOTAL %META | VARIACIÓN %META |
     const porcentajeRow = document.createElement('tr');
     porcentajeRow.innerHTML = `<td class="border border-gray-300 px-3 py-2 font-bold bg-green-100 text-center">%META</td>`;
     for (let mes = 1; mes <= 12; mes++) {
@@ -381,6 +394,23 @@ function crearTablaHorizontalCorrecta() {
         
         porcentajeRow.innerHTML += `<td class="border border-gray-300 px-2 py-2 text-center text-sm ${clase}">${porcentaje}</td>`;
     }
+    // CALCULAR %META TOTAL ANUAL
+    let porcentajeTotalAnual = '-';
+    let claseTotalAnual = 'bg-gray-50';
+    if (totalMeta && totalActual) {
+        const avanceTotal = (totalActual / totalMeta * 100).toFixed(1);
+        porcentajeTotalAnual = `${avanceTotal}%`;
+        
+        if (avanceTotal >= 100) {
+            claseTotalAnual = 'text-green-700 font-bold bg-green-100';
+        } else if (avanceTotal >= 80) {
+            claseTotalAnual = 'text-yellow-700 font-semibold bg-yellow-100';
+        } else {
+            claseTotalAnual = 'text-red-700 font-medium bg-red-100';
+        }
+    }
+    porcentajeRow.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center font-bold ${claseTotalAnual}">${porcentajeTotalAnual}</td>`;
+    porcentajeRow.innerHTML += `<td class="border border-gray-300 px-3 py-2 text-center"></td>`; // Celda vacía para variación
     tbody.appendChild(porcentajeRow);
     
     table.appendChild(tbody);
