@@ -394,3 +394,476 @@ export async function getUsers() {
 
   return [];
 }
+// ============================================
+// GESTIÓN AVANZADA DE USUARIOS Y ÁREAS
+// ============================================
+
+/**
+ * Obtiene un usuario por su ID con sus áreas asignadas
+ */
+export async function getUserById(userId) {
+  if (!userId) throw new Error('userId es requerido');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('perfiles')
+    .select(`
+      id,
+      email,
+      nombre_completo,
+      rol_principal,
+      telefono,
+      puesto,
+      estado,
+      ultimo_acceso,
+      fecha_creacion,
+      fecha_actualizacion,
+      usuario_areas (
+        id,
+        area_id,
+        rol,
+        puede_capturar,
+        puede_editar,
+        puede_eliminar,
+        estado,
+        fecha_asignacion,
+        areas (
+          id,
+          nombre,
+          clave,
+          color_hex,
+          parent_area_id,
+          nivel,
+          path
+        )
+      )
+    `)
+    .eq('id', userId)
+    .eq('usuario_areas.estado', 'ACTIVO')
+    .single();
+
+  if (profileError) {
+    throw profileError;
+  }
+
+  return profile;
+}
+
+/**
+ * Obtiene todas las áreas con su jerarquía completa
+ */
+export async function getAreaHierarchy() {
+  const { data, error } = await supabase
+    .from('areas')
+    .select('id, nombre, clave, color_hex, parent_area_id, nivel, path, orden_visualizacion, estado')
+    .eq('estado', 'ACTIVO')
+    .order('path', { ascending: true });
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+/**
+ * Obtiene las áreas asignadas a un usuario con permisos
+ */
+export async function getUserAreas(userId) {
+  if (!userId) return [];
+
+  const { data, error } = await supabase
+    .from('usuario_areas')
+    .select(`
+      id,
+      area_id,
+      rol,
+      puede_capturar,
+      puede_editar,
+      puede_eliminar,
+      estado,
+      fecha_asignacion,
+      areas (
+        id,
+        nombre,
+        clave,
+        color_hex,
+        parent_area_id,
+        nivel,
+        path
+      )
+    `)
+    .eq('usuario_id', userId)
+    .eq('estado', 'ACTIVO');
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+
+/**
+ * Obtiene las áreas que el usuario actual puede gestionar según su rol
+ */
+export async function getEditableAreasForUser(currentUserId) {
+  if (!currentUserId) return [];
+
+  const currentUser = await getUserById(currentUserId);
+  
+  if (!currentUser) return [];
+
+  if (currentUser.rol_principal === 'ADMIN') {
+    return getAreaHierarchy();
+  }
+
+  const allAreas = await getAreaHierarchy();
+  const userAreas = currentUser.usuario_areas || [];
+
+  if (userAreas.length === 0) return [];
+
+  const editableAreaIds = new Set();
+
+  userAreas.forEach(userArea => {
+    const area = userArea.areas;
+    if (!area) return;
+
+    const rol = userArea.rol || currentUser.rol_principal;
+
+    switch (rol) {
+      case 'DIRECTOR':
+        editableAreaIds.add(area.id);
+        allAreas.forEach(a => {
+          if (a.path && area.path && a.path.startsWith(area.path + '.')) {
+            editableAreaIds.add(a.id);
+          }
+        });
+        break;
+
+      case 'SUBDIRECTOR':
+        editableAreaIds.add(area.id);
+        allAreas.forEach(a => {
+          if (a.path && area.path && a.path.startsWith(area.path + '.')) {
+            editableAreaIds.add(a.id);
+          }
+        });
+        break;
+
+      default:
+        break;
+    }
+  });
+
+  return allAreas.filter(area => editableAreaIds.has(area.id));
+}
+
+/**
+ * Actualiza los datos básicos de un usuario
+ */
+export async function updateUser(userId, userData) {
+  if (!userId) throw new Error('userId es requerido');
+
+  const allowedFields = {
+    nombre_completo: userData.nombre_completo,
+    rol_principal: userData.rol_principal,
+    telefono: userData.telefono,
+    puesto: userData.puesto,
+    estado: userData.estado
+  };
+
+  const updateData = {};
+  Object.keys(allowedFields).forEach(key => {
+    if (allowedFields[key] !== undefined) {
+      updateData[key] = allowedFields[key];
+    }
+  });
+
+  const { data, error } = await supabase
+    .from('perfiles')
+    .update(updateData)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+/**
+ * Asigna un área a un usuario con permisos específicos
+ */
+export async function addUserArea(userId, areaAssignment) {
+  if (!userId) throw new Error('userId es requerido');
+  if (!areaAssignment.area_id) throw new Error('area_id es requerido');
+
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  const payload = {
+    usuario_id: userId,
+    area_id: areaAssignment.area_id,
+    rol: areaAssignment.rol || null,
+    puede_capturar: areaAssignment.puede_capturar ?? false,
+    puede_editar: areaAssignment.puede_editar ?? false,
+    puede_eliminar: areaAssignment.puede_eliminar ?? false,
+    estado: 'ACTIVO',
+    asignado_por: user?.id || null
+  };
+
+  const { data, error } = await supabase
+    .from('usuario_areas')
+    .insert(payload)
+    .select(`
+      id,
+      area_id,
+      rol,
+      puede_capturar,
+      puede_editar,
+      puede_eliminar,
+      estado,
+      areas (
+        id,
+        nombre,
+        clave,
+        color_hex,
+        nivel
+      )
+    `)
+    .single();
+
+  if (error) {
+    if (error.code === '23505') {
+      return updateUserArea(userId, areaAssignment.area_id, areaAssignment);
+    }
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Actualiza los permisos de un área asignada a un usuario
+ */
+export async function updateUserArea(userId, areaId, updates) {
+  if (!userId || !areaId) throw new Error('userId y areaId son requeridos');
+
+  const allowedUpdates = {
+    rol: updates.rol,
+    puede_capturar: updates.puede_capturar,
+    puede_editar: updates.puede_editar,
+    puede_eliminar: updates.puede_eliminar,
+    estado: updates.estado
+  };
+
+  const updateData = {};
+  Object.keys(allowedUpdates).forEach(key => {
+    if (allowedUpdates[key] !== undefined) {
+      updateData[key] = allowedUpdates[key];
+    }
+  });
+
+  const { data, error } = await supabase
+    .from('usuario_areas')
+    .update(updateData)
+    .eq('usuario_id', userId)
+    .eq('area_id', areaId)
+    .select(`
+      id,
+      area_id,
+      rol,
+      puede_capturar,
+      puede_editar,
+      puede_eliminar,
+      estado,
+      areas (
+        id,
+        nombre,
+        clave,
+        color_hex,
+        nivel
+      )
+    `)
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+/**
+ * Elimina la asignación de un área a un usuario (soft delete)
+ */
+export async function removeUserArea(userId, areaId) {
+  if (!userId || !areaId) throw new Error('userId y areaId son requeridos');
+
+  const { data, error } = await supabase
+    .from('usuario_areas')
+    .update({ estado: 'INACTIVO' })
+    .eq('usuario_id', userId)
+    .eq('area_id', areaId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+/**
+ * Elimina TODAS las áreas asignadas a un usuario (dejar sin asignar)
+ */
+export async function removeAllUserAreas(userId) {
+  if (!userId) throw new Error('userId es requerido');
+
+  const { data, error } = await supabase
+    .from('usuario_areas')
+    .update({ estado: 'INACTIVO' })
+    .eq('usuario_id', userId)
+    .eq('estado', 'ACTIVO')
+    .select();
+
+  if (error) throw error;
+
+  return data;
+}
+
+/**
+ * Verifica si el usuario actual puede editar a otro usuario
+ */
+export async function canUserEditUser(currentUserId, targetUserId) {
+  if (!currentUserId || !targetUserId) return false;
+
+  if (currentUserId === targetUserId) return false;
+
+  const currentUser = await getUserById(currentUserId);
+  if (!currentUser) return false;
+
+  if (currentUser.rol_principal === 'ADMIN') return true;
+
+  const targetUser = await getUserById(targetUserId);
+  if (!targetUser) return false;
+
+  if (targetUser.rol_principal === 'ADMIN') return false;
+
+  const currentUserAreas = currentUser.usuario_areas || [];
+  const targetUserAreas = targetUser.usuario_areas || [];
+
+  if (targetUserAreas.length === 0) return false;
+
+  if (currentUser.rol_principal === 'DIRECTOR') {
+    return targetUserAreas.some(targetArea => {
+      return currentUserAreas.some(currentArea => {
+        const currentPath = currentArea.areas?.path || '';
+        const targetPath = targetArea.areas?.path || '';
+        return targetPath.startsWith(currentPath);
+      });
+    });
+  }
+
+  if (currentUser.rol_principal === 'SUBDIRECTOR') {
+    return targetUserAreas.some(targetArea => {
+      return currentUserAreas.some(currentArea => {
+        const currentPath = currentArea.areas?.path || '';
+        const targetPath = targetArea.areas?.path || '';
+        return targetPath.startsWith(currentPath);
+      });
+    });
+  }
+
+  return false;
+}
+
+/**
+ * Obtiene los roles que el usuario actual puede asignar
+ */
+export async function getAssignableRoles(currentUserId) {
+  if (!currentUserId) return [];
+
+  const currentUser = await getUserById(currentUserId);
+  if (!currentUser) return [];
+
+  const allRoles = [
+    { value: 'ADMIN', label: 'Administrador' },
+    { value: 'DIRECTOR', label: 'Director' },
+    { value: 'SUBDIRECTOR', label: 'Subdirector' },
+    { value: 'CAPTURISTA', label: 'Capturista' }
+  ];
+
+  switch (currentUser.rol_principal) {
+    case 'ADMIN':
+      return allRoles;
+    
+    case 'DIRECTOR':
+      return allRoles.filter(r => ['SUBDIRECTOR', 'CAPTURISTA'].includes(r.value));
+    
+    case 'SUBDIRECTOR':
+      return allRoles.filter(r => r.value === 'CAPTURISTA');
+    
+    case 'CAPTURISTA':
+      return [];
+    
+    default:
+      return [];
+  }
+}
+
+/**
+ * Obtiene las áreas donde un usuario puede capturar según su rol
+ */
+export async function getCapturableAreasForUser(userId) {
+  if (!userId) return [];
+
+  const user = await getUserById(userId);
+  if (!user) return [];
+
+  if (user.rol_principal === 'ADMIN') {
+    return getAreaHierarchy();
+  }
+
+  const allAreas = await getAreaHierarchy();
+  const userAreas = user.usuario_areas || [];
+
+  if (userAreas.length === 0) return [];
+
+  const capturableAreaIds = new Set();
+
+  userAreas.forEach(userArea => {
+    const area = userArea.areas;
+    if (!area) return;
+
+    const rol = userArea.rol || user.rol_principal;
+
+    if (userArea.puede_capturar) {
+      capturableAreaIds.add(area.id);
+    }
+
+    switch (rol) {
+      case 'DIRECTOR':
+        capturableAreaIds.add(area.id);
+        allAreas.forEach(a => {
+          if (a.path && area.path && a.path.startsWith(area.path + '.')) {
+            capturableAreaIds.add(a.id);
+          }
+        });
+        break;
+
+      case 'SUBDIRECTOR':
+        capturableAreaIds.add(area.id);
+        allAreas.forEach(a => {
+          if (a.path && area.path && a.path.startsWith(area.path + '.')) {
+            capturableAreaIds.add(a.id);
+          }
+        });
+        break;
+
+      case 'CAPTURISTA':
+        if (area.nivel >= 3) {
+          capturableAreaIds.add(area.id);
+        }
+        if (userArea.puede_capturar) {
+          capturableAreaIds.add(area.id);
+        }
+        break;
+
+      default:
+        break;
+    }
+  });
+
+  return allAreas.filter(area => capturableAreaIds.has(area.id));
+}
