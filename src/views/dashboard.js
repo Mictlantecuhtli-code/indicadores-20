@@ -613,6 +613,240 @@ async function getIndicatorRealData(indicatorId) {
     return null;
   }
 }
+async function getIndicatorMetas(indicatorId) {
+  if (!indicatorId) return null;
+  
+  try {
+    const { data, error } = await supabase
+      .from('indicador_metas')
+      .select('*')
+      .eq('indicador_id', indicatorId)
+      .order('anio', { ascending: false })
+      .order('mes', { ascending: true });
+      
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error al obtener metas:', error);
+    return [];
+  }
+}
+
+// Nueva función para construir el modal de metas
+function buildIndicatorMetasModalMarkup({
+  indicator,
+  metas,
+  type = 'scenario',
+  chartType = 'bar'
+}) {
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  
+  // Filtrar metas del año actual
+  const currentYearMetas = metas.filter(meta => meta.anio === currentYear);
+  
+  // Agrupar por mes
+  const metasByMonth = {};
+  currentYearMetas.forEach(meta => {
+    if (!metasByMonth[meta.mes]) {
+      metasByMonth[meta.mes] = {};
+    }
+    metasByMonth[meta.mes][meta.escenario] = meta;
+  });
+  
+  // Encontrar el último mes con datos
+  const monthsWithData = Object.keys(metasByMonth).map(Number).sort((a, b) => a - b);
+  const latestMonth = monthsWithData[monthsWithData.length - 1] || currentMonth;
+  
+  // Obtener datos del último mes
+  const latestMetas = metasByMonth[latestMonth] || {};
+  const metaAlcanzada = latestMetas.ALTO?.valor || 0;
+  const metaProgramada = latestMetas.MEDIO?.valor || 0;
+  
+  // Calcular diferencia
+  const diff = metaAlcanzada - metaProgramada;
+  const pct = metaProgramada > 0 ? (diff / metaProgramada) * 100 : 0;
+  const trendClasses = getTrendColorClasses(diff);
+  
+  const unit = indicator?.unidad_medida || '';
+  const formatValue = (value) => {
+    if (unit === '%') {
+      return `${Number(value).toFixed(2)}%`;
+    }
+    return Number(value).toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  };
+  
+  // Construir tabla de detalles
+  const tableRows = monthsWithData.map(mes => {
+    const monthData = metasByMonth[mes];
+    const alto = monthData.ALTO?.valor || null;
+    const medio = monthData.MEDIO?.valor || null;
+    const monthDiff = alto !== null && medio !== null ? alto - medio : null;
+    const monthPct = medio > 0 && monthDiff !== null ? (monthDiff / medio) * 100 : null;
+    
+    return `
+      <tr class="hover:bg-slate-50">
+        <td class="px-4 py-3 font-medium">${MONTHS[mes - 1]?.label || `Mes ${mes}`}</td>
+        <td class="px-4 py-3 text-right">${alto !== null ? formatValue(alto) : '—'}</td>
+        <td class="px-4 py-3 text-right">${medio !== null ? formatValue(medio) : '—'}</td>
+        <td class="px-4 py-3 text-right font-semibold ${monthDiff !== null ? (monthDiff >= 0 ? 'text-green-600' : 'text-red-600') : ''}">
+          ${monthDiff !== null ? (monthDiff >= 0 ? '+' : '') + formatValue(monthDiff) : '—'}
+        </td>
+        <td class="px-4 py-3 text-right ${monthPct !== null ? (monthPct >= 0 ? 'text-green-600' : 'text-red-600') : ''}">
+          ${monthPct !== null ? (monthPct >= 0 ? '+' : '') + monthPct.toFixed(2) + '%' : '—'}
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  return `
+    <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" data-modal-overlay>
+      <div class="relative w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl" style="max-height: 90vh; overflow-y: auto;">
+        <button
+          type="button"
+          class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+          aria-label="Cerrar"
+          data-modal-close
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="space-y-6 p-6">
+          <header class="space-y-2">
+            <p class="text-xs uppercase tracking-widest text-slate-400">Indicador con metas por escenario</p>
+            <h2 class="text-2xl font-semibold text-slate-900">${escapeHtml(indicator.nombre)}</h2>
+            ${indicator.descripcion ? `<p class="text-sm text-slate-600">${escapeHtml(indicator.descripcion)}</p>` : ''}
+          </header>
+
+          <section class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+              <p class="text-xs font-semibold uppercase tracking-widest text-blue-600">Meta Alcanzada</p>
+              <p class="mt-2 text-2xl font-bold text-blue-900">${formatValue(metaAlcanzada)}</p>
+              <p class="mt-1 text-xs text-blue-700">Escenario ALTO - ${MONTHS[latestMonth - 1]?.label || ''} ${currentYear}</p>
+            </div>
+            
+            <div class="rounded-2xl border border-slate-200 bg-gradient-to-br from-amber-50 to-amber-100 p-4">
+              <p class="text-xs font-semibold uppercase tracking-widest text-amber-600">Meta Programada</p>
+              <p class="mt-2 text-2xl font-bold text-amber-900">${formatValue(metaProgramada)}</p>
+              <p class="mt-1 text-xs text-amber-700">Escenario MEDIO - ${MONTHS[latestMonth - 1]?.label || ''} ${currentYear}</p>
+            </div>
+            
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <p class="text-xs font-semibold uppercase tracking-widest text-slate-600">Diferencia</p>
+              <p class="mt-2 text-2xl font-bold ${trendClasses.text}">${diff >= 0 ? '+' : ''}${formatValue(diff)}</p>
+              <p class="mt-1 text-xs text-slate-600">Alcanzado vs. Programado</p>
+            </div>
+            
+            <div class="rounded-2xl border border-slate-200 bg-white p-4">
+              <p class="text-xs font-semibold uppercase tracking-widest text-slate-600">Variación %</p>
+              <p class="mt-2 text-2xl font-bold ${trendClasses.text}">${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</p>
+              <p class="mt-1 text-xs text-slate-600">Respecto a Meta Programada</p>
+            </div>
+          </section>
+
+          <section class="rounded-2xl border border-slate-200 bg-white p-6">
+            <h3 class="mb-4 text-sm font-semibold uppercase tracking-widest text-slate-500">
+              Comparación de metas por mes - ${currentYear}
+            </h3>
+            <canvas 
+              data-indicator-metas-chart
+              data-chart-type="${chartType}"
+              class="w-full"
+              style="max-height: 300px;"
+            ></canvas>
+          </section>
+
+          <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-100 px-5 py-3">
+              <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-500">Detalle mensual</h3>
+            </div>
+            <div class="max-h-72 overflow-auto">
+              <table class="min-w-full divide-y divide-slate-200 text-sm">
+                <thead class="bg-slate-50 text-xs uppercase tracking-widest text-slate-500">
+                  <tr>
+                    <th class="px-4 py-3 text-left">Mes</th>
+                    <th class="px-4 py-3 text-right">Meta Alcanzada</th>
+                    <th class="px-4 py-3 text-right">Meta Programada</th>
+                    <th class="px-4 py-3 text-right">Diferencia</th>
+                    <th class="px-4 py-3 text-right">Variación %</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  ${tableRows}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Función para renderizar la gráfica de metas
+function renderMetasChart(canvas, metasByMonth, chartType) {
+  if (!canvas || !metasByMonth) return;
+  
+  const ctx = canvas.getContext('2d');
+  const months = Object.keys(metasByMonth).map(Number).sort((a, b) => a - b);
+  
+  const labels = months.map(mes => MONTHS[mes - 1]?.short || `M${mes}`);
+  const dataAlto = months.map(mes => metasByMonth[mes].ALTO?.valor || 0);
+  const dataMedio = months.map(mes => metasByMonth[mes].MEDIO?.valor || 0);
+  
+  if (activeModalChart) {
+    activeModalChart.destroy();
+  }
+  
+  activeModalChart = new Chart(ctx, {
+    type: chartType,
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Meta Alcanzada (ALTO)',
+          data: dataAlto,
+          backgroundColor: chartType === 'bar' ? 'rgba(59, 130, 246, 0.8)' : 'transparent',
+          borderColor: 'rgb(59, 130, 246)',
+          borderWidth: 2,
+          tension: 0.1
+        },
+        {
+          label: 'Meta Programada (MEDIO)',
+          data: dataMedio,
+          backgroundColor: chartType === 'bar' ? 'rgba(251, 146, 60, 0.8)' : 'transparent',
+          borderColor: 'rgb(251, 146, 60)',
+          borderWidth: 2,
+          tension: 0.1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return value.toLocaleString('es-MX');
+            }
+          }
+        }
+      }
+    }
+  });
+}
 
 function getLastLoadedMonth(history = []) {
   if (!history.length) return null;
@@ -2642,6 +2876,71 @@ function buildModalMarkup({
   `;
 }
 
+function renderMetasChart(canvas, metasByMonth, chartType) {
+  if (!canvas || !metasByMonth) return;
+  
+  const ctx = canvas.getContext('2d');
+  const months = Object.keys(metasByMonth).map(Number).sort((a, b) => a - b);
+  
+  const labels = months.map(mes => MONTHS[mes - 1]?.short || `M${mes}`);
+  const dataAlto = months.map(mes => metasByMonth[mes].ALTO?.valor || 0);
+  const dataMedio = months.map(mes => metasByMonth[mes].MEDIO?.valor || 0);
+  
+  if (activeModalChart) {
+    activeModalChart.destroy();
+  }
+  
+  activeModalChart = new Chart(ctx, {
+    type: chartType,
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Meta Alcanzada (ALTO)',
+          data: dataAlto,
+          backgroundColor: chartType === 'bar' ? 'rgba(59, 130, 246, 0.8)' : 'transparent',
+          borderColor: 'rgb(59, 130, 246)',
+          borderWidth: 2,
+          tension: 0.1
+        },
+        {
+          label: 'Meta Programada (MEDIO)',
+          data: dataMedio,
+          backgroundColor: chartType === 'bar' ? 'rgba(251, 146, 60, 0.8)' : 'transparent',
+          borderColor: 'rgb(251, 146, 60)',
+          borderWidth: 2,
+          tension: 0.1
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: function(value) {
+              return value.toLocaleString('es-MX');
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// Modificar la función openIndicatorModal para detectar indicadores con metas específicas
 async function openIndicatorModal({ label, dataKey, type, scenario }) {
   const root = ensureModalContainer();
   
@@ -2695,6 +2994,75 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
       return;
     }
 
+    // Verificar si el indicador tiene metas con escenarios ALTO y MEDIO
+    const metas = await getIndicatorMetas(foundIndicator.id);
+    
+    // Filtrar metas del año actual con escenarios ALTO y MEDIO
+    const currentYear = new Date().getFullYear();
+    const hasMetasAltoyMedio = metas.some(meta => 
+      meta.anio === currentYear && 
+      (meta.escenario === 'ALTO' || meta.escenario === 'MEDIO')
+    );
+    
+    // Si tiene metas ALTO y MEDIO, mostrar el modal especial
+    if (hasMetasAltoyMedio) {
+      let currentChartType = 'bar';
+      
+      const renderModal = (chartType) => {
+        root.innerHTML = buildIndicatorMetasModalMarkup({
+          indicator: foundIndicator,
+          metas: metas,
+          chartType: chartType
+        });
+        
+        const overlay = root.querySelector('[data-modal-overlay]');
+        const closeButton = root.querySelector('[data-modal-close]');
+        const canvas = root.querySelector('[data-indicator-metas-chart]');
+        
+        const handleClose = () => {
+          overlay?.removeEventListener('click', overlayListener);
+          closeButton?.removeEventListener('click', handleClose);
+          document.removeEventListener('keydown', escListener);
+          closeIndicatorModal();
+        };
+        
+        const overlayListener = event => {
+          if (event.target === overlay) {
+            handleClose();
+          }
+        };
+        
+        const escListener = event => {
+          if (event.key === 'Escape') {
+            handleClose();
+          }
+        };
+        
+        overlay?.addEventListener('click', overlayListener);
+        closeButton?.addEventListener('click', handleClose);
+        document.addEventListener('keydown', escListener);
+        
+        // Preparar datos para la gráfica
+        const currentYearMetas = metas.filter(meta => meta.anio === currentYear);
+        const metasByMonth = {};
+        currentYearMetas.forEach(meta => {
+          if (!metasByMonth[meta.mes]) {
+            metasByMonth[meta.mes] = {};
+          }
+          metasByMonth[meta.mes][meta.escenario] = meta;
+        });
+        
+        // Renderizar gráfica
+        if (canvas && Object.keys(metasByMonth).length > 0) {
+          renderMetasChart(canvas, metasByMonth, chartType);
+        }
+      };
+      
+      renderModal(currentChartType);
+      return;
+    }
+    
+    // Si no tiene metas ALTO y MEDIO, continuar con el flujo normal
     const realData = await getIndicatorRealData(foundIndicator.id);
     
     if (!realData || !realData.history.length) {
@@ -2722,7 +3090,7 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
       return;
     }
 
-    // CAMBIO: Agregar estado para el checkbox de histórico y la tendencia
+    // Continuar con el flujo normal para indicadores sin metas ALTO/MEDIO
     let currentChartType = type === 'quarterly' ? 'bar' : 'line';
     let showHistorical = false;
     let showTrend = false;
@@ -2765,7 +3133,7 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
       const closeButton = root.querySelector('[data-modal-close]');
       const canvas = root.querySelector('[data-modal-chart]');
       const chartToggle = root.querySelector('[data-chart-toggle]');
-      const historicalCheckbox = root.querySelector('[data-show-historical]'); // NUEVO
+      const historicalCheckbox = root.querySelector('[data-show-historical]');
       const trendToggle = root.querySelector('[data-toggle-trend]');
 
       const handleClose = () => {
@@ -2804,7 +3172,7 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
         });
       }
 
-      // NUEVO: Evento para checkbox de histórico
+      // Evento para checkbox de histórico
       if (historicalCheckbox) {
         historicalCheckbox.checked = historical;
         historicalCheckbox.addEventListener('change', event => {
@@ -2861,6 +3229,7 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
     closeBtn?.addEventListener('click', closeIndicatorModal);
   }
 }
+
 function buildOptionMarkup(option) {
   const iconClass = OPTION_ICON_CLASSES[option.type] ?? 'fa-solid fa-circle-dot';
   return `
