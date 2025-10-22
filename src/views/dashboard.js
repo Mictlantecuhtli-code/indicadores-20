@@ -42,6 +42,16 @@ const OPTION_BLUEPRINTS = [
   }
 ];
 
+const INDICADORES_META_ESPECIAL = [
+  'DPE-K053-001',
+  'DPE-K053-002', 
+  'DPE-K053-003',
+  'DPE-K053-004',
+  'DPE-E001-001',
+  'DPE-E001-002',
+  'DPE-E001-003',
+  'DPE-E001-004'
+];
 const SMS_OPTION_BLUEPRINTS = [
   {
     ...OPTION_BLUEPRINTS[0],
@@ -597,16 +607,49 @@ async function getIndicatorRealData(indicatorId) {
       return indicators.find(i => i.id === indicatorId);
     })();
 
-    const [history, targets, indicator] = await Promise.all([
+    // Obtener history, targets y metas
+    const [history, targets, indicator, metas] = await Promise.all([
       getIndicatorHistory(indicatorId, { limit: 120 }),
       getIndicatorTargets(indicatorId),
-      indicatorPromise
+      indicatorPromise,
+      getIndicatorMetas(indicatorId) // Agregar esta línea
     ]);
+
+    // Si tiene metas con ALTO y MEDIO, construir un history virtual
+    if (metas && metas.length > 0) {
+      const hasAltoyMedio = metas.some(m => m.escenario === 'ALTO' || m.escenario === 'MEDIO');
+      
+      if (hasAltoyMedio) {
+        // Crear un "history" virtual basado en las metas ALTO
+        const virtualHistory = metas
+          .filter(m => m.escenario === 'ALTO')
+          .map(m => ({
+            id: m.id,
+            indicador_id: m.indicador_id,
+            anio: m.anio,
+            mes: m.mes,
+            valor: m.valor,
+            fecha_captura: m.fecha_captura,
+            estatus_validacion: 'VALIDADO'
+          }));
+        
+        // Si no hay history real pero sí metas, usar las metas como history
+        if ((!history || history.length === 0) && virtualHistory.length > 0) {
+          return {
+            indicator,
+            history: virtualHistory,
+            targets: targets || [],
+            metas: metas // Agregar las metas al retorno
+          };
+        }
+      }
+    }
 
     return {
       indicator,
       history: history || [],
-      targets: targets || []
+      targets: targets || [],
+      metas: metas || [] // Agregar las metas al retorno
     };
   } catch (error) {
     console.error('Error obteniendo datos del indicador:', error);
@@ -1020,7 +1063,34 @@ function findIndicatorByDataKey(indicators, dataKey) {
   if (window.DEBUG_INDICATORS) {
     console.warn(`❌ No se encontró match para ${dataKey}`);
   }
+
+  function findIndicatorByDataKey(indicators, dataKey) {
+  // ... código existente ...
   
+  // Agregar esta verificación al final, antes del return null:
+  // Buscar por clave directamente
+  const byClaveIndicator = indicators.find(ind => 
+    ind.clave && INDICADORES_META_ESPECIAL.includes(ind.clave)
+  );
+  
+  if (byClaveIndicator && dataKey && dataKey.includes(byClaveIndicator.clave)) {
+    return byClaveIndicator;
+  }
+  
+  // También buscar por nombre parcial si el dataKey contiene palabras clave
+  if (dataKey) {
+    const palabrasClave = ['carga transportada', 'operatividad', 'sesiones', 'mantenimientos', 
+                          'calidad de servicio', 'usuarios satisfechos', 'tiempo de acceso', 'check-in'];
+    
+    for (const palabra of palabrasClave) {
+      if (dataKey.toLowerCase().includes(palabra)) {
+        const found = indicators.find(ind => 
+          ind.nombre && ind.nombre.toLowerCase().includes(palabra)
+        );
+        if (found) return found;
+      }
+    }
+  }
   return null;
 }
 
@@ -2994,12 +3064,12 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
       return;
     }
 
-    // Verificar si el indicador tiene metas con escenarios ALTO y MEDIO
-    const metas = await getIndicatorMetas(foundIndicator.id);
+    // Primero obtener realData con la función modificada
+    const realData = await getIndicatorRealData(foundIndicator.id);
     
-    // Filtrar metas del año actual con escenarios ALTO y MEDIO
+    // Verificar si tiene metas ALTO y MEDIO
     const currentYear = new Date().getFullYear();
-    const hasMetasAltoyMedio = metas.some(meta => 
+    const hasMetasAltoyMedio = realData && realData.metas && realData.metas.some(meta => 
       meta.anio === currentYear && 
       (meta.escenario === 'ALTO' || meta.escenario === 'MEDIO')
     );
@@ -3011,7 +3081,7 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
       const renderModal = (chartType) => {
         root.innerHTML = buildIndicatorMetasModalMarkup({
           indicator: foundIndicator,
-          metas: metas,
+          metas: realData.metas,
           chartType: chartType
         });
         
@@ -3043,7 +3113,7 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
         document.addEventListener('keydown', escListener);
         
         // Preparar datos para la gráfica
-        const currentYearMetas = metas.filter(meta => meta.anio === currentYear);
+        const currentYearMetas = realData.metas.filter(meta => meta.anio === currentYear);
         const metasByMonth = {};
         currentYearMetas.forEach(meta => {
           if (!metasByMonth[meta.mes]) {
@@ -3062,10 +3132,8 @@ async function openIndicatorModal({ label, dataKey, type, scenario }) {
       return;
     }
     
-    // Si no tiene metas ALTO y MEDIO, continuar con el flujo normal
-    const realData = await getIndicatorRealData(foundIndicator.id);
-    
-    if (!realData || !realData.history.length) {
+    // Si no tiene datos reales ni metas, mostrar mensaje de sin datos
+    if (!realData || !realData.history || !realData.history.length) {
       root.innerHTML = `
         <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" data-modal-overlay>
           <div class="rounded-2xl bg-white p-8 shadow-2xl max-w-md">
