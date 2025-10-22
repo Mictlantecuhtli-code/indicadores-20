@@ -20,6 +20,55 @@ const months = Array.from({ length: 12 }).map((_, index) => ({
 const TARGET_YEARS = Array.from({ length: 11 }).map((_, index) => 2022 + index);
 
 const SCENARIOS = ['BAJO', 'MEDIO', 'ALTO'];
+const INDICADORES_META_ESPECIAL = [
+  'DPE-K053-001',
+  'DPE-K053-002', 
+  'DPE-K053-003',
+  'DPE-K053-004',
+  'DPE-E001-001',
+  'DPE-E001-002',
+  'DPE-E001-003',
+  'DPE-E001-004'
+];
+
+// Función para verificar si un indicador usa metas especiales
+function usaMetasEspeciales(indicator) {
+  return indicator && INDICADORES_META_ESPECIAL.includes(indicator.clave);
+}
+
+// Función para obtener el label del escenario
+function getScenarioLabel(escenario, indicator) {
+  if (usaMetasEspeciales(indicator)) {
+    switch (escenario) {
+      case 'ALTO':
+        return 'Meta Alcanzada';
+      case 'MEDIO':
+        return 'Meta Programada';
+      default:
+        return escenario;
+    }
+  }
+  
+  // Para otros indicadores, usar las etiquetas normales
+  switch (escenario) {
+    case 'BAJO':
+      return 'Escenario Bajo';
+    case 'MEDIO':
+      return 'Escenario Mediano';
+    case 'ALTO':
+      return 'Escenario Alto';
+    default:
+      return escenario;
+  }
+}
+
+function formatScenarioDisplay(escenario, indicator) {
+  const label = getScenarioLabel(escenario, indicator);
+  if (usaMetasEspeciales(indicator)) {
+    return `<span class="font-medium">${label}</span>`;
+  }
+  return label;
+}
 
 let currentAreas = [];
 let currentIndicators = [];
@@ -175,7 +224,7 @@ function buildTargetRows(targets, scenario, unitLabel = '') {
                 data-original-value="${normalizedValue}"
                 data-target-id="${target?.id ?? ''}"
                 value="${normalizedValue}"
-                placeholder="Captura la meta${unitLabel ? ` (${unitLabel})` : ''}"
+                placeholder="${usaMetasEspeciales(indicator) ? 'Valor' : 'Captura la meta'}${unitLabel ? ` (${unitLabel})` : ''}"
               />
             </div>
           </td>
@@ -497,9 +546,14 @@ async function loadIndicatorContent(container, indicatorId, forceReload = false)
     const targetYearOptions = TARGET_YEARS.map(year => `
       <option value="${year}" ${year === initialTargetYear ? 'selected' : ''}>${year}</option>
     `).join('');
-    const targetScenarioOptions = SCENARIOS.map(scenario => `
-      <option value="${scenario}" ${scenario === initialTargetScenario ? 'selected' : ''}>${scenario}</option>
-    `).join('');
+    const targetScenarioOptions = usaMetasEspeciales(indicator) 
+      ? `
+        <option value="ALTO">Meta Alcanzada</option>
+        <option value="MEDIO" ${initialTargetScenario === 'MEDIO' ? 'selected' : ''}>Meta Programada</option>
+      `
+      : SCENARIOS.map(scenario => `
+        <option value="${scenario}" ${scenario === initialTargetScenario ? 'selected' : ''}>${getScenarioLabel(scenario, indicator)}</option>
+      `).join('');
     const targetRowsHtml = buildTargetRows(targets, initialTargetScenario, indicator.unidad_medida);
 
     container.innerHTML = `
@@ -590,8 +644,8 @@ async function loadIndicatorContent(container, indicatorId, forceReload = false)
                     ${targetYearOptions}
                   </select>
                 </label>
-                <label class="flex flex-col gap-1 text-sm text-slate-600">
-                  Escenario
+                  <label class="flex flex-col gap-1 text-sm text-slate-600">
+                  ${usaMetasEspeciales(indicator) ? 'Tipo de Meta' : 'Escenario'}
                   <select name="scenario" class="rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-400">
                     ${targetScenarioOptions}
                   </select>
@@ -622,7 +676,11 @@ async function loadIndicatorContent(container, indicatorId, forceReload = false)
                   Actualizar metas
                 </button>
               </div>
-              <p class="text-[11px] text-slate-400">Se guardarán únicamente los meses con cambios para el escenario seleccionado.</p>
+              <p class="text-[11px] text-slate-400">
+                ${usaMetasEspeciales(indicator) 
+                  ? 'Se guardarán únicamente los meses con cambios. Meta Alcanzada = Escenario ALTO, Meta Programada = Escenario MEDIO.' 
+                  : 'Se guardarán únicamente los meses con cambios para el escenario seleccionado.'}
+              </p>
             </form>
           </div>
         </div>
