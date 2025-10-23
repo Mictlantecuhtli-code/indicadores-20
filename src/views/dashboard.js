@@ -1,4 +1,3 @@
-
 import { getAreas, getIndicators, getIndicatorHistory, getIndicatorTargets, getCapturasFauna } from '../services/supabaseClient.js';
 import { formatValueByUnit } from '../utils/formatters.js';
 import { isFaunaImpactRateIndicator } from '../utils/smsIndicators.js';
@@ -533,7 +532,7 @@ const QUARTER_LABELS = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3', 'Trimestre 
 
 const SCENARIO_LABELS = {
   BAJO: 'Escenario Bajo',
-  MEDIO: 'Escenario Mediano',
+  MEDIO: 'Escenario Medio',
   ALTO: 'Escenario Alto',
   OBJETIVO: 'Objetivo',
   'ALERTA 1': 'Nivel de alerta 1',
@@ -569,7 +568,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   },
   'DPE-K053-002': {
@@ -577,7 +577,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   },
   'DPE-K053-003': {
@@ -585,7 +586,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   },
   'DPE-K053-004': {
@@ -593,7 +595,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   },
   'DPE-E001-001': {
@@ -601,7 +604,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   },
   'DPE-E001-002': {
@@ -609,7 +613,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   },
   'DPE-E001-003': {
@@ -617,7 +622,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   },
   'DPE-E001-004': {
@@ -625,7 +631,8 @@ const INDICATOR_CODE_OVERRIDES = {
     defaultScenario: 'MEDIO',
     scenarios: ['MEDIO'],
     scenarioLabels: {
-      MEDIO: 'Meta Programada'
+      MEDIO: 'Meta Programada',
+      ALTO: 'Meta Alcanzada'
     }
   }
 };
