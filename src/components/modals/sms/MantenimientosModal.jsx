@@ -25,7 +25,8 @@ import ErrorState from '../shared/ErrorState';
 import useCSVExport from '../../../hooks/shared/useCSVExport';
 
 import { getMantenimientosPavimentos, getYearsAvailableMantenimientos } from '../../../lib/supabaseClient';
-import { formatNumber, formatPercent, MONTH_LABELS } from '../../../utils/shared';
+import { formatNumber, formatPercent } from '../../../utils/shared';
+import { calculateAverage, calculateTotal, prepareMonthlyData } from '../../../utils/sms/chartHelpers';
 
 export default function MantenimientosModal({ title, onClose, meta = 100 }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -50,31 +51,35 @@ export default function MantenimientosModal({ title, onClose, meta = 100 }) {
   const chartData = useMemo(() => {
     if (!mantenimientos?.length) return [];
 
-    return MONTH_LABELS.map((monthLabel, index) => {
-      const month = index + 1;
-      const record = mantenimientos.find(m => m.mes === month);
-
-      return {
-        month: monthLabel,
-        monthNumber: month,
-        programados: record?.programados ?? null,
-        realizados: record?.realizados ?? null,
-        porcentaje: record?.porcentaje_cumplimiento ?? null,
-        meta
-      };
-    });
+    return prepareMonthlyData(mantenimientos, 'mes', [
+      'programados',
+      'realizados',
+      'porcentaje_cumplimiento'
+    ]).map(item => ({
+      month: item.month,
+      monthNumber: item.monthNumber,
+      programados: item.programados ?? null,
+      realizados: item.realizados ?? null,
+      porcentaje: item.porcentaje_cumplimiento ?? null,
+      meta
+    }));
   }, [mantenimientos, meta]);
 
   // Estadísticas
   const stats = useMemo(() => {
-    if (!mantenimientos?.length) return null;
+    if (!chartData.length) return null;
 
-    const totalProgramados = mantenimientos.reduce((sum, m) => sum + (m.programados || 0), 0);
-    const totalRealizados = mantenimientos.reduce((sum, m) => sum + (m.realizados || 0), 0);
+    const totalProgramados = calculateTotal(chartData.map(item => item.programados));
+    const totalRealizados = calculateTotal(chartData.map(item => item.realizados));
     const cumplimiento = totalProgramados > 0 ? (totalRealizados / totalProgramados) * 100 : null;
 
-    return { totalProgramados, totalRealizados, cumplimiento };
-  }, [mantenimientos]);
+    return {
+      totalProgramados,
+      totalRealizados,
+      cumplimiento,
+      promedioPorcentaje: calculateAverage(chartData.map(item => item.porcentaje))
+    };
+  }, [chartData]);
 
   // Export CSV
   const handleExport = () => {

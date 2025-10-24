@@ -3,7 +3,7 @@ import { formatValueByUnit } from '../utils/formatters.js';
 import { isFaunaImpactRateIndicator } from '../utils/smsIndicators.js';
 import { renderError, renderLoading } from '../ui/feedback.js';
 // Sistema de puentes React
-import { mountReactModal, unmountReactModal } from '../bridges/reactBridge.jsx';
+import { mountReactModal, unmountReactModal, mountEmbeddedComponent } from '../bridges/reactBridge.jsx';
 
 const OPTION_BLUEPRINTS = [
   {
@@ -129,33 +129,41 @@ const SMS_OBJECTIVE_BLUEPRINTS = [
 },
 
 // Objetivo 3 - Combinar los PCI y corregir orden
-{
-  id: 'objective-3',
-  title: 'Objetivo 3',
-  description: 'Mantener la disponibilidad de pistas dentro de los parámetros establecidos.',
-  indicatorMatchers: [
-    {
-      codes: ['SMS-05A'],
-      keywords: [],
-      fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
-    },
-    {
-      codes: ['SMS-05B'],
-      keywords: [],
-      fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
-    },
-    {
-      codes: ['SMS-06'],
-      keywords: [],
-      fallbackTitle: 'Porcentaje de mantenimientos programados a pavimentos'
-    },
-    {
-      codes: ['SMS-07'],
-      keywords: [],
-      fallbackTitle: 'Porcentaje de disponibilidad de pistas'
-    }
-  ]
-},
+  {
+    id: 'objective-3',
+    title: 'Objetivo 3',
+    description: 'Mantener la disponibilidad de pistas dentro de los parámetros establecidos.',
+    indicatorMatchers: [
+      {
+        codes: ['SMS-05A'],
+        keywords: [],
+        fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
+      },
+      {
+        codes: ['SMS-05B'],
+        keywords: [],
+        fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
+      },
+      {
+        codes: ['SMS-06'],
+        keywords: [],
+        fallbackTitle: 'Porcentaje de mantenimientos programados a pavimentos'
+      },
+      {
+        codes: ['SMS-07'],
+        keywords: [],
+        fallbackTitle: 'Porcentaje de disponibilidad de pistas'
+      }
+    ],
+    customViews: [
+      {
+        id: 'sms-pci-comparativo',
+        type: 'pci-comparativo',
+        title: 'Comparativo PCI (Pistas 01L vs 01R)',
+        description: 'Comparativa mensual de los indicadores SMS-05A y SMS-05B.'
+      }
+    ]
+  },
   {
     id: 'objective-4',
     title: 'Objetivo 4',
@@ -241,6 +249,7 @@ const SMS_SECTION_ICON_CLASS = 'fa-solid fa-shield-halved';
 const DIRECTION_GROUP_PREFIX = 'direction-indicator-';
 
 let cachedIndicators = null;
+let pciComparativoRoot = null;
 
 function registerGroupDefinition(definition) {
   if (!definition || !definition.id) {
@@ -1162,6 +1171,18 @@ function findIndicatorByDataKey(indicators, dataKey) {
   }
   
   return null;
+}
+
+function findIndicatorByCode(indicators, code) {
+  if (!code) return null;
+  const normalizedCode = code.toString().trim().toUpperCase();
+  if (!normalizedCode) return null;
+
+  return (indicators || []).find(indicator => {
+    const indicatorCode = indicator?.clave ?? indicator?.codigo ?? null;
+    if (!indicatorCode) return false;
+    return indicatorCode.toString().trim().toUpperCase() === normalizedCode;
+  }) ?? null;
 }
 
 function sum(values = []) {
@@ -4051,6 +4072,19 @@ function buildSectionsMarkup(sections) {
   return sections.map(section => {
     const isInitiallyOpen = section.id === DEFAULT_ACCORDION_ID;
     const content = buildIndicatorSectionContent(section);
+    const panelClass = 'border-t border-slate-100 bg-slate-50/60 px-6 py-5';
+    const panelAttributes = [
+      `class="${panelClass}"`,
+      `data-accordion-panel="${section.id}"`
+    ];
+
+    if (section.id === SMS_SECTION_ID) {
+      panelAttributes.push('data-sms-section');
+    }
+
+    if (!isInitiallyOpen) {
+      panelAttributes.push('hidden');
+    }
 
     return `
       <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" data-accordion-section="${
@@ -4075,9 +4109,7 @@ function buildSectionsMarkup(sections) {
             isInitiallyOpen ? 'rotate-180' : ''
           }" data-accordion-chevron></i>
         </button>
-        <div class="border-t border-slate-100 bg-slate-50/60 px-6 py-5" data-accordion-panel="${section.id}" ${
-          isInitiallyOpen ? '' : 'hidden'
-        }>
+        <div ${panelAttributes.join(' ')}>
           ${content}
         </div>
       </section>
@@ -4193,6 +4225,11 @@ function initGroupControls(container) {
 
     if (viewType === 'fauna-capture') {
       await openFaunaCaptureModal(viewTitle);
+      return;
+    }
+
+    if (viewType === 'pci-comparativo') {
+      mountPCIComparativo();
       return;
     }
 
@@ -4736,6 +4773,48 @@ async function openSMSDisponibilidadModal(title) {
   });
 }
 
+function mountPCIComparativo() {
+  const indicators = Array.isArray(cachedIndicators) ? cachedIndicators : [];
+  const sms05A = findIndicatorByCode(indicators, 'SMS-05A');
+  const sms05B = findIndicatorByCode(indicators, 'SMS-05B');
+
+  if (!sms05A || !sms05B) {
+    console.warn('Indicadores PCI no encontrados');
+    return;
+  }
+
+  if (pciComparativoRoot) {
+    try {
+      pciComparativoRoot.unmount();
+    } catch (error) {
+      console.error('Error al desmontar comparativo PCI:', error);
+    }
+    pciComparativoRoot = null;
+  }
+
+  let container = document.getElementById('pci-comparativo-container');
+  if (!container) {
+    const smsSection = document.querySelector('[data-sms-section]');
+    if (!smsSection) {
+      console.warn('No se encontró la sección SMS para montar el comparativo PCI');
+      return;
+    }
+
+    container = document.createElement('div');
+    container.id = 'pci-comparativo-container';
+    container.className = 'mt-6';
+    smsSection.appendChild(container);
+  } else {
+    container.innerHTML = '';
+  }
+
+  pciComparativoRoot = mountEmbeddedComponent('pci-comparativo-container', 'pci-comparativo', {
+    indicadorA: sms05A,
+    indicadorB: sms05B,
+    meta: 70
+  });
+}
+
 export async function renderDashboard(container) {
   if (!container) return;
 
@@ -4752,6 +4831,8 @@ export async function renderDashboard(container) {
 
     initGroupControls(container);
     initOptionModals(container);
+
+    mountPCIComparativo();
 
     const directionsContainer = container.querySelector('[data-direction-sections]');
     if (directionsContainer) {

@@ -25,7 +25,8 @@ import ErrorState from '../shared/ErrorState';
 import useCSVExport from '../../../hooks/shared/useCSVExport';
 
 import { getDisponibilidadPistas, getYearsAvailableDisponibilidad } from '../../../lib/supabaseClient';
-import { formatPercent, MONTH_LABELS } from '../../../utils/shared';
+import { formatPercent } from '../../../utils/shared';
+import { calculateAverage, prepareMonthlyData } from '../../../utils/sms/chartHelpers';
 
 export default function DisponibilidadPistasModal({ title, onClose, meta = 98 }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -50,16 +51,14 @@ export default function DisponibilidadPistasModal({ title, onClose, meta = 98 })
   const chartData = useMemo(() => {
     if (!disponibilidad?.length) return [];
 
-    return MONTH_LABELS.map((monthLabel, index) => {
-      const month = index + 1;
-      const records = disponibilidad.filter(d => d.mes === month);
-
-      const pista01L = records.find(r => r.pista === '01L')?.porcentaje_disponibilidad ?? null;
-      const pista01R = records.find(r => r.pista === '01R')?.porcentaje_disponibilidad ?? null;
+    return prepareMonthlyData(disponibilidad, 'mes').map(item => {
+      const records = disponibilidad.filter(record => record.mes === item.monthNumber);
+      const pista01L = records.find(record => record.pista === '01L')?.porcentaje_disponibilidad ?? null;
+      const pista01R = records.find(record => record.pista === '01R')?.porcentaje_disponibilidad ?? null;
 
       return {
-        month: monthLabel,
-        monthNumber: month,
+        month: item.month,
+        monthNumber: item.monthNumber,
         pista01L,
         pista01R,
         meta
@@ -69,23 +68,18 @@ export default function DisponibilidadPistasModal({ title, onClose, meta = 98 })
 
   // Estadísticas
   const stats = useMemo(() => {
-    if (!disponibilidad?.length) return null;
+    if (!chartData.length) return null;
 
-    const pista01LRecords = disponibilidad.filter(d => d.pista === '01L');
-    const pista01RRecords = disponibilidad.filter(d => d.pista === '01R');
+    const pista01LValues = chartData.map(item => item.pista01L);
+    const pista01RValues = chartData.map(item => item.pista01R);
+    const allValues = [...pista01LValues, ...pista01RValues].filter(value => value != null);
 
-    const promedio01L = pista01LRecords.length > 0
-      ? pista01LRecords.reduce((sum, d) => sum + (d.porcentaje_disponibilidad || 0), 0) / pista01LRecords.length
-      : null;
-
-    const promedio01R = pista01RRecords.length > 0
-      ? pista01RRecords.reduce((sum, d) => sum + (d.porcentaje_disponibilidad || 0), 0) / pista01RRecords.length
-      : null;
-
-    const promedioGeneral = disponibilidad.reduce((sum, d) => sum + (d.porcentaje_disponibilidad || 0), 0) / disponibilidad.length;
-
-    return { promedio01L, promedio01R, promedioGeneral };
-  }, [disponibilidad]);
+    return {
+      promedio01L: calculateAverage(pista01LValues),
+      promedio01R: calculateAverage(pista01RValues),
+      promedioGeneral: calculateAverage(allValues)
+    };
+  }, [chartData]);
 
   // Export CSV
   const handleExport = () => {

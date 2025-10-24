@@ -28,7 +28,8 @@ import {
   getYearsAvailableLuces,
   getPistasAvailableLuces
 } from '../../../lib/supabaseClient';
-import { formatNumber, formatPercent, MONTH_LABELS } from '../../../utils/shared';
+import { formatNumber, formatPercent } from '../../../utils/shared';
+import { calculateAverage, prepareMonthlyData } from '../../../utils/sms/chartHelpers';
 
 export default function IluminacionModal({ title, onClose }) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -68,34 +69,37 @@ export default function IluminacionModal({ title, onClose }) {
   const chartData = useMemo(() => {
     if (!mediciones?.length) return [];
 
-    return MONTH_LABELS.map((monthLabel, index) => {
-      const month = index + 1;
-      const record = mediciones.find(m => m.mes === month);
-
-      return {
-        month: monthLabel,
-        monthNumber: month,
-        operativas: record?.luces_operativas ?? null,
-        totales: record?.luces_totales ?? null,
-        porcentaje: record?.porcentaje_operativas ?? null
-      };
-    });
+    return prepareMonthlyData(mediciones, 'mes', [
+      'luces_operativas',
+      'luces_totales',
+      'porcentaje_operativas'
+    ]).map(item => ({
+      month: item.month,
+      monthNumber: item.monthNumber,
+      operativas: item.luces_operativas ?? null,
+      totales: item.luces_totales ?? null,
+      porcentaje: item.porcentaje_operativas ?? null
+    }));
   }, [mediciones]);
 
   // Estadísticas
   const stats = useMemo(() => {
-    if (!mediciones?.length) return null;
+    if (!chartData.length) return null;
 
-    const promedioOperativas = mediciones.reduce((sum, m) => sum + (m.luces_operativas || 0), 0) / mediciones.length;
-    const promedioTotales = mediciones.reduce((sum, m) => sum + (m.luces_totales || 0), 0) / mediciones.length;
-    const promedioPorcentaje = mediciones.reduce((sum, m) => sum + (m.porcentaje_operativas || 0), 0) / mediciones.length;
+    const operativas = chartData.map(item => item.operativas);
+    const totales = chartData.map(item => item.totales);
+    const porcentajes = chartData.map(item => item.porcentaje);
+
+    const promedioOperativas = calculateAverage(operativas);
+    const promedioTotales = calculateAverage(totales);
+    const promedioPorcentaje = calculateAverage(porcentajes);
 
     return {
-      promedioOperativas: Math.round(promedioOperativas),
-      promedioTotales: Math.round(promedioTotales),
+      promedioOperativas: promedioOperativas != null ? Math.round(promedioOperativas) : null,
+      promedioTotales: promedioTotales != null ? Math.round(promedioTotales) : null,
       promedioPorcentaje: promedioPorcentaje
     };
-  }, [mediciones]);
+  }, [chartData]);
 
   // Export CSV
   const handleExport = () => {

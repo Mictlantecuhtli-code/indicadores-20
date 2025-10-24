@@ -706,6 +706,47 @@ export async function getYearsAvailableDisponibilidad() {
   return uniqueYears;
 }
 
+export async function getPCIMediciones({ anio = null, pista = null } = {}) {
+  let query = supabase
+    .from('pci_mediciones')
+    .select('*')
+    .order('anio', { ascending: true })
+    .order('mes', { ascending: true });
+
+  if (Number.isFinite(anio)) {
+    query = query.eq('anio', anio);
+  }
+
+  if (pista) {
+    query = query.eq('pista', pista);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error getPCIMediciones:', error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+export async function getYearsAvailablePCI() {
+  const { data, error } = await supabase
+    .from('pci_mediciones')
+    .select('anio');
+
+  if (error) {
+    console.error('Error getYearsAvailablePCI:', error);
+    return [];
+  }
+
+  const uniqueYears = Array.from(
+    new Set((data || []).map(item => Number(item.anio)).filter(yearValue => Number.isFinite(yearValue)))
+  ).sort((a, b) => b - a);
+
+  return uniqueYears;
+}
+
 export async function saveMeasurement(payload) {
   const sanitized = prepareMeasurementPayload(payload ? { ...payload } : payload, 'PENDIENTE');
   const { data, error } = await supabase.from('mediciones').insert(sanitized).select().single();
