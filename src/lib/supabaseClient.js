@@ -517,6 +517,88 @@ export async function getCapturasFaunaResumen({ year } = {}) {
   return [];
 }
 
+export async function getYearsAvailableCapturas() {
+  const relations = ['v_capturas_especie'];
+
+  for (const relation of relations) {
+    const { data, error } = await supabase
+      .from(relation)
+      .select('anio', { distinct: true })
+      .order('anio', { ascending: false });
+
+    if (!error) {
+      const years = Array.isArray(data)
+        ? data
+            .map(item => Number(item.anio))
+            .filter(year => Number.isFinite(year))
+        : [];
+
+      return Array.from(new Set(years)).sort((a, b) => b - a);
+    }
+
+    if (!isRelationNotFound(error)) {
+      throw error;
+    }
+  }
+
+  return [];
+}
+
+export async function getCapturasFauna({ anio } = {}) {
+  const relations = ['v_capturas_especie'];
+
+  for (const relation of relations) {
+    let query = supabase
+      .from(relation)
+      .select('*')
+      .order('anio', { ascending: true })
+      .order('mes', { ascending: true });
+
+    if (Number.isFinite(anio)) {
+      query = query.eq('anio', anio);
+    }
+
+    const { data, error } = await query;
+
+    if (!error) {
+      const records = Array.isArray(data) ? data : [];
+      const normalized = [];
+
+      records.forEach(item => {
+        const year = Number(item.anio);
+        const month = Number(item.mes);
+
+        if (!Number.isFinite(year) || !Number.isFinite(month)) {
+          return;
+        }
+
+        const entries = [
+          { tipo_fauna: 'Aves', cantidad: Number(item.aves ?? 0) },
+          { tipo_fauna: 'Mamifero', cantidad: Number(item.mamiferos ?? 0) },
+          { tipo_fauna: 'Reptil', cantidad: Number(item.reptiles ?? 0) }
+        ];
+
+        entries.forEach(entry => {
+          normalized.push({
+            anio: year,
+            mes: month,
+            tipo_fauna: entry.tipo_fauna,
+            cantidad: Number.isFinite(entry.cantidad) ? entry.cantidad : 0
+          });
+        });
+      });
+
+      return normalized;
+    }
+
+    if (!isRelationNotFound(error)) {
+      throw error;
+    }
+  }
+
+  return [];
+}
+
 export async function saveMeasurement(payload) {
   const sanitized = prepareMeasurementPayload(payload ? { ...payload } : payload, 'PENDIENTE');
   const { data, error } = await supabase.from('mediciones').insert(sanitized).select().single();
