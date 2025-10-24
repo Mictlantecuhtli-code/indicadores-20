@@ -6,8 +6,11 @@
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Importar modales React (por ahora solo Fauna como POC)
+// Importar modales React
 import FaunaCaptureModal from '../components/modals/sms/FaunaCaptureModal';
+import IluminacionModal from '../components/modals/sms/IluminacionModal';
+import MantenimientosModal from '../components/modals/sms/MantenimientosModal';
+import DisponibilidadPistasModal from '../components/modals/sms/DisponibilidadPistasModal';
 
 // QueryClient para React Query
 const queryClient = new QueryClient({
@@ -23,8 +26,10 @@ const queryClient = new QueryClient({
 
 // Registro de modales disponibles
 const MODAL_COMPONENTS = {
-  'fauna-capture': FaunaCaptureModal
-  // Más modales se agregarán en fases posteriores
+  'fauna-capture': FaunaCaptureModal,
+  iluminacion: IluminacionModal,
+  mantenimientos: MantenimientosModal,
+  'disponibilidad-pistas': DisponibilidadPistasModal
 };
 
 let currentRoot = null;

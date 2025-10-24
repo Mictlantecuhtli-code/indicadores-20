@@ -176,6 +176,11 @@ const SMS_OBJECTIVE_BLUEPRINTS = [
   }
 ];
 
+const SMS_FAUNA_CODES = new Set(['SMS-01', 'SMS-02']);
+const SMS_ILUMINACION_CODES = new Set(['SMS-03', 'SMS-03A', 'SMS-03B', 'SMS-04']);
+const SMS_MANTENIMIENTOS_CODES = new Set(['SMS-06']);
+const SMS_DISPONIBILIDAD_CODES = new Set(['SMS-07']);
+
 
 const OPTION_ICON_CLASSES = {
   monthly: 'fa-solid fa-chart-line',
@@ -4188,6 +4193,21 @@ function initGroupControls(container) {
 
     if (viewType === 'fauna-capture') {
       await openFaunaCaptureModal(viewTitle);
+      return;
+    }
+
+    if (viewType === 'iluminacion') {
+      await openSMSIluminacionModal(viewTitle);
+      return;
+    }
+
+    if (viewType === 'mantenimientos') {
+      await openSMSMantenimientosModal(viewTitle);
+      return;
+    }
+
+    if (viewType === 'disponibilidad-pistas') {
+      await openSMSDisponibilidadModal(viewTitle);
     }
   });
 }
@@ -4219,6 +4239,28 @@ function initDirectionIndicatorButtons(container) {
       const dataKey = button.dataset.indicatorDatakey || '';
       const type = button.dataset.indicatorType || '';
       const scenarioValue = normalizeScenarioValue(button.dataset.indicatorScenario || null);
+
+      const normalizedCode = code ? code.toString().trim().toUpperCase() : '';
+
+      if (normalizedCode && SMS_FAUNA_CODES.has(normalizedCode)) {
+        await openFaunaCaptureModal(name);
+        return;
+      }
+
+      if (normalizedCode && SMS_ILUMINACION_CODES.has(normalizedCode)) {
+        await openSMSIluminacionModal(name);
+        return;
+      }
+
+      if (normalizedCode && SMS_MANTENIMIENTOS_CODES.has(normalizedCode)) {
+        await openSMSMantenimientosModal(name);
+        return;
+      }
+
+      if (normalizedCode && SMS_DISPONIBILIDAD_CODES.has(normalizedCode)) {
+        await openSMSDisponibilidadModal(name);
+        return;
+      }
 
       if (dataKey) {
         await openIndicatorModal({
@@ -4661,6 +4703,33 @@ async function renderDirections(container) {
 async function openFaunaCaptureModal(title) {
   mountReactModal('fauna-capture', {
     title: title || 'Capturas de Fauna',
+    onClose: () => {
+      unmountReactModal();
+    }
+  });
+}
+
+async function openSMSIluminacionModal(title) {
+  mountReactModal('iluminacion', {
+    title: title || 'Sistema de Iluminación',
+    onClose: () => {
+      unmountReactModal();
+    }
+  });
+}
+
+async function openSMSMantenimientosModal(title) {
+  mountReactModal('mantenimientos', {
+    title: title || 'Mantenimientos Programados',
+    onClose: () => {
+      unmountReactModal();
+    }
+  });
+}
+
+async function openSMSDisponibilidadModal(title) {
+  mountReactModal('disponibilidad-pistas', {
+    title: title || 'Disponibilidad de Pistas',
     onClose: () => {
       unmountReactModal();
     }

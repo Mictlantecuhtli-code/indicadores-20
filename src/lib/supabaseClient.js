@@ -453,15 +453,16 @@ export async function getIndicatorHistory(indicadorId, { limit = 24 } = {}) {
   return [];
 }
 
-export async function getMedicionesLucesDetalle({ year = null, pista = null } = {}) {
+export async function getMedicionesLucesDetalle({ anio = null, year = null, pista = null } = {}) {
   let query = supabase
     .from('mediciones_luces_detalle')
     .select('*')
     .order('anio', { ascending: true })
     .order('mes', { ascending: true });
 
-  if (Number.isFinite(year)) {
-    query = query.eq('anio', year);
+  const resolvedYear = Number.isFinite(anio) ? anio : Number.isFinite(year) ? year : null;
+  if (Number.isFinite(resolvedYear)) {
+    query = query.eq('anio', resolvedYear);
   }
 
   if (pista) {
@@ -471,6 +472,38 @@ export async function getMedicionesLucesDetalle({ year = null, pista = null } = 
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getYearsAvailableLuces() {
+  const { data, error } = await supabase
+    .from('mediciones_luces_detalle')
+    .select('anio');
+
+  if (error) {
+    console.error('Error getYearsAvailableLuces:', error);
+    return [];
+  }
+
+  const uniqueYears = Array.from(
+    new Set((data || []).map(item => Number(item.anio)).filter(yearValue => Number.isFinite(yearValue)))
+  ).sort((a, b) => b - a);
+
+  return uniqueYears;
+}
+
+export async function getPistasAvailableLuces() {
+  const { data, error } = await supabase
+    .from('mediciones_luces_detalle')
+    .select('pista');
+
+  if (error) {
+    console.error('Error getPistasAvailableLuces:', error);
+    return [];
+  }
+
+  const uniquePistas = Array.from(new Set((data || []).map(item => item.pista).filter(Boolean))).sort();
+
+  return uniquePistas;
 }
 
 export async function getIndicatorTargets(indicadorId, { year } = {}) {
@@ -597,6 +630,80 @@ export async function getCapturasFauna({ anio } = {}) {
   }
 
   return [];
+}
+
+export async function getMantenimientosPavimentos({ anio = null } = {}) {
+  let query = supabase
+    .from('mantenimientos_pavimentos')
+    .select('*')
+    .order('anio', { ascending: true })
+    .order('mes', { ascending: true });
+
+  if (Number.isFinite(anio)) {
+    query = query.eq('anio', anio);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error getMantenimientosPavimentos:', error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+export async function getYearsAvailableMantenimientos() {
+  const { data, error } = await supabase
+    .from('mantenimientos_pavimentos')
+    .select('anio');
+
+  if (error) {
+    console.error('Error getYearsAvailableMantenimientos:', error);
+    return [];
+  }
+
+  const uniqueYears = Array.from(
+    new Set((data || []).map(item => Number(item.anio)).filter(yearValue => Number.isFinite(yearValue)))
+  ).sort((a, b) => b - a);
+
+  return uniqueYears;
+}
+
+export async function getDisponibilidadPistas({ anio = null } = {}) {
+  let query = supabase
+    .from('disponibilidad_pistas')
+    .select('*')
+    .order('anio', { ascending: true })
+    .order('mes', { ascending: true });
+
+  if (Number.isFinite(anio)) {
+    query = query.eq('anio', anio);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Error getDisponibilidadPistas:', error);
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+export async function getYearsAvailableDisponibilidad() {
+  const { data, error } = await supabase
+    .from('disponibilidad_pistas')
+    .select('anio');
+
+  if (error) {
+    console.error('Error getYearsAvailableDisponibilidad:', error);
+    return [];
+  }
+
+  const uniqueYears = Array.from(
+    new Set((data || []).map(item => Number(item.anio)).filter(yearValue => Number.isFinite(yearValue)))
+  ).sort((a, b) => b - a);
+
+  return uniqueYears;
 }
 
 export async function saveMeasurement(payload) {
