@@ -2,7 +2,7 @@ import {
   getIndicators,
   getIndicatorHistory,
   getIndicatorTargets
-} from '../services/supabaseClient.js';
+} from '../lib/supabaseClient.js';
 import { formatNumber } from '../utils/formatters.js';
 import { showToast } from '../ui/feedback.js';
 

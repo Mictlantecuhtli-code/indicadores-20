@@ -1,4 +1,4 @@
-import { getIndicators } from '../services/supabaseClient.js';
+import { getIndicators } from '../lib/supabaseClient.js';
 import { formatNumber, formatDate } from '../utils/formatters.js';
 import { renderLoading, renderError, showToast } from '../ui/feedback.js';
 

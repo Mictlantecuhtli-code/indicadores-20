@@ -1,13 +1,6 @@
-export function formatNumber(value, { decimals = 2 } = {}) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return '—';
-  }
+import { formatNumber as sharedFormatNumber } from './shared.js';
 
-  return Number(value).toLocaleString('es-MX', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals
-  });
-}
+export const formatNumber = sharedFormatNumber;
 
 function resolvePercentageFractionDigits(value, override) {
   if (typeof override === 'number' && override >= 0) {
@@ -96,7 +89,7 @@ export function formatValueByUnit(
     return formatPercentage(value, { decimals: percentageDecimals, scale: percentageScale });
   }
 
-  return formatNumber(value, { decimals: numberDecimals });
+  return sharedFormatNumber(value, { decimals: numberDecimals });
 }
 
 export function monthName(month) {

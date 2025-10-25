@@ -5,7 +5,7 @@ import {
   saveAirportRoute,
   deleteAirportRoute,
   saveRouteAirlines
-} from '../services/supabaseClient.js';
+} from '../lib/supabaseClient.js';
 import { renderLoading, renderError, showToast } from '../ui/feedback.js';
 import { getUserRole } from '../state/session.js';
 

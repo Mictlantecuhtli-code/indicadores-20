@@ -1,3 +1,5 @@
+import { MONTH_LABELS as FULL_MONTH_LABELS, MONTH_LABELS_SHORT } from './constants.js';
+
 /**
  * Utilidades compartidas entre Vanilla y React
  * Sin dependencias de DOM ni frameworks específicos
@@ -6,11 +8,27 @@
 /**
  * Formatear número con separador de miles
  */
-export function formatNumber(num) {
+export function formatNumber(num, options = {}) {
   if (num == null || !Number.isFinite(Number(num))) {
     return '—';
   }
-  return Number(num).toLocaleString('es-MX');
+
+  const { decimals, minimumFractionDigits, maximumFractionDigits } = options;
+  const localeOptions = {};
+
+  if (typeof decimals === 'number') {
+    localeOptions.minimumFractionDigits = decimals;
+    localeOptions.maximumFractionDigits = decimals;
+  } else {
+    if (typeof minimumFractionDigits === 'number') {
+      localeOptions.minimumFractionDigits = minimumFractionDigits;
+    }
+    if (typeof maximumFractionDigits === 'number') {
+      localeOptions.maximumFractionDigits = maximumFractionDigits;
+    }
+  }
+
+  return Number(num).toLocaleString('es-MX', localeOptions);
 }
 
 /**
@@ -67,15 +85,11 @@ export function calculateAverage(values) {
 /**
  * Obtener meses del año en español
  */
-export const MONTH_LABELS = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-];
+export const MONTH_LABELS = FULL_MONTH_LABELS;
 
 /**
  * Obtener mes corto
  */
 export function getShortMonth(monthIndex) {
-  const shorts = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  return shorts[monthIndex] || '';
+  return MONTH_LABELS_SHORT[monthIndex] || '';
 }

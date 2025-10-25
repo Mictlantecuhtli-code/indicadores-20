@@ -1,5 +1,6 @@
-import { getAreas, getIndicators, getIndicatorHistory, getIndicatorTargets } from '../services/supabaseClient.js';
+import { getAreas, getIndicators, getIndicatorHistory, getIndicatorTargets } from '../lib/supabaseClient.js';
 import { formatValueByUnit } from '../utils/formatters.js';
+import { CURRENT_YEAR } from '../utils/constants.js';
 import { isFaunaImpactRateIndicator } from '../utils/smsIndicators.js';
 import { renderError, renderLoading } from '../ui/feedback.js';
 // Sistema de puentes React
@@ -527,7 +528,6 @@ const BASE_ACCORDION_SECTIONS = [
 
 const DEFAULT_ACCORDION_ID = 'operativos';
 
-const CURRENT_YEAR = new Date().getFullYear();
 
 const MONTHS = [
   { index: 0, label: 'Enero', short: 'Ene' },
@@ -1510,7 +1510,7 @@ function computeForecastData(realData, type, { periods = 6 } = {}) {
     }
   };
 }
-function formatNumber(value) {
+function formatInteger(value) {
   if (value == null || Number.isNaN(Number(value))) return '—';
   return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 }).format(Number(value));
 }
@@ -1561,7 +1561,7 @@ function formatPercentage(value, digits = null) {
 function formatSignedNumber(value) {
   if (value == null || Number.isNaN(Number(value))) return '—';
   const absolute = Math.abs(Number(value));
-  const formatted = formatNumber(absolute);
+  const formatted = formatInteger(absolute);
   if (value > 0) return `+${formatted}`;
   if (value < 0) return `-${formatted}`;
   return formatted;
@@ -4224,7 +4224,7 @@ function initGroupControls(container) {
     const viewTitle = button.dataset.viewTitle;
 
     if (viewType === 'fauna-capture') {
-      await openFaunaCaptureModal(viewTitle);
+      handleSMSFaunaClick({ nombre: viewTitle });
       return;
     }
 
@@ -4234,17 +4234,17 @@ function initGroupControls(container) {
     }
 
     if (viewType === 'iluminacion') {
-      await openSMSIluminacionModal(viewTitle);
+      handleSMSIluminacionClick({ nombre: viewTitle });
       return;
     }
 
     if (viewType === 'mantenimientos') {
-      await openSMSMantenimientosModal(viewTitle);
+      handleSMSMantenimientosClick({ nombre: viewTitle });
       return;
     }
 
     if (viewType === 'disponibilidad-pistas') {
-      await openSMSDisponibilidadModal(viewTitle);
+      handleSMSDisponibilidadClick({ nombre: viewTitle });
     }
   });
 }
@@ -4279,23 +4279,16 @@ function initDirectionIndicatorButtons(container) {
 
       const normalizedCode = code ? code.toString().trim().toUpperCase() : '';
 
-      if (normalizedCode && SMS_FAUNA_CODES.has(normalizedCode)) {
-        await openFaunaCaptureModal(name);
-        return;
-      }
+      const indicator = {
+        nombre: name,
+        codigo: normalizedCode,
+        codigo_indicador: normalizedCode,
+        id: dataKey,
+        tipo: type,
+        escenario: scenarioValue
+      };
 
-      if (normalizedCode && SMS_ILUMINACION_CODES.has(normalizedCode)) {
-        await openSMSIluminacionModal(name);
-        return;
-      }
-
-      if (normalizedCode && SMS_MANTENIMIENTOS_CODES.has(normalizedCode)) {
-        await openSMSMantenimientosModal(name);
-        return;
-      }
-
-      if (normalizedCode && SMS_DISPONIBILIDAD_CODES.has(normalizedCode)) {
-        await openSMSDisponibilidadModal(name);
+      if (handleIndicatorClick(indicator)) {
         return;
       }
 
@@ -4737,36 +4730,58 @@ async function renderDirections(container) {
   }
 }
 
-async function openFaunaCaptureModal(title) {
+function resolveIndicatorTitle(indicator, fallback) {
+  if (typeof indicator === 'string') {
+    return indicator || fallback;
+  }
+
+  if (indicator && typeof indicator === 'object') {
+    return (
+      indicator.nombre ||
+      indicator.title ||
+      indicator.label ||
+      indicator.nombre_indicador ||
+      fallback
+    );
+  }
+
+  return fallback;
+}
+
+function handleSMSFaunaClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Capturas de Fauna');
   mountReactModal('fauna-capture', {
-    title: title || 'Capturas de Fauna',
+    title,
     onClose: () => {
       unmountReactModal();
     }
   });
 }
 
-async function openSMSIluminacionModal(title) {
+function handleSMSIluminacionClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Sistema de Iluminación');
   mountReactModal('iluminacion', {
-    title: title || 'Sistema de Iluminación',
+    title,
     onClose: () => {
       unmountReactModal();
     }
   });
 }
 
-async function openSMSMantenimientosModal(title) {
+function handleSMSMantenimientosClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Mantenimientos Programados');
   mountReactModal('mantenimientos', {
-    title: title || 'Mantenimientos Programados',
+    title,
     onClose: () => {
       unmountReactModal();
     }
   });
 }
 
-async function openSMSDisponibilidadModal(title) {
+function handleSMSDisponibilidadClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Disponibilidad de Pistas');
   mountReactModal('disponibilidad-pistas', {
-    title: title || 'Disponibilidad de Pistas',
+    title,
     onClose: () => {
       unmountReactModal();
     }
@@ -4813,6 +4828,44 @@ function mountPCIComparativo() {
     indicadorB: sms05B,
     meta: 70
   });
+}
+
+function handleIndicatorClick(indicator) {
+  if (!indicator) return false;
+
+  const rawCode = indicator.codigo_indicador || indicator.codigo || indicator.clave;
+  const code = (rawCode || '').toString().toUpperCase();
+
+  if (!code) {
+    return false;
+  }
+
+  if (SMS_FAUNA_CODES.has(code) || code.startsWith('SMS-01') || code.startsWith('SMS-02')) {
+    handleSMSFaunaClick(indicator);
+    return true;
+  }
+
+  if (SMS_ILUMINACION_CODES.has(code) || code.startsWith('SMS-03') || code.startsWith('SMS-04')) {
+    handleSMSIluminacionClick(indicator);
+    return true;
+  }
+
+  if (code.startsWith('SMS-05A') || code.startsWith('SMS-05B')) {
+    mountPCIComparativo();
+    return true;
+  }
+
+  if (SMS_MANTENIMIENTOS_CODES.has(code) || code.startsWith('SMS-06')) {
+    handleSMSMantenimientosClick(indicator);
+    return true;
+  }
+
+  if (SMS_DISPONIBILIDAD_CODES.has(code) || code.startsWith('SMS-07')) {
+    handleSMSDisponibilidadClick(indicator);
+    return true;
+  }
+
+  return false;
 }
 
 export async function renderDashboard(container) {

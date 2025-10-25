@@ -7,7 +7,7 @@ import {
   updateUserAreaPermissions,
   getAreas,
   createUser
-} from '../services/supabaseClient.js';
+} from '../lib/supabaseClient.js';
 import { formatDate } from '../utils/formatters.js';
 import { showToast, renderLoading, renderError } from '../ui/feedback.js';
 
