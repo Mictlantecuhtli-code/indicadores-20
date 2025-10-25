@@ -1,7 +1,10 @@
-import { getAreas, getIndicators, getIndicatorHistory, getIndicatorTargets, getCapturasFauna } from '../services/supabaseClient.js';
+import { getAreas, getIndicators, getIndicatorHistory, getIndicatorTargets } from '../lib/supabaseClient.js';
 import { formatValueByUnit } from '../utils/formatters.js';
+import { CURRENT_YEAR } from '../utils/constants.js';
 import { isFaunaImpactRateIndicator } from '../utils/smsIndicators.js';
 import { renderError, renderLoading } from '../ui/feedback.js';
+// Sistema de puentes React
+import { mountReactModal, unmountReactModal, mountEmbeddedComponent } from '../bridges/reactBridge.jsx';
 
 const OPTION_BLUEPRINTS = [
   {
@@ -127,33 +130,41 @@ const SMS_OBJECTIVE_BLUEPRINTS = [
 },
 
 // Objetivo 3 - Combinar los PCI y corregir orden
-{
-  id: 'objective-3',
-  title: 'Objetivo 3',
-  description: 'Mantener la disponibilidad de pistas dentro de los parámetros establecidos.',
-  indicatorMatchers: [
-    {
-      codes: ['SMS-05A'],
-      keywords: [],
-      fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
-    },
-    {
-      codes: ['SMS-05B'],
-      keywords: [],
-      fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
-    },
-    {
-      codes: ['SMS-06'],
-      keywords: [],
-      fallbackTitle: 'Porcentaje de mantenimientos programados a pavimentos'
-    },
-    {
-      codes: ['SMS-07'],
-      keywords: [],
-      fallbackTitle: 'Porcentaje de disponibilidad de pistas'
-    }
-  ]
-},
+  {
+    id: 'objective-3',
+    title: 'Objetivo 3',
+    description: 'Mantener la disponibilidad de pistas dentro de los parámetros establecidos.',
+    indicatorMatchers: [
+      {
+        codes: ['SMS-05A'],
+        keywords: [],
+        fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
+      },
+      {
+        codes: ['SMS-05B'],
+        keywords: [],
+        fallbackTitle: 'PCI (Índice de condiciones del pavimento)'
+      },
+      {
+        codes: ['SMS-06'],
+        keywords: [],
+        fallbackTitle: 'Porcentaje de mantenimientos programados a pavimentos'
+      },
+      {
+        codes: ['SMS-07'],
+        keywords: [],
+        fallbackTitle: 'Porcentaje de disponibilidad de pistas'
+      }
+    ],
+    customViews: [
+      {
+        id: 'sms-pci-comparativo',
+        type: 'pci-comparativo',
+        title: 'Comparativo PCI (Pistas 01L vs 01R)',
+        description: 'Comparativa mensual de los indicadores SMS-05A y SMS-05B.'
+      }
+    ]
+  },
   {
     id: 'objective-4',
     title: 'Objetivo 4',
@@ -173,6 +184,11 @@ const SMS_OBJECTIVE_BLUEPRINTS = [
     ]
   }
 ];
+
+const SMS_FAUNA_CODES = new Set(['SMS-01', 'SMS-02']);
+const SMS_ILUMINACION_CODES = new Set(['SMS-03', 'SMS-03A', 'SMS-03B', 'SMS-04']);
+const SMS_MANTENIMIENTOS_CODES = new Set(['SMS-06']);
+const SMS_DISPONIBILIDAD_CODES = new Set(['SMS-07']);
 
 
 const OPTION_ICON_CLASSES = {
@@ -234,6 +250,7 @@ const SMS_SECTION_ICON_CLASS = 'fa-solid fa-shield-halved';
 const DIRECTION_GROUP_PREFIX = 'direction-indicator-';
 
 let cachedIndicators = null;
+let pciComparativoRoot = null;
 
 function registerGroupDefinition(definition) {
   if (!definition || !definition.id) {
@@ -511,7 +528,6 @@ const BASE_ACCORDION_SECTIONS = [
 
 const DEFAULT_ACCORDION_ID = 'operativos';
 
-const CURRENT_YEAR = new Date().getFullYear();
 
 const MONTHS = [
   { index: 0, label: 'Enero', short: 'Ene' },
@@ -1157,6 +1173,18 @@ function findIndicatorByDataKey(indicators, dataKey) {
   return null;
 }
 
+function findIndicatorByCode(indicators, code) {
+  if (!code) return null;
+  const normalizedCode = code.toString().trim().toUpperCase();
+  if (!normalizedCode) return null;
+
+  return (indicators || []).find(indicator => {
+    const indicatorCode = indicator?.clave ?? indicator?.codigo ?? null;
+    if (!indicatorCode) return false;
+    return indicatorCode.toString().trim().toUpperCase() === normalizedCode;
+  }) ?? null;
+}
+
 function sum(values = []) {
   return values.reduce((acc, value) => acc + (Number(value) || 0), 0);
 }
@@ -1482,7 +1510,7 @@ function computeForecastData(realData, type, { periods = 6 } = {}) {
     }
   };
 }
-function formatNumber(value) {
+function formatInteger(value) {
   if (value == null || Number.isNaN(Number(value))) return '—';
   return new Intl.NumberFormat('es-MX', { maximumFractionDigits: 0 }).format(Number(value));
 }
@@ -1533,7 +1561,7 @@ function formatPercentage(value, digits = null) {
 function formatSignedNumber(value) {
   if (value == null || Number.isNaN(Number(value))) return '—';
   const absolute = Math.abs(Number(value));
-  const formatted = formatNumber(absolute);
+  const formatted = formatInteger(absolute);
   if (value > 0) return `+${formatted}`;
   if (value < 0) return `-${formatted}`;
   return formatted;
@@ -4044,6 +4072,19 @@ function buildSectionsMarkup(sections) {
   return sections.map(section => {
     const isInitiallyOpen = section.id === DEFAULT_ACCORDION_ID;
     const content = buildIndicatorSectionContent(section);
+    const panelClass = 'border-t border-slate-100 bg-slate-50/60 px-6 py-5';
+    const panelAttributes = [
+      `class="${panelClass}"`,
+      `data-accordion-panel="${section.id}"`
+    ];
+
+    if (section.id === SMS_SECTION_ID) {
+      panelAttributes.push('data-sms-section');
+    }
+
+    if (!isInitiallyOpen) {
+      panelAttributes.push('hidden');
+    }
 
     return `
       <section class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" data-accordion-section="${
@@ -4068,9 +4109,7 @@ function buildSectionsMarkup(sections) {
             isInitiallyOpen ? 'rotate-180' : ''
           }" data-accordion-chevron></i>
         </button>
-        <div class="border-t border-slate-100 bg-slate-50/60 px-6 py-5" data-accordion-panel="${section.id}" ${
-          isInitiallyOpen ? '' : 'hidden'
-        }>
+        <div ${panelAttributes.join(' ')}>
           ${content}
         </div>
       </section>
@@ -4185,7 +4224,27 @@ function initGroupControls(container) {
     const viewTitle = button.dataset.viewTitle;
 
     if (viewType === 'fauna-capture') {
-      await openFaunaCaptureModal(viewTitle);
+      handleSMSFaunaClick({ nombre: viewTitle });
+      return;
+    }
+
+    if (viewType === 'pci-comparativo') {
+      mountPCIComparativo();
+      return;
+    }
+
+    if (viewType === 'iluminacion') {
+      handleSMSIluminacionClick({ nombre: viewTitle });
+      return;
+    }
+
+    if (viewType === 'mantenimientos') {
+      handleSMSMantenimientosClick({ nombre: viewTitle });
+      return;
+    }
+
+    if (viewType === 'disponibilidad-pistas') {
+      handleSMSDisponibilidadClick({ nombre: viewTitle });
     }
   });
 }
@@ -4217,6 +4276,21 @@ function initDirectionIndicatorButtons(container) {
       const dataKey = button.dataset.indicatorDatakey || '';
       const type = button.dataset.indicatorType || '';
       const scenarioValue = normalizeScenarioValue(button.dataset.indicatorScenario || null);
+
+      const normalizedCode = code ? code.toString().trim().toUpperCase() : '';
+
+      const indicator = {
+        nombre: name,
+        codigo: normalizedCode,
+        codigo_indicador: normalizedCode,
+        id: dataKey,
+        tipo: type,
+        escenario: scenarioValue
+      };
+
+      if (handleIndicatorClick(indicator)) {
+        return;
+      }
 
       if (dataKey) {
         await openIndicatorModal({
@@ -4656,567 +4730,142 @@ async function renderDirections(container) {
   }
 }
 
-async function openFaunaCaptureModal(title) {
-  try {
-    const root = ensureModalContainer();
-    document.body.classList.add('overflow-hidden');
+function resolveIndicatorTitle(indicator, fallback) {
+  if (typeof indicator === 'string') {
+    return indicator || fallback;
+  }
 
-    // Mostrar loading
-    root.innerHTML = `
-      <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" data-modal-overlay>
-        <div class="rounded-2xl bg-white p-8 shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div class="text-center">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-            <p class="text-sm text-slate-600">Cargando datos de capturas...</p>
-          </div>
-        </div>
-      </div>
-    `;
+  if (indicator && typeof indicator === 'object') {
+    return (
+      indicator.nombre ||
+      indicator.title ||
+      indicator.label ||
+      indicator.nombre_indicador ||
+      fallback
+    );
+  }
 
-    // Obtener datos
-    const captureData = await getCapturasFauna();
-    
-    if (!captureData || !captureData.length) {
-      root.innerHTML = `
-        <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" data-modal-overlay>
-          <div class="rounded-2xl bg-white p-8 shadow-2xl max-w-md">
-            <div class="text-center">
-              <i class="fa-solid fa-chart-simple text-4xl text-slate-300 mb-4"></i>
-              <h3 class="text-lg font-semibold text-slate-900 mb-2">Sin datos disponibles</h3>
-              <p class="text-sm text-slate-600 mb-4">No hay datos de capturas de fauna registrados.</p>
-              <button
-                type="button"
-                class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
-                data-modal-close
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      const closeBtn = root.querySelector('[data-modal-close]');
-      closeBtn?.addEventListener('click', closeIndicatorModal);
+  return fallback;
+}
+
+function handleSMSFaunaClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Capturas de Fauna');
+  mountReactModal('fauna-capture', {
+    title,
+    onClose: () => {
+      unmountReactModal();
+    }
+  });
+}
+
+function handleSMSIluminacionClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Sistema de Iluminación');
+  mountReactModal('iluminacion', {
+    title,
+    onClose: () => {
+      unmountReactModal();
+    }
+  });
+}
+
+function handleSMSMantenimientosClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Mantenimientos Programados');
+  mountReactModal('mantenimientos', {
+    title,
+    onClose: () => {
+      unmountReactModal();
+    }
+  });
+}
+
+function handleSMSDisponibilidadClick(indicator) {
+  const title = resolveIndicatorTitle(indicator, 'Disponibilidad de Pistas');
+  mountReactModal('disponibilidad-pistas', {
+    title,
+    onClose: () => {
+      unmountReactModal();
+    }
+  });
+}
+
+function mountPCIComparativo() {
+  const indicators = Array.isArray(cachedIndicators) ? cachedIndicators : [];
+  const sms05A = findIndicatorByCode(indicators, 'SMS-05A');
+  const sms05B = findIndicatorByCode(indicators, 'SMS-05B');
+
+  if (!sms05A || !sms05B) {
+    console.warn('Indicadores PCI no encontrados');
+    return;
+  }
+
+  if (pciComparativoRoot) {
+    try {
+      pciComparativoRoot.unmount();
+    } catch (error) {
+      console.error('Error al desmontar comparativo PCI:', error);
+    }
+    pciComparativoRoot = null;
+  }
+
+  let container = document.getElementById('pci-comparativo-container');
+  if (!container) {
+    const smsSection = document.querySelector('[data-sms-section]');
+    if (!smsSection) {
+      console.warn('No se encontró la sección SMS para montar el comparativo PCI');
       return;
     }
 
-    // Estado del modal
-    let currentChartType = 'bar';
-    let showHistorical = false;
-
-    const renderModal = (chartType, historical) => {
-      root.innerHTML = buildFaunaCaptureModalMarkup(title, captureData, chartType, historical);
-
-      const overlay = root.querySelector('[data-modal-overlay]');
-      const closeButton = root.querySelector('[data-modal-close]');
-      const canvas = root.querySelector('[data-fauna-chart]');
-      const chartToggle = root.querySelector('[data-chart-toggle]');
-      const historicalCheckbox = root.querySelector('[data-show-historical]');
-
-      const handleClose = () => {
-        overlay?.removeEventListener('click', overlayListener);
-        closeButton?.removeEventListener('click', handleClose);
-        document.removeEventListener('keydown', escListener);
-        closeIndicatorModal();
-      };
-
-      const overlayListener = event => {
-        if (event.target === overlay) {
-          handleClose();
-        }
-      };
-
-      const escListener = event => {
-        if (event.key === 'Escape') {
-          handleClose();
-        }
-      };
-
-      overlay?.addEventListener('click', overlayListener);
-      closeButton?.addEventListener('click', handleClose);
-      document.addEventListener('keydown', escListener);
-
-      // Evento para cambiar tipo de gráfica
-      if (chartToggle) {
-        chartToggle.querySelectorAll('[data-chart-type]').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const newChartType = btn.dataset.chartType;
-            if (newChartType !== currentChartType) {
-              currentChartType = newChartType;
-              renderModal(newChartType, showHistorical);
-            }
-          });
-        });
-      }
-
-      // Evento para checkbox de histórico
-      if (historicalCheckbox) {
-        historicalCheckbox.checked = historical;
-        historicalCheckbox.addEventListener('change', event => {
-          showHistorical = event.target.checked;
-          renderModal(currentChartType, showHistorical);
-        });
-      }
-
-      // Renderizar gráfica
-      const chartConfig = buildFaunaCaptureChartConfig(captureData, chartType, historical);
-      if (chartConfig) {
-        renderModalChart(canvas, chartConfig);
-      }
-    };
-
-    renderModal(currentChartType, showHistorical);
-
-  } catch (error) {
-    console.error('Error al abrir modal de capturas de fauna:', error);
-    const root = ensureModalContainer();
-    root.innerHTML = `
-      <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" data-modal-overlay>
-        <div class="rounded-2xl bg-white p-8 shadow-2xl max-w-md">
-          <div class="text-center">
-            <i class="fa-solid fa-circle-exclamation text-4xl text-red-500 mb-4"></i>
-            <h3 class="text-lg font-semibold text-slate-900 mb-2">Error al cargar datos</h3>
-            <p class="text-sm text-slate-600 mb-4">${escapeHtml(error.message || 'Ocurrió un error inesperado')}</p>
-            <button
-              type="button"
-              class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
-              data-modal-close
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-    
-    const closeBtn = root.querySelector('[data-modal-close]');
-    closeBtn?.addEventListener('click', closeIndicatorModal);
-  }
-}
-
-function buildFaunaCaptureModalMarkup(title, captureData, chartType = 'bar', showHistorical = false) {
-  const currentYear = new Date().getFullYear();
-  const previousYear = currentYear - 1;
-  
-  // Obtener últimos datos disponibles
-  const latestData = getLatestFaunaData(captureData, currentYear);
-  
-  // Calcular variación año contra año
-  const currentYearTotal = latestData.currentTotal;
-  const previousYearTotal = latestData.previousTotal;
-  const diff = currentYearTotal - previousYearTotal;
-  const pct = previousYearTotal > 0 ? diff / previousYearTotal : null;
-  
-  const trendClasses = getTrendColorClasses(diff, { invert: true }); // SMS inverso
-  const formattedDiff = formatSignedNumber(diff);
-  const formattedPct = formatPercentage(pct);
-  
-  // Construir tabla con histórico opcional
-  const { headerMarkup, bodyMarkup } = buildFaunaTableData(captureData, showHistorical);
-  
-  const chartToggle = buildChartTypeToggle(chartType, 'monthly');
-
-  return `
-    <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" data-modal-overlay>
-      <div class="relative w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl" style="max-height: 90vh; overflow-y: auto;">
-        <button
-          type="button"
-          class="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"
-          aria-label="Cerrar"
-          data-modal-close
-        >
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-
-        <div class="space-y-6 p-6">
-          <header class="space-y-2">
-            <p class="text-xs uppercase tracking-widest text-slate-400">Vista personalizada</p>
-            <h2 class="text-2xl font-semibold text-slate-900">${escapeHtml(title)}</h2>
-            <div class="flex flex-wrap gap-3 text-sm text-slate-500">
-              <span><strong>Área:</strong> SMS - Gestión del Peligro Aviario</span>
-              <span><strong>Período:</strong> ${currentYear} vs ${previousYear}</span>
-            </div>
-          </header>
-
-          <section class="space-y-4">
-            <header class="flex items-center justify-between">
-              <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-500">Comparativo mensual (${latestData.monthName} ${currentYear})</h3>
-              <span class="text-xs font-semibold uppercase tracking-widest text-slate-400">Comparativo año contra año</span>
-            </header>
-
-            <div class="grid gap-4 sm:grid-cols-3">
-              <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs uppercase tracking-widest text-slate-400">${currentYear}</p>
-                <p class="mt-2 text-2xl font-semibold text-slate-900">${formatNumber(currentYearTotal)}</p>
-              </article>
-              <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs uppercase tracking-widest text-slate-400">${previousYear}</p>
-                <p class="mt-2 text-2xl font-semibold text-slate-900">${formatNumber(previousYearTotal)}</p>
-              </article>
-              <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p class="text-xs uppercase tracking-widest text-slate-400">Variación</p>
-                <p class="mt-2 text-2xl font-semibold ${trendClasses.text}">${formattedPct}</p>
-                <p class="mt-1 text-sm text-slate-600">(${formattedDiff})</p>
-              </article>
-            </div>
-          </section>
-
-          <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="mb-3 flex items-center justify-between flex-wrap gap-3">
-              <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-500">Visualización</h3>
-              <div class="flex items-center gap-3">
-                ${chartToggle}
-              </div>
-            </div>
-            <div class="h-72">
-              <canvas data-fauna-chart aria-label="Gráfica de capturas de fauna"></canvas>
-            </div>
-            <div class="mt-3 flex justify-end">
-              <label class="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  data-show-historical
-                  class="h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span>Mostrar últimos 4 años</span>
-              </label>
-            </div>
-          </section>
-
-          <section class="rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div class="border-b border-slate-100 px-5 py-3">
-              <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-500">Detalle del periodo</h3>
-            </div>
-            <div class="max-h-72 overflow-auto">
-              <table class="min-w-full divide-y divide-slate-200 text-sm">
-                <thead class="bg-slate-50 text-xs uppercase tracking-widest text-slate-500">
-                  ${headerMarkup}
-                </thead>
-                <tbody>${bodyMarkup}</tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function processMonthlyFaunaData(captureData, year) {
-  const months = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-  ];
-  
-  // Filtrar datos del año actual
-  const yearData = captureData.filter(item => item.anio === year);
-  
-  // Crear estructura mensual
-  const monthlyData = months.map((monthName, index) => {
-    const monthNumber = index + 1;
-    const monthData = yearData.find(item => item.mes === monthNumber);
-    
-    return {
-      month: monthName,
-      aves: monthData?.aves || 0,
-      mamiferos: monthData?.mamiferos || 0,
-      reptiles: monthData?.reptiles || 0,
-      total: (monthData?.aves || 0) + (monthData?.mamiferos || 0) + (monthData?.reptiles || 0)
-    };
-  });
-  
-  return monthlyData;
-}
-
-function getLatestFaunaData(captureData, year) {
-  const currentYear = year;
-  const previousYear = year - 1;
-  
-  // Obtener datos del año actual
-  const currentYearData = captureData.filter(item => item.anio === currentYear);
-  const previousYearData = captureData.filter(item => item.anio === previousYear);
-  
-  // Encontrar el último mes con datos en el año actual
-  const currentMonths = currentYearData.map(item => item.mes).sort((a, b) => b - a);
-  const latestMonth = currentMonths.length > 0 ? currentMonths[0] : 12;
-  
-  // Obtener totales acumulados hasta el último mes disponible
-  const currentTotal = currentYearData
-    .filter(item => item.mes <= latestMonth)
-    .reduce((sum, item) => sum + (item.aves || 0) + (item.mamiferos || 0) + (item.reptiles || 0), 0);
-    
-  const previousTotal = previousYearData
-    .filter(item => item.mes <= latestMonth)
-    .reduce((sum, item) => sum + (item.aves || 0) + (item.mamiferos || 0) + (item.reptiles || 0), 0);
-  
-  const monthName = MONTHS[latestMonth - 1]?.label || `Mes ${latestMonth}`;
-  
-  return {
-    currentTotal,
-    previousTotal,
-    latestMonth,
-    monthName,
-    currentYear,
-    previousYear
-  };
-}
-
-function buildFaunaTableData(captureData, showHistorical = false) {
-  const currentYear = CURRENT_YEAR;
-  const historicalYears = showHistorical
-    ? Array.from({ length: 4 }, (_, index) => currentYear - (3 - index)).filter(year => year > 0)
-    : [];
-  const hasHistoricalYears = showHistorical && historicalYears.length > 0;
-
-  let headerCells = ['<th class="px-4 py-2 text-left">Periodo</th>'];
-
-  if (hasHistoricalYears) {
-    headerCells = headerCells.concat(
-      historicalYears.map((year, index, array) =>
-        `<th class="px-4 py-2 text-right ${
-          index === array.length - 1 ? 'text-slate-700' : 'text-slate-500'
-        }">${year}</th>`
-      )
-    );
+    container = document.createElement('div');
+    container.id = 'pci-comparativo-container';
+    container.className = 'mt-6';
+    smsSection.appendChild(container);
   } else {
-    headerCells.push('<th class="px-4 py-2 text-right">Actual</th>');
-    headerCells.push('<th class="px-4 py-2 text-right">Anterior</th>');
+    container.innerHTML = '';
   }
 
-  const variationNote = hasHistoricalYears
-    ? `<div class="mt-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">${
-        currentYear - 1
-      } → ${currentYear}</div>`
-    : '';
-
-  headerCells.push(
-    hasHistoricalYears
-      ? `<th class="px-4 py-2 text-right">Variación${variationNote}</th>`
-      : '<th class="px-4 py-2 text-right">Variación</th>'
-  );
-
-  headerCells.push(
-    hasHistoricalYears
-      ? `<th class="px-4 py-2 text-right">% Variación${variationNote}</th>`
-      : '<th class="px-4 py-2 text-right">% Variación</th>'
-  );
-
-  const totalColumns = headerCells.length;
-  const headerMarkup = `<tr>${headerCells.join('')}</tr>`;
-
-  if (!captureData || !captureData.length) {
-    return {
-      headerMarkup,
-      bodyMarkup: `<tr><td colspan="${totalColumns}" class="px-4 py-6 text-center text-slate-400">No hay datos disponibles</td></tr>`
-    };
-  }
-
-  // Procesar datos por mes
-  const currentData = captureData.filter(item => item.anio === currentYear);
-  const previousData = captureData.filter(item => item.anio === (currentYear - 1));
-
-  const currentMap = new Map();
-  currentData.forEach(item => {
-    const total = (item.aves || 0) + (item.mamiferos || 0) + (item.reptiles || 0);
-    currentMap.set(item.mes, total);
+  pciComparativoRoot = mountEmbeddedComponent('pci-comparativo-container', 'pci-comparativo', {
+    indicadorA: sms05A,
+    indicadorB: sms05B,
+    meta: 70
   });
-
-  const previousMap = new Map();
-  previousData.forEach(item => {
-    const total = (item.aves || 0) + (item.mamiferos || 0) + (item.reptiles || 0);
-    previousMap.set(item.mes, total);
-  });
-
-  // Crear mapas históricos si es necesario
-  const historicalMaps = new Map();
-  if (hasHistoricalYears) {
-    historicalYears.forEach(year => {
-      const yearData = captureData.filter(item => item.anio === year);
-      const monthMap = new Map();
-      yearData.forEach(item => {
-        const total = (item.aves || 0) + (item.mamiferos || 0) + (item.reptiles || 0);
-        monthMap.set(item.mes, total);
-      });
-      historicalMaps.set(year, monthMap);
-    });
-  }
-
-  const monthsToRender = showHistorical
-    ? Array.from({ length: 12 }, (_, index) => index + 1)
-    : Array.from(new Set([...currentMap.keys(), ...previousMap.keys()])).sort((a, b) => a - b);
-
-  const bodyMarkup = monthsToRender
-    .map(monthNumber => {
-      const current = currentMap.get(monthNumber) || 0;
-      const previous = previousMap.get(monthNumber) || 0;
-      const diff = current - previous;
-      const pct = previous > 0 ? diff / previous : null;
-
-      const historicalCells = showHistorical
-        ? historicalYears
-            .map((year, index, array) => {
-              const map = historicalMaps.get(year);
-              const value = map?.get(monthNumber) || 0;
-              return `<td class="px-4 py-2 text-right text-sm ${
-                index === array.length - 1 ? 'font-semibold text-slate-800' : 'text-slate-500'
-              }">${formatNumber(value)}</td>`;
-            })
-            .join('')
-        : `<td class="px-4 py-2 text-right text-sm font-semibold text-slate-800">${formatNumber(current)}</td><td class="px-4 py-2 text-right text-sm text-slate-600">${formatNumber(previous)}</td>`;
-
-      const variationClass = diff > 0 ? 'text-rose-600' : diff < 0 ? 'text-emerald-600' : 'text-slate-500';
-
-      return `
-        <tr class="border-b border-slate-100">
-          <td class="px-4 py-2 text-left text-sm text-slate-600">${escapeHtml(MONTHS[monthNumber - 1]?.label || `Mes ${monthNumber}`)}</td>
-          ${historicalCells}
-          <td class="px-4 py-2 text-right text-sm font-semibold ${variationClass}">
-            <div>${formatSignedNumber(diff)}</div>
-          </td>
-          <td class="px-4 py-2 text-right text-sm text-slate-600">
-            <div>${formatPercentage(pct)}</div>
-          </td>
-        </tr>
-      `;
-    })
-    .join('');
-
-  return { headerMarkup, bodyMarkup };
 }
 
-function buildFaunaCaptureChartConfig(captureData, chartType = 'bar', showHistorical = false) {
-  const currentYear = new Date().getFullYear();
-  
-  // Determinar años a mostrar
-  const yearsToShow = showHistorical ? 4 : 1;
-  const startYear = currentYear - (yearsToShow - 1);
-  
-  const months = MONTHS.map(month => month.short);
-  const datasets = [];
-  const colors = [
-    { aves: '#3B82F6', mamiferos: '#F59E0B', reptiles: '#10B981' }, // Año actual
-    { aves: '#60A5FA', mamiferos: '#FBBF24', reptiles: '#34D399' }, // Año -1
-    { aves: '#93C5FD', mamiferos: '#FCD34D', reptiles: '#6EE7B7' }, // Año -2
-    { aves: '#DBEAFE', mamiferos: '#FEF3C7', reptiles: '#D1FAE5' }  // Año -3
-  ];
-  
-  for (let yearIndex = 0; yearIndex < yearsToShow; yearIndex++) {
-    const year = startYear + yearIndex;
-    const yearData = captureData.filter(item => item.anio === year);
-    
-    // Crear arrays para cada tipo de fauna
-    const avesData = Array(12).fill(0);
-    const mamiferosData = Array(12).fill(0);
-    const reptilesData = Array(12).fill(0);
-    
-    yearData.forEach(item => {
-      if (item.mes >= 1 && item.mes <= 12) {
-        const monthIndex = item.mes - 1;
-        avesData[monthIndex] = item.aves || 0;
-        mamiferosData[monthIndex] = item.mamiferos || 0;
-        reptilesData[monthIndex] = item.reptiles || 0;
-      }
-    });
-    
-    const yearSuffix = showHistorical ? ` (${year})` : '';
-    const colorSet = colors[yearIndex] || colors[0];
-    
-    datasets.push(
-      {
-        label: `Aves${yearSuffix}`,
-        data: avesData,
-        backgroundColor: colorSet.aves,
-        borderColor: colorSet.aves,
-        borderWidth: chartType === 'line' ? 2 : 1,
-        stack: showHistorical ? `stack${year}` : 'stack0'
-      },
-      {
-        label: `Mamíferos${yearSuffix}`,
-        data: mamiferosData,
-        backgroundColor: colorSet.mamiferos,
-        borderColor: colorSet.mamiferos,
-        borderWidth: chartType === 'line' ? 2 : 1,
-        stack: showHistorical ? `stack${year}` : 'stack0'
-      },
-      {
-        label: `Reptiles${yearSuffix}`,
-        data: reptilesData,
-        backgroundColor: colorSet.reptiles,
-        borderColor: colorSet.reptiles,
-        borderWidth: chartType === 'line' ? 2 : 1,
-        stack: showHistorical ? `stack${year}` : 'stack0'
-      }
-    );
+function handleIndicatorClick(indicator) {
+  if (!indicator) return false;
+
+  const rawCode = indicator.codigo_indicador || indicator.codigo || indicator.clave;
+  const code = (rawCode || '').toString().toUpperCase();
+
+  if (!code) {
+    return false;
   }
-  
-  const config = {
-    type: chartType,
-    data: {
-      labels: months,
-      datasets: datasets
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: {
-          stacked: chartType === 'bar',
-          grid: {
-            display: false
-          }
-        },
-        y: {
-          stacked: chartType === 'bar',
-          beginAtZero: true,
-          ticks: {
-            stepSize: 1,
-            callback: function(value) {
-              return Number.isInteger(value) ? value : '';
-            }
-          }
-        }
-      },
-      plugins: {
-        legend: {
-          position: 'top',
-          align: 'end'
-        },
-        tooltip: {
-          mode: 'index',
-          intersect: false,
-          callbacks: {
-            footer: function(tooltipItems) {
-              if (chartType === 'bar' && !showHistorical) {
-                let total = 0;
-                tooltipItems.forEach(function(tooltipItem) {
-                  total += tooltipItem.parsed.y;
-                });
-                return 'Total: ' + total;
-              }
-              return '';
-            }
-          }
-        }
-      },
-      interaction: {
-        mode: 'nearest',
-        axis: 'x',
-        intersect: false
-      }
-    }
-  };
-  
-  // Configuración específica para gráficas de línea
-  if (chartType === 'line') {
-    config.data.datasets.forEach(dataset => {
-      dataset.tension = 0.3;
-      dataset.fill = false;
-      dataset.pointRadius = 3;
-    });
+
+  if (SMS_FAUNA_CODES.has(code) || code.startsWith('SMS-01') || code.startsWith('SMS-02')) {
+    handleSMSFaunaClick(indicator);
+    return true;
   }
-  
-  return config;
+
+  if (SMS_ILUMINACION_CODES.has(code) || code.startsWith('SMS-03') || code.startsWith('SMS-04')) {
+    handleSMSIluminacionClick(indicator);
+    return true;
+  }
+
+  if (code.startsWith('SMS-05A') || code.startsWith('SMS-05B')) {
+    mountPCIComparativo();
+    return true;
+  }
+
+  if (SMS_MANTENIMIENTOS_CODES.has(code) || code.startsWith('SMS-06')) {
+    handleSMSMantenimientosClick(indicator);
+    return true;
+  }
+
+  if (SMS_DISPONIBILIDAD_CODES.has(code) || code.startsWith('SMS-07')) {
+    handleSMSDisponibilidadClick(indicator);
+    return true;
+  }
+
+  return false;
 }
 
 export async function renderDashboard(container) {
@@ -5235,6 +4884,8 @@ export async function renderDashboard(container) {
 
     initGroupControls(container);
     initOptionModals(container);
+
+    mountPCIComparativo();
 
     const directionsContainer = container.querySelector('[data-direction-sections]');
     if (directionsContainer) {

@@ -7,7 +7,7 @@ import {
   updateMeasurement,
   validateMeasurement,
   upsertTarget
-} from '../services/supabaseClient.js';
+} from '../lib/supabaseClient.js';
 import { renderLoading, renderError, showToast } from '../ui/feedback.js';
 import { formatNumber, monthName, formatDate } from '../utils/formatters.js';
 import { getSession } from '../state/session.js';

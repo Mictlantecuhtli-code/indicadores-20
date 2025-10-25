@@ -7,7 +7,7 @@ import { renderLogin } from './views/login.js';
 import { renderAirportInfo } from './views/airportInfo.js';
 import { getSession, setSession, subscribe } from './state/session.js';
 import { renderLayout, highlightActiveRoute } from './ui/layout.js';
-import { supabase, signOut } from './services/supabaseClient.js';
+import { supabase, signOut } from './lib/supabaseClient.js';
 import { showToast } from './ui/feedback.js';
 import { getRoutesForRole, getDefaultRouteForRole } from './constants/legacyAccess.js';
 

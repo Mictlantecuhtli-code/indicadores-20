@@ -1,4 +1,4 @@
-import { signInWithEmail } from '../services/supabaseClient.js';
+import { signInWithEmail } from '../lib/supabaseClient.js';
 import { setSession } from '../state/session.js';
 import { showToast } from '../ui/feedback.js';
 import { getDefaultRouteForRole } from '../constants/legacyAccess.js';

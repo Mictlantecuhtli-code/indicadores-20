@@ -1,5 +1,5 @@
 import { initRouter } from './router.js';
-import { supabase } from './services/supabaseClient.js';
+import { supabase } from './lib/supabaseClient.js';
 import { setSession } from './state/session.js';
 
 async function bootstrap() {
