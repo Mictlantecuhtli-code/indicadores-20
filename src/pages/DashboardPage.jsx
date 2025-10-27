@@ -37,7 +37,6 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import { AlertTriangle } from 'lucide-react';
 
 const TEMPLATE_META = {
   mensual_vs_anterior: { type: 'monthly', icon: LineChartIcon },
@@ -58,123 +57,6 @@ const CATEGORY_ICON_MAP = {
 };
 
 const MONTH_SHORT_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-function normalizeIndicatorLabel(value) {
-  return (value ?? '')
-    .toString()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-}
-
-const FAUNA_SPECIES_NAMES = new Set(
-  [
-    'capturas de aves realizadas',
-    'capturas de mamiferos realizadas',
-    'capturas de mamíferos realizadas',
-    'capturas de reptiles realizadas'
-  ].map(normalizeIndicatorLabel)
-);
-
-const FAUNA_SPECIES_KEYWORD_SETS = [
-  ['captur', 'ave'],
-  ['captur', 'mamif'],
-  ['captur', 'reptil']
-];
-
-const SMS_OPTION_BLUEPRINTS = [
-  {
-    ...OPTION_BLUEPRINTS[0],
-    id: 'sms-monthly-yoy',
-    buildLabel: () => 'Comparativo mensual (real vs. año anterior)'
-  },
-  {
-    ...OPTION_BLUEPRINTS[1],
-    id: 'sms-quarterly-yoy',
-    buildLabel: () => 'Comparativo trimestral (real vs. año anterior)'
-  },
-  {
-    id: 'sms-scenario-objective',
-    type: 'scenario',
-    scenario: 'OBJETIVO',
-    buildLabel: () => 'Seguimiento vs. objetivo institucional'
-  },
-  {
-    id: 'sms-scenario-alert1',
-    type: 'scenario',
-    scenario: 'ALERTA 1',
-    buildLabel: () => 'Seguimiento vs. nivel de alerta 1'
-  },
-  {
-    id: 'sms-scenario-alert2',
-    type: 'scenario',
-    scenario: 'ALERTA 2',
-    buildLabel: () => 'Seguimiento vs. nivel de alerta 2'
-  },
-  {
-    id: 'sms-scenario-alert3',
-    type: 'scenario',
-    scenario: 'ALERTA 3',
-    buildLabel: () => 'Seguimiento vs. nivel de alerta 3'
-  }
-];
-
-
-function isFaunaSpeciesIndicator(indicator) {
-  const name = normalizeIndicatorLabel(indicator?.nombre);
-  if (!name) return false;
-  if (FAUNA_SPECIES_NAMES.has(name)) return true;
-
-  return FAUNA_SPECIES_KEYWORD_SETS.some(keywords =>
-    keywords.every(keyword => name.includes(keyword))
-  );
-}
-
-function matchesIndicatorMatcher(indicator, matcher = {}) {
-  if (!indicator) return false;
-
-  const code = indicator?.clave?.toString().trim().toUpperCase() ?? '';
-  if (matcher.codes?.length) {
-    const codeMatch = matcher.codes.some(candidate => code === candidate.toUpperCase());
-    if (codeMatch) {
-      return true;
-    }
-  }
-
-  const name = normalizeIndicatorLabel(indicator?.nombre);
-  const description = normalizeIndicatorLabel(indicator?.descripcion);
-
-  if (matcher.keywords?.length) {
-    const keywords = matcher.keywords.map(word => word.toString().toLowerCase());
-    const haystacks = [name, description].filter(Boolean);
-    if (
-      haystacks.some(text => keywords.every(keyword => text.includes(keyword)))
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function isFaunaAggregateIndicator(indicator) {
-  if (!indicator) return false;
-  if (Array.isArray(indicator._faunaSourceIds) && indicator._faunaSourceIds.length) {
-    return true;
-  }
-
-  const code = indicator?.clave?.toString().trim().toUpperCase();
-  if (code === 'SMS-02' || code === 'SMS-FAUNA') {
-    return true;
-  }
-
-  const name = normalizeIndicatorLabel(indicator?.nombre);
-  if (!name) return false;
-  if (name.includes('captura') && name.includes('fauna')) return true;
-  if (name.includes('capturas por especie')) return true;
-  return false;
-}
 
 function toNumber(value) {
   const parsed = Number(value);
@@ -1855,136 +1737,6 @@ export default function DashboardPage() {
   const operativeSection = sections.find(section => section.id === 'operativos');
   const fboSection = sections.find(section => section.id === 'fbo');
 
-  const smsIndicators = useMemo(() => {
-    const records = indicatorsQuery.data ?? [];
-    const smsRecords = records.filter(record => {
-      const code = record?.clave?.toString().toUpperCase() ?? '';
-      const name = record?.nombre?.toString().toLowerCase() ?? '';
-      const description = record?.descripcion?.toString().toLowerCase() ?? '';
-      return (
-        code.startsWith('SMS-') ||
-        name.includes('seguridad operacional') ||
-        description.includes('seguridad operacional') ||
-        name.includes('safety management') ||
-        description.includes('safety management')
-      );
-    })
-      .map(item => ({
-        ...item,
-        _orden: Number(item?.orden_visualizacion) || Number.MAX_SAFE_INTEGER
-      }));
-
-    const faunaSpecies = [];
-    const baseList = [];
-
-    smsRecords.forEach(item => {
-      if (isFaunaSpeciesIndicator(item)) {
-        faunaSpecies.push(item);
-      } else {
-        baseList.push(item);
-      }
-    });
-
-    let result = [...baseList];
-
-    if (faunaSpecies.length) {
-      const faunaOrder = Math.min(
-        ...faunaSpecies.map(entry => entry._orden ?? Number.MAX_SAFE_INTEGER)
-      );
-      const faunaSourceIds = faunaSpecies.map(entry => entry.id).filter(Boolean);
-      const aggregateIndex = result.findIndex(isFaunaAggregateIndicator);
-
-      if (aggregateIndex >= 0) {
-        const aggregate = result[aggregateIndex];
-        result[aggregateIndex] = {
-          ...aggregate,
-          nombre: 'Captura de Fauna',
-          descripcion:
-            aggregate?.descripcion ?? 'Capturas acumuladas de fauna (aves, mamíferos y reptiles).',
-          _orden: aggregate._orden ?? faunaOrder,
-          _faunaSourceIds: faunaSourceIds
-        };
-      } else {
-        const reference = faunaSpecies[0] ?? null;
-        if (reference) {
-          result.push({
-            id: 'sms-fauna-aggregate',
-            clave: 'SMS-FAUNA',
-            nombre: 'Captura de Fauna',
-            descripcion: 'Capturas acumuladas de fauna (aves, mamíferos y reptiles).',
-            unidad_medida: reference.unidad_medida ?? null,
-            meta_anual: reference.meta_anual ?? null,
-            meta_objetivo: reference.meta_objetivo ?? null,
-            area_nombre: reference.area_nombre ?? reference.area ?? null,
-            area_clave: reference.area_clave ?? null,
-            _orden: faunaOrder,
-            _faunaSourceIds: faunaSourceIds,
-            _isSynthetic: true
-          });
-        }
-      }
-    }
-
-    return result.sort((a, b) => {
-      if (a._orden !== b._orden) {
-        return a._orden - b._orden;
-      }
-      return (a?.nombre ?? '').localeCompare(b?.nombre ?? '', 'es', { sensitivity: 'base' });
-    });
-  }, [indicatorsQuery.data]);
-
-  const { smsObjectiveGroups, smsUnassignedIndicators } = useMemo(() => {
-    if (!smsIndicators.length) {
-      return { smsObjectiveGroups: [], smsUnassignedIndicators: [] };
-    }
-
-    const usedIds = new Set();
-    const objectives = [];
-
-    SMS_OBJECTIVE_BLUEPRINTS.forEach(objective => {
-      const matchedIndicators = [];
-
-      objective.indicatorMatchers.forEach(matcher => {
-        const match = smsIndicators.find(
-          indicator => !usedIds.has(indicator.id) && matchesIndicatorMatcher(indicator, matcher)
-        );
-
-        if (match) {
-          usedIds.add(match.id);
-          matchedIndicators.push(match);
-        }
-      });
-
-      if (matchedIndicators.length) {
-        objectives.push({
-          id: objective.id,
-          title: objective.title,
-          description: objective.description,
-          indicators: matchedIndicators
-        });
-      }
-    });
-
-    const leftovers = smsIndicators
-      .filter(indicator => !usedIds.has(indicator.id))
-      .sort((a, b) => {
-        if (a._orden !== b._orden) {
-          return a._orden - b._orden;
-        }
-        return (a?.nombre ?? '').localeCompare(b?.nombre ?? '', 'es', { sensitivity: 'base' });
-      });
-
-    return { smsObjectiveGroups: objectives, smsUnassignedIndicators: leftovers };
-  }, [smsIndicators]);
-
-  const sms05A = useMemo(() => {
-    return smsIndicators.find(item => (item?.clave ?? '').toString().toUpperCase() === 'SMS-05A') ?? null;
-  }, [smsIndicators]);
-
-  const sms05B = useMemo(() => {
-    return smsIndicators.find(item => (item?.clave ?? '').toString().toUpperCase() === 'SMS-05B') ?? null;
-  }, [smsIndicators]);
-
   const activeEntry = activeOptionId ? optionIndex.get(activeOptionId) ?? null : null;
 
   const handleCloseModal = () => setActiveOptionId(null);
@@ -2039,15 +1791,83 @@ export default function DashboardPage() {
                 No se pudieron cargar los indicadores SMS.
               </div>
             ) : (
-              <div className="rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50 px-6 py-8 text-center text-slate-700">
-                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-inner">
-                  <AlertTriangle className="h-7 w-7 text-amber-500" aria-hidden="true" />
+              <div className="rounded-2xl border-2 border-dashed border-amber-200 bg-gradient-to-br from-amber-50 to-white p-8">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  <div className="relative">
+                    <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
+                      <svg
+                        className="h-8 w-8 text-amber-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                        />
+                      </svg>
+                    </div>
+                    <div className="absolute -top-1 -right-1">
+                      <span className="flex h-4 w-4">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500" />
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-xl font-bold text-slate-900">🚧 Módulo en Reconstrucción</h3>
+                    <p className="text-base text-slate-700 max-w-md">
+                      Los indicadores SMS están siendo reconstruidos con <strong>mejoras significativas</strong>
+                    </p>
+                  </div>
+
+                  <div className="w-full max-w-2xl mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+                      {[
+                        'Nuevo diseño UI/UX',
+                        'Gráficos mejorados',
+                        'Filtros avanzados',
+                        'Export mejorado (PDF + Excel)',
+                        'Comparativas mejoradas',
+                        'Performance optimizado'
+                      ].map(item => (
+                        <div key={item} className="flex items-start gap-2 text-sm text-slate-600">
+                          <svg className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-6 w-full max-w-md">
+                    <div className="rounded-lg bg-white border border-amber-200 p-4 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          <svg className="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-slate-900">Tiempo estimado</p>
+                          <p className="text-xs text-slate-600 mt-0.5">En desarrollo activo</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-slate-500 italic max-w-lg mt-4">
+                    Estamos trabajando para ofrecerte la mejor experiencia en el análisis de indicadores de seguridad operacional.
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900">Módulo SMS en reconstrucción</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  Estamos trabajando en una nueva experiencia para los indicadores SMS.
-                  Mientras tanto, este apartado permanecerá temporalmente deshabilitado.
-                </p>
               </div>
             )}
           </AccordionSection>

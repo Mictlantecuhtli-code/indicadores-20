@@ -501,12 +501,12 @@ function buildSmsGroupDefinitions(indicators = []) {
 }
 
 function registerSmsGroupDefinitions(indicators = []) {
+  // Deshabilitado temporalmente durante la reconstrucción de los módulos SMS
+  console.log('⚠️ Registro de grupos SMS deshabilitado - en reconstrucción');
+
   removeGroupDefinitionsByPrefix(SMS_GROUP_PREFIX);
 
-  const definitions = buildSmsGroupDefinitions(indicators);
-  definitions.forEach(registerGroupDefinition);
-
-  return definitions.map(definition => definition.id);
+  return [];
 }
 
 const BASE_ACCORDION_SECTIONS = [
@@ -4612,26 +4612,63 @@ function shouldHideDirection(direction) {
 
 function buildDirectionPanelContent(direction, rootId) {
   if (isSmsDirection(direction)) {
-    const groupIds = getRegisteredSmsGroupIds();
-
-    if (groupIds.length) {
-      const groupsMarkup = groupIds.map(groupId => buildGroupMarkup(groupId, rootId)).join('');
-
-      return `
-        <div class="space-y-3">
-          <p class="text-sm font-medium text-slate-700">Indicadores SMS</p>
-          <div class="space-y-3">
-            ${groupsMarkup}
-          </div>
-        </div>
-      `;
-    }
-
     return `
       <div class="space-y-3">
         <p class="text-sm font-medium text-slate-700">Indicadores SMS</p>
-        <div class="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-          No hay indicadores SMS registrados.
+        <div class="rounded-2xl border-2 border-dashed border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 p-8 shadow-sm">
+          <div class="flex flex-col items-center text-center space-y-4">
+            <div class="relative">
+              <div class="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center shadow-inner">
+                <svg class="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+              </div>
+              <span class="absolute -top-1 -right-1 flex h-4 w-4">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+              </span>
+            </div>
+            <div class="space-y-2 max-w-md">
+              <h3 class="text-lg font-bold text-slate-900">
+                🚧 Módulo en Reconstrucción
+              </h3>
+              <p class="text-sm text-slate-700 leading-relaxed">
+                Los indicadores SMS están siendo reconstruidos con <strong class="text-amber-700">mejoras significativas</strong>.
+                Estarán disponibles próximamente.
+              </p>
+            </div>
+            <div class="w-full max-w-lg mt-2">
+              <div class="grid grid-cols-2 gap-2 text-left text-xs">
+                <div class="flex items-center gap-2 text-slate-600">
+                  <svg class="h-4 w-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Nuevo diseño</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-600">
+                  <svg class="h-4 w-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Gráficos mejorados</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-600">
+                  <svg class="h-4 w-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Filtros avanzados</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-600">
+                  <svg class="h-4 w-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                  <span>Export mejorado</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-slate-500 italic max-w-md mt-3">
+              Gracias por tu paciencia mientras mejoramos esta sección.
+            </p>
+          </div>
         </div>
       </div>
     `;
