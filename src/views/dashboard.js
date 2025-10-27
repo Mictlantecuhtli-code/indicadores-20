@@ -4,7 +4,7 @@ import { CURRENT_YEAR } from '../utils/constants.js';
 import { isFaunaImpactRateIndicator } from '../utils/smsIndicators.js';
 import { renderError, renderLoading } from '../ui/feedback.js';
 // Sistema de puentes React
-import { mountReactModal, unmountReactModal, mountEmbeddedComponent } from '../bridges/reactBridge.jsx';
+import { mountEmbeddedComponent } from '../bridges/reactBridge.jsx';
 
 const OPTION_BLUEPRINTS = [
   {
@@ -3391,6 +3391,81 @@ function mostrarMensajeConstruccionModal() {
   });
 }
 
+function showSimpleReconstructionModal({
+  heading = 'Vista en Reconstrucción',
+  subtitle = '',
+  description = '',
+  iconClass = 'fa-solid fa-wrench',
+  confirmLabel = 'Entendido'
+} = {}) {
+  const root = ensureModalContainer();
+
+  const subtitleMarkup = subtitle
+    ? `<p class="text-sm font-semibold text-slate-500">${subtitle}</p>`
+    : '';
+
+  const descriptionMarkup = description
+    ? `<p class="text-base text-slate-600 leading-relaxed max-w-md mx-auto">${description}</p>`
+    : '';
+
+  root.innerHTML = `
+    <div class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" data-modal-overlay>
+      <div class="relative w-full max-w-2xl rounded-3xl bg-white p-8 shadow-2xl">
+        <button
+          type="button"
+          class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-slate-200"
+          aria-label="Cerrar"
+          data-modal-close
+        >
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="text-center space-y-4">
+          <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+            <i class="${iconClass} text-3xl text-blue-600"></i>
+          </div>
+
+          <div class="space-y-2">
+            <h3 class="text-2xl font-bold text-slate-900">${heading}</h3>
+            ${subtitleMarkup}
+            ${descriptionMarkup}
+          </div>
+
+          <div class="pt-4">
+            <button
+              type="button"
+              class="rounded-lg bg-aifa-blue px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              data-modal-close
+            >
+              ${confirmLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.classList.add('overflow-hidden');
+
+  const overlay = root.querySelector('[data-modal-overlay]');
+  const closeTargets = root.querySelectorAll('[data-modal-close]');
+
+  const handleClose = () => {
+    root.innerHTML = '';
+    document.body.classList.remove('overflow-hidden');
+  };
+
+  closeTargets.forEach(target => {
+    target.addEventListener('click', handleClose);
+  });
+
+  overlay?.addEventListener('click', event => {
+    if (event.target === overlay) {
+      handleClose();
+    }
+  });
+}
+
 function ensureModalContainer() {
   if (!modalContainer) {
     modalContainer = document.createElement('div');
@@ -4951,41 +5026,41 @@ function resolveIndicatorTitle(indicator, fallback) {
 
 function handleSMSFaunaClick(indicator) {
   const title = resolveIndicatorTitle(indicator, 'Capturas de Fauna');
-  mountReactModal('fauna-capture', {
-    title,
-    onClose: () => {
-      unmountReactModal();
-    }
+  showSimpleReconstructionModal({
+    heading: 'Vista en Reconstrucción',
+    subtitle: title,
+    description:
+      'La visualización detallada de capturas de fauna está siendo rediseñada para ofrecerte una mejor experiencia y análisis más completos.'
   });
 }
 
 function handleSMSIluminacionClick(indicator) {
   const title = resolveIndicatorTitle(indicator, 'Sistema de Iluminación');
-  mountReactModal('iluminacion', {
-    title,
-    onClose: () => {
-      unmountReactModal();
-    }
+  showSimpleReconstructionModal({
+    heading: 'Vista en Reconstrucción',
+    subtitle: title,
+    description:
+      'El panel de mediciones de iluminación está en reconstrucción para incorporar gráficos interactivos, comparativas y mejores reportes.'
   });
 }
 
 function handleSMSMantenimientosClick(indicator) {
   const title = resolveIndicatorTitle(indicator, 'Mantenimientos Programados');
-  mountReactModal('mantenimientos', {
-    title,
-    onClose: () => {
-      unmountReactModal();
-    }
+  showSimpleReconstructionModal({
+    heading: 'Vista en Reconstrucción',
+    subtitle: title,
+    description:
+      'La vista detallada de mantenimientos programados se está modernizando para mostrar calendarios interactivos, estados y seguimiento en tiempo real.'
   });
 }
 
 function handleSMSDisponibilidadClick(indicator) {
   const title = resolveIndicatorTitle(indicator, 'Disponibilidad de Pistas');
-  mountReactModal('disponibilidad-pistas', {
-    title,
-    onClose: () => {
-      unmountReactModal();
-    }
+  showSimpleReconstructionModal({
+    heading: 'Vista en Reconstrucción',
+    subtitle: title,
+    description:
+      'Estamos rediseñando la disponibilidad de pistas para incluir proyecciones, análisis comparativos y alertas inteligentes.'
   });
 }
 

@@ -52,19 +52,19 @@ for file in "${REQUIRED_FILES[@]}"; do
 done
 
 echo ""
-echo "✓ Verificando modales React..."
-MODALS=(
+echo "✓ Verificando modales SMS eliminados..."
+LEGACY_MODALS=(
   "src/components/modals/sms/FaunaCaptureModal.jsx"
   "src/components/modals/sms/IluminacionModal.jsx"
   "src/components/modals/sms/MantenimientosModal.jsx"
   "src/components/modals/sms/DisponibilidadPistasModal.jsx"
 )
 
-for modal in "${MODALS[@]}"; do
+for modal in "${LEGACY_MODALS[@]}"; do
   if [ -f "$modal" ]; then
-    echo "  ✅ $(basename "$modal")"
+    echo "  ⚠️ $(basename "$modal") aún existe (debería eliminarse durante la reconstrucción)"
   else
-    echo "  ❌ $(basename "$modal") (falta)"
+    echo "  ✅ $(basename "$modal") eliminado (en reconstrucción)"
   fi
 done
 
