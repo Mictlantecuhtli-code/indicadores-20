@@ -5,6 +5,7 @@ import classNames from 'classnames';
 import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
+  AlertTriangle,
   BarChart3,
   BarChartHorizontal,
   Calendar,
