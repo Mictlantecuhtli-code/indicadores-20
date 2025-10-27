@@ -5,6 +5,7 @@ import classNames from 'classnames';
 import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
+  AlertTriangle,
   BarChart3,
   BarChartHorizontal,
   Calendar,
@@ -36,8 +37,7 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import SMSIndicatorCard from '../components/indicadores/SMSIndicatorCard.jsx';
-import SMSComparativoPCI from '../components/indicadores/SMSComparativoPCI.jsx';
+import { AlertTriangle } from 'lucide-react';
 
 const TEMPLATE_META = {
   mensual_vs_anterior: { type: 'monthly', icon: LineChartIcon },
@@ -2038,47 +2038,16 @@ export default function DashboardPage() {
               <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
                 No se pudieron cargar los indicadores SMS.
               </div>
-            ) : smsObjectiveGroups.length || smsUnassignedIndicators.length ? (
-              <div className="space-y-8">
-                {smsObjectiveGroups.map(objective => (
-                  <section key={objective.id} className="space-y-4">
-                    <header className="space-y-1">
-                      <h3 className="text-base font-semibold text-slate-800">{objective.title}</h3>
-                      {objective.description ? (
-                        <p className="text-sm text-slate-500">{objective.description}</p>
-                      ) : null}
-                    </header>
-                    <div className="space-y-6">
-                      {objective.indicators.map(indicator => (
-                        <SMSIndicatorCard key={indicator.id} indicator={indicator} />
-                      ))}
-                    </div>
-                  </section>
-                ))}
-
-                {smsUnassignedIndicators.length ? (
-                  <section className="space-y-4">
-                    <header className="space-y-1">
-                      <h3 className="text-base font-semibold text-slate-800">Otros indicadores</h3>
-                      <p className="text-sm text-slate-500">
-                        Indicadores de Seguridad Operacional sin objetivo asignado.
-                      </p>
-                    </header>
-                    <div className="space-y-6">
-                      {smsUnassignedIndicators.map(indicator => (
-                        <SMSIndicatorCard key={indicator.id} indicator={indicator} />
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-
-                {sms05A && sms05B ? (
-                  <SMSComparativoPCI indicadorA={sms05A} indicadorB={sms05B} meta={70} />
-                ) : null}
-              </div>
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-                No hay indicadores SMS configurados.
+              <div className="rounded-2xl border-2 border-dashed border-amber-200 bg-amber-50 px-6 py-8 text-center text-slate-700">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-inner">
+                  <AlertTriangle className="h-7 w-7 text-amber-500" aria-hidden="true" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900">Módulo SMS en reconstrucción</h3>
+                <p className="mt-2 text-sm text-slate-600">
+                  Estamos trabajando en una nueva experiencia para los indicadores SMS.
+                  Mientras tanto, este apartado permanecerá temporalmente deshabilitado.
+                </p>
               </div>
             )}
           </AccordionSection>
