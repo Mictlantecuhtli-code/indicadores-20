@@ -1751,6 +1751,21 @@ export default function DashboardPage() {
           </p>
         </header>
 
+        <div className="rounded-2xl border-l-4 border-blue-500 bg-blue-50 p-4 shadow-sm">
+          <div className="flex gap-3">
+            <div className="flex-shrink-0">
+              <i className="fa-solid fa-circle-info text-blue-600 text-lg"></i>
+            </div>
+            <div className="flex-1">
+              <h3 className="mb-1 text-sm font-semibold text-blue-900">Mejoras en proceso</h3>
+              <p className="text-sm text-blue-700">
+                Estamos mejorando las vistas detalladas de algunos indicadores SMS. Las funcionalidades principales siguen disponibles
+                y pronto tendrás acceso a visualizaciones más potentes y fáciles de usar.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="space-y-5">
           <AccordionSection
             id="operativos"
