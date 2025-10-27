@@ -198,6 +198,26 @@ const OPTION_ICON_CLASSES = {
   scenario: 'fa-solid fa-bullseye'
 };
 
+function isSmsDataKey(dataKey) {
+  if (!dataKey) return false;
+
+  const normalized = dataKey.toString().trim();
+  if (!normalized) return false;
+
+  const lower = normalized.toLowerCase();
+  const upper = normalized.toUpperCase();
+
+  if (lower.includes('sms-')) {
+    return true;
+  }
+
+  if (upper.startsWith('INDICATOR:') && upper.includes('SMS')) {
+    return true;
+  }
+
+  return false;
+}
+
 const GROUP_DEFINITIONS = {
   operations: {
     id: 'operations',
@@ -3237,6 +3257,140 @@ function buildChartTypeToggle(currentType, type) {
     </div>
   `;
 }
+
+function mostrarMensajeConstruccionModal() {
+  const root = ensureModalContainer();
+
+  root.innerHTML = `
+    <div 
+      class="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/50 px-4 py-6" 
+      data-modal-overlay
+    >
+      <div class="relative max-w-lg w-full rounded-2xl bg-white p-8 shadow-2xl">
+        <button
+          type="button"
+          class="absolute top-4 right-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          data-modal-close-button
+          aria-label="Cerrar"
+        >
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <div class="flex flex-col items-center text-center space-y-6">
+          <div class="relative">
+            <div class="h-20 w-20 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center shadow-lg">
+              <svg class="h-10 w-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+            </div>
+            <span class="absolute -top-2 -right-2 flex h-6 w-6">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-6 w-6 bg-amber-500 items-center justify-center">
+                <span class="text-white text-xs font-bold">!</span>
+              </span>
+            </span>
+          </div>
+
+          <div class="space-y-2">
+            <h2 class="text-2xl font-bold text-slate-900">
+              🚧 Módulo en Reconstrucción
+            </h2>
+            <p class="text-base text-slate-600 leading-relaxed max-w-md">
+              Este indicador SMS está siendo reconstruido con 
+              <strong class="text-amber-700">mejoras significativas</strong>
+            </p>
+          </div>
+
+          <div class="w-full bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
+            <p class="text-sm font-semibold text-slate-700 mb-4">✨ Próximas mejoras:</p>
+            <div class="grid grid-cols-2 gap-3 text-left text-sm">
+              <div class="flex items-start gap-2 text-slate-600">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>Diseño moderno</span>
+              </div>
+              <div class="flex items-start gap-2 text-slate-600">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>Gráficos interactivos</span>
+              </div>
+              <div class="flex items-start gap-2 text-slate-600">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>Filtros avanzados</span>
+              </div>
+              <div class="flex items-start gap-2 text-slate-600">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>Export mejorado</span>
+              </div>
+              <div class="flex items-start gap-2 text-slate-600">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>Comparativas</span>
+              </div>
+              <div class="flex items-start gap-2 text-slate-600">
+                <svg class="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span>Performance optimizado</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 bg-white border border-amber-200 rounded-lg px-6 py-3 shadow-sm">
+            <svg class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div class="text-left">
+              <p class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Estado</p>
+              <p class="text-sm font-bold text-slate-900">En desarrollo activo</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="w-full rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-3 text-base font-semibold text-white shadow-lg hover:from-amber-600 hover:to-orange-600 transition-all transform hover:scale-105"
+            data-modal-close-button
+          >
+            Entendido
+          </button>
+
+          <p class="text-xs text-slate-500 italic">
+            Gracias por tu paciencia mientras mejoramos esta funcionalidad
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.classList.add('overflow-hidden');
+
+  const overlay = root.querySelector('[data-modal-overlay]');
+
+  const closeModal = () => {
+    overlay?.remove();
+    document.body.classList.remove('overflow-hidden');
+  };
+
+  overlay?.addEventListener('click', event => {
+    if (event.target === overlay) {
+      closeModal();
+    }
+  });
+
+  root.querySelectorAll('[data-modal-close-button]').forEach(button => {
+    button.addEventListener('click', closeModal);
+  });
+}
+
 function ensureModalContainer() {
   if (!modalContainer) {
     modalContainer = document.createElement('div');
@@ -3493,6 +3647,11 @@ function buildModalMarkup({
 }
 
 async function openIndicatorModal({ label, dataKey, type, scenario }) {
+  if (isSmsDataKey(dataKey)) {
+    mostrarMensajeConstruccionModal();
+    return;
+  }
+
   const root = ensureModalContainer();
   
   root.innerHTML = `
@@ -4259,6 +4418,11 @@ function initOptionModals(container) {
 
       if (!dataKey || !type) {
         console.warn('Opción sin datos configurados', button);
+        return;
+      }
+
+      if (isSmsDataKey(dataKey)) {
+        mostrarMensajeConstruccionModal();
         return;
       }
 
