@@ -4623,14 +4623,24 @@ async function openPgpaFsModal() {
     
     let showHistorical = false;
     let activeTab = 'pgpafs';
-    let pgpafsChartRendered = false;
-    let capturesChartRendered = false;
+    let pgpafsChart = null;
+    let capturesChart = null;
     let cleanup = () => {};
 
     const renderModal = () => {
       const chartView = buildPgpaFsChartView(smsRecords, { showHistorical });
       const summary = buildPgpaFsSummary(chartView.entries);
       const capturesView = buildCapturesChartView(capturesRecords, { showHistorical });
+
+      // Destruir gráficas anteriores si existen
+      if (pgpafsChart) {
+        pgpafsChart.destroy();
+        pgpafsChart = null;
+      }
+      if (capturesChart) {
+        capturesChart.destroy();
+        capturesChart = null;
+      }
 
       root.innerHTML = buildPgpaFsModalMarkup({
         activeTab,
@@ -4653,11 +4663,18 @@ async function openPgpaFsModal() {
         'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition';
       const tabHandlers = new Map();
 
-      pgpafsChartRendered = false;
-      capturesChartRendered = false;
+      const Chart = typeof window !== 'undefined' ? window.Chart : null;
 
       const handleClose = () => {
         cleanup();
+        if (pgpafsChart) {
+          pgpafsChart.destroy();
+          pgpafsChart = null;
+        }
+        if (capturesChart) {
+          capturesChart.destroy();
+          capturesChart = null;
+        }
         closeIndicatorModal();
       };
 
@@ -4700,19 +4717,18 @@ async function openPgpaFsModal() {
           }
         });
 
-        if (activeTab === 'pgpafs') {
-          if (chartView.config && canvasPgpafs && !pgpafsChartRendered) {
-            renderModalChart(canvasPgpafs, chartView.config);
-            pgpafsChartRendered = true;
-          } else if (activeModalChart && typeof activeModalChart.resize === 'function') {
-            activeModalChart.resize();
+        // Renderizar gráfica según pestaña activa
+        if (activeTab === 'pgpafs' && chartView.config && canvasPgpafs && Chart) {
+          if (!pgpafsChart) {
+            pgpafsChart = new Chart(canvasPgpafs, chartView.config);
+          } else if (typeof pgpafsChart.resize === 'function') {
+            pgpafsChart.resize();
           }
-        } else if (activeTab === 'captures') {
-          if (capturesView.config && canvasCapturas && !capturesChartRendered) {
-            renderModalChart(canvasCapturas, capturesView.config);
-            capturesChartRendered = true;
-          } else if (activeModalChart && typeof activeModalChart.resize === 'function') {
-            activeModalChart.resize();
+        } else if (activeTab === 'captures' && capturesView.config && canvasCapturas && Chart) {
+          if (!capturesChart) {
+            capturesChart = new Chart(canvasCapturas, capturesView.config);
+          } else if (typeof capturesChart.resize === 'function') {
+            capturesChart.resize();
           }
         }
       };
@@ -4747,10 +4763,6 @@ async function openPgpaFsModal() {
       if (pgpafsToggleButton) {
         pgpafsToggleButton.addEventListener('click', () => {
           showHistorical = !showHistorical;
-          if (activeModalChart) {
-            activeModalChart.destroy();
-            activeModalChart = null;
-          }
           renderModal();
         });
       }
@@ -4758,10 +4770,6 @@ async function openPgpaFsModal() {
       if (capturesToggleButton) {
         capturesToggleButton.addEventListener('click', () => {
           showHistorical = !showHistorical;
-          if (activeModalChart) {
-            activeModalChart.destroy();
-            activeModalChart = null;
-          }
           renderModal();
         });
       }
