@@ -114,6 +114,23 @@ function resolveIndicatorUnit(indicator) {
   );
 }
 
+function isSmsIndicator(indicator) {
+  if (!indicator || typeof indicator !== 'object') return false;
+  const area = resolveIndicatorAreaName(indicator);
+  const code =
+    indicator.clave ?? indicator.codigo ?? indicator.indicador_clave ?? indicator.indicador ?? indicator.key;
+  const normalizedArea = area?.toString().toLowerCase() ?? '';
+  const normalizedCode = code?.toString().toUpperCase() ?? '';
+  return normalizedArea.includes('sms') || normalizedCode.startsWith('SMS-');
+}
+
+function createCompositeCaptureRow() {
+  return {
+    id: crypto.randomUUID ? crypto.randomUUID() : `capture-${Math.random().toString(16).slice(2)}`,
+    valor: ''
+  };
+}
+
 function computeValidationStatus(record) {
   if (!record || typeof record !== 'object') return 'PENDIENTE';
   const rawStatus =
@@ -153,6 +170,10 @@ export default function CapturePage() {
   const [selectedIndicator, setSelectedIndicator] = useState(null);
   const [editingMeasurement, setEditingMeasurement] = useState(null);
   const [validatingMeasurementId, setValidatingMeasurementId] = useState(null);
+  const [compositeCaptureEnabled, setCompositeCaptureEnabled] = useState(false);
+  const [compositeCaptures, setCompositeCaptures] = useState([createCompositeCaptureRow()]);
+  const [compositeAggregation, setCompositeAggregation] = useState('sum');
+  const [compositeError, setCompositeError] = useState(null);
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
@@ -251,6 +272,10 @@ export default function CapturePage() {
       valor: '',
       escenario: 'REAL'
     });
+    setCompositeCaptureEnabled(false);
+    setCompositeCaptures([createCompositeCaptureRow()]);
+    setCompositeAggregation('sum');
+    setCompositeError(null);
   }, [measurementForm, currentYear]);
 
   const resetTargetForm = useCallback(() => {
@@ -267,6 +292,26 @@ export default function CapturePage() {
     resetMeasurementForm();
     resetTargetForm();
   }, [selectedIndicator, resetMeasurementForm, resetTargetForm]);
+
+  const selectedIndicatorRecord = useMemo(() => {
+    return filteredIndicators.find(indicator => String(indicator.id) === String(selectedIndicator)) ?? null;
+  }, [filteredIndicators, selectedIndicator]);
+
+  const isSmsCapture = useMemo(() => isSmsIndicator(selectedIndicatorRecord), [selectedIndicatorRecord]);
+
+  const compositeNumericValues = useMemo(
+    () =>
+      compositeCaptures
+        .map(item => Number(item.valor))
+        .filter(value => Number.isFinite(value)),
+    [compositeCaptures]
+  );
+
+  const compositeResult = useMemo(() => {
+    if (!compositeNumericValues.length) return null;
+    const total = compositeNumericValues.reduce((sum, value) => sum + value, 0);
+    return compositeAggregation === 'average' ? total / compositeNumericValues.length : total;
+  }, [compositeNumericValues, compositeAggregation]);
 
   const createMeasurementMutation = useMutation({
     mutationFn: payload => saveMeasurement(payload),
@@ -316,6 +361,10 @@ export default function CapturePage() {
       valor: item.valor ?? '',
       escenario: item.escenario ?? 'REAL'
     });
+    setCompositeCaptureEnabled(false);
+    setCompositeCaptures([createCompositeCaptureRow()]);
+    setCompositeAggregation('sum');
+    setCompositeError(null);
   };
 
   const handleCancelEdit = () => {
@@ -338,11 +387,25 @@ export default function CapturePage() {
 
   const onSubmitMeasurement = measurementForm.handleSubmit(values => {
     if (!selectedIndicator) return;
+    setCompositeError(null);
+    measurementForm.clearErrors('valor');
+
+    let derivedValue = Number(values.valor);
+
+    if (isSmsCapture && compositeCaptureEnabled) {
+      if (compositeNumericValues.length < 2) {
+        setCompositeError('Agrega al menos dos capturas válidas para calcular el indicador compuesto.');
+        return;
+      }
+      const total = compositeNumericValues.reduce((sum, value) => sum + value, 0);
+      derivedValue = compositeAggregation === 'average' ? total / compositeNumericValues.length : total;
+    }
+
     const basePayload = {
       indicador_id: selectedIndicator,
       anio: Number(values.anio),
       mes: Number(values.mes),
-      valor: Number(values.valor),
+      valor: derivedValue,
       escenario: values.escenario
     };
 
@@ -550,13 +613,146 @@ export default function CapturePage() {
                   </select>
                 </label>
                 <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-                  Valor
-                  <input
-                    type="number"
-                    step="0.0001"
-                    {...measurementForm.register('valor', { required: true, min: 0 })}
-                    className="rounded-lg border border-slate-200 px-3 py-2 shadow-sm focus:border-aifa-blue focus:outline-none focus:ring-2 focus:ring-aifa-blue/30"
-                  />
+                  <div className="flex items-center gap-2">
+                    <span>Valor</span>
+                    {isSmsCapture && (
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                        Indicador SMS
+                      </span>
+                    )}
+                  </div>
+                  {!isSmsCapture || !compositeCaptureEnabled ? (
+                    <input
+                      type="number"
+                      step="0.0001"
+                      {...measurementForm.register('valor', { required: !compositeCaptureEnabled, min: 0 })}
+                      className="rounded-lg border border-slate-200 px-3 py-2 shadow-sm focus:border-aifa-blue focus:outline-none focus:ring-2 focus:ring-aifa-blue/30"
+                      disabled={isSmsCapture && compositeCaptureEnabled}
+                    />
+                  ) : null}
+                  {isSmsCapture && (
+                    <div className="mt-2 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                      <label className="flex items-start gap-2 text-sm font-medium text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 rounded border-slate-300 text-aifa-blue focus:ring-aifa-blue"
+                          checked={compositeCaptureEnabled}
+                          onChange={event => {
+                            setCompositeCaptureEnabled(event.target.checked);
+                            setCompositeError(null);
+                          }}
+                        />
+                        <div>
+                          Usar captura compuesta
+                          <p className="text-xs font-normal text-slate-500">
+                            Activa esta opción cuando el indicador se calcula a partir de dos o más capturas en el mismo periodo.
+                          </p>
+                        </div>
+                      </label>
+
+                      {compositeCaptureEnabled && (
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Cómo combinar los valores
+                            </span>
+                            <div className="inline-flex rounded-lg border border-slate-200 bg-white shadow-sm" role="group">
+                              <button
+                                type="button"
+                                className={`px-3 py-1.5 text-xs font-semibold transition first:rounded-l-lg last:rounded-r-lg ${
+                                  compositeAggregation === 'sum'
+                                    ? 'bg-aifa-blue text-white shadow'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                                onClick={() => setCompositeAggregation('sum')}
+                              >
+                                Sumar capturas
+                              </button>
+                              <button
+                                type="button"
+                                className={`px-3 py-1.5 text-xs font-semibold transition first:rounded-l-lg last:rounded-r-lg ${
+                                  compositeAggregation === 'average'
+                                    ? 'bg-aifa-blue text-white shadow'
+                                    : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                                onClick={() => setCompositeAggregation('average')}
+                              >
+                                Promediar capturas
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            {compositeCaptures.map((capture, index) => (
+                              <div key={capture.id} className="flex items-center gap-3">
+                                <div className="flex-1">
+                                  <label className="flex flex-col gap-1 text-xs text-slate-500">
+                                    Captura {index + 1}
+                                    <input
+                                      type="number"
+                                      step="0.0001"
+                                      value={capture.valor}
+                                      onChange={event =>
+                                        setCompositeCaptures(prev =>
+                                          prev.map(item =>
+                                            item.id === capture.id ? { ...item, valor: event.target.value } : item
+                                          )
+                                        )
+                                      }
+                                      className="rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-aifa-blue focus:outline-none focus:ring-2 focus:ring-aifa-blue/30"
+                                    />
+                                  </label>
+                                </div>
+                                {compositeCaptures.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setCompositeCaptures(prev =>
+                                        prev.filter(item => item.id !== capture.id || prev.length === 1)
+                                      )
+                                    }
+                                    className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-rose-200 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-200/60"
+                                    aria-label={`Eliminar captura ${index + 1}`}
+                                  >
+                                    Eliminar
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+
+                            <div className="flex flex-wrap items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setCompositeCaptures(prev => [...prev, createCompositeCaptureRow()])}
+                                className="inline-flex items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-aifa-blue hover:text-aifa-blue focus:outline-none focus:ring-2 focus:ring-aifa-blue/30"
+                              >
+                                <PlusCircle className="h-3.5 w-3.5" />
+                                Agregar otra captura
+                              </button>
+                              <p className="text-xs text-slate-500">
+                                Registra al menos dos valores para generar el indicador.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Resultado calculado
+                              </span>
+                              <span className="text-lg font-bold text-slate-900">
+                                {compositeResult !== null ? formatNumber(compositeResult) : '—'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500">
+                              Se aplicará automáticamente al guardar la medición.
+                            </p>
+                            {compositeError && <p className="mt-1 text-xs text-rose-600">{compositeError}</p>}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </label>
                 <div className="flex flex-col gap-3 sm:col-span-2">
                   <div className="flex flex-wrap gap-3">
