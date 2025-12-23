@@ -28,20 +28,27 @@ export function normalizeScenarioKey(value) {
     .trim();
 }
 
+const FAUNA_IMPACT_CODES = new Set(['SMS-01']);
+
 export function isFaunaImpactRateIndicator(indicator) {
   if (!indicator) return false;
 
   const code = indicator?.clave?.toString().trim().toUpperCase();
-  if (code === 'SMS-01') {
+  if (code && FAUNA_IMPACT_CODES.has(code)) {
     return true;
   }
 
-  const name = normalizeIndicatorText(indicator?.nombre);
-  const description = normalizeIndicatorText(indicator?.descripcion);
+  const textFields = [
+    indicator?.nombre,
+    indicator?.descripcion,
+    indicator?.indicador_nombre,
+    indicator?.nombre_indicador,
+    indicator?.titulo,
+    indicator?.display_name,
+    indicator?.meta_titulo
+  ]
+    .map(normalizeIndicatorText)
+    .filter(Boolean);
 
-  const haystacks = [name, description].filter(Boolean);
-
-  return haystacks.some(text =>
-    text.includes('impact') && text.includes('fauna') && text.includes('tasa')
-  );
+  return textFields.some(text => text.includes('fauna') && (text.includes('impact') || text.includes('tasa')));
 }
