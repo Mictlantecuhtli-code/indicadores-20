@@ -445,6 +445,14 @@ export default function CapturePage() {
     };
   }, [watchedTotalOperations, watchedImpactos]);
 
+  const faunaCalculatedRate = useMemo(() => {
+    if (faunaPreview.tasa !== null && faunaPreview.tasa !== undefined) return faunaPreview.tasa;
+    if (editingMeasurement?.tasa !== null && editingMeasurement?.tasa !== undefined) {
+      return Number(editingMeasurement.tasa);
+    }
+    return null;
+  }, [faunaPreview.tasa, editingMeasurement]);
+
   const createMeasurementMutation = useMutation({
     mutationFn: payload => saveMeasurement(payload),
     onSuccess: (_data, variables) => {
@@ -1040,7 +1048,7 @@ export default function CapturePage() {
                       <div className="text-right">
                         <p className="text-[11px] uppercase tracking-wide text-slate-500">Tasa preliminar</p>
                         <p className="text-xl font-bold text-slate-900">
-                          {faunaPreview.tasa !== null ? `${faunaPreview.tasa.toFixed(4)}%` : '—'}
+                          {faunaCalculatedRate !== null ? `${faunaCalculatedRate.toFixed(4)}%` : '—'}
                         </p>
                       </div>
                     </div>
