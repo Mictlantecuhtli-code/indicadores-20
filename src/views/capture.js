@@ -6,7 +6,10 @@ import {
   saveMeasurement,
   updateMeasurement,
   validateMeasurement,
-  upsertTarget
+  upsertTarget,
+  getFaunaImpactsByIndicator,
+  createFaunaImpact,
+  updateFaunaImpact
 } from '../services/supabaseClient.js';
 import { renderLoading, renderError, showToast } from '../ui/feedback.js';
 import { formatNumber, monthName, formatDate } from '../utils/formatters.js';
@@ -20,12 +23,37 @@ const months = Array.from({ length: 12 }).map((_, index) => ({
 const TARGET_YEARS = Array.from({ length: 11 }).map((_, index) => 2022 + index);
 
 const SCENARIOS = ['BAJO', 'MEDIO', 'ALTO'];
+const FAUNA_IMPACT_CODES = new Set(['SMS-01']);
 
 let currentAreas = [];
 let currentIndicators = [];
 let selectedAreaId = null;
 let selectedIndicatorId = null;
 let currentYear = new Date().getFullYear();
+
+function isFaunaImpactIndicator(indicator) {
+  if (!indicator) return false;
+  const code = indicator.clave ?? indicator.codigo ?? indicator.indicador_clave ?? indicator.indicador;
+  if (code && FAUNA_IMPACT_CODES.has(code.toString().toUpperCase())) return true;
+
+  const haystacks = [
+    indicator.nombre,
+    indicator.descripcion,
+    indicator.nombre_indicador,
+    indicator.titulo,
+    indicator.meta_titulo
+  ]
+    .filter(Boolean)
+    .map(text =>
+      text
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+    );
+
+  return haystacks.some(text => text.includes('fauna') && (text.includes('impact') || text.includes('tasa')));
+}
 
 function formatValidationStatus(status) {
   if (!status) return 'Pendiente';
@@ -137,6 +165,84 @@ function buildHistoryTable(history, { showValidation = false } = {}) {
           </div>
         `
         : ''}
+    </div>
+  `;
+}
+
+function buildFaunaHistoryTable(history, { allowEdit = false } = {}) {
+  if (!history.length) {
+    return `
+      <div class="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-6 text-center text-sm text-slate-500">
+        No se han registrado impactos de fauna para este indicador.
+      </div>
+    `;
+  }
+
+  const sorted = [...history].sort((a, b) => {
+    if (b.anio !== a.anio) return b.anio - a.anio;
+    return (b.mes || 0) - (a.mes || 0);
+  });
+
+  return `
+    <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table class="min-w-full divide-y divide-slate-200 text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold text-slate-500">Periodo</th>
+            <th class="px-4 py-3 text-right font-semibold text-slate-500">Operaciones</th>
+            <th class="px-4 py-3 text-right font-semibold text-slate-500">Impactos</th>
+            <th class="px-4 py-3 text-right font-semibold text-slate-500">Tasa</th>
+            <th class="px-4 py-3 text-left font-semibold text-slate-500">Estatus</th>
+            ${allowEdit ? '<th class="px-4 py-3 text-left font-semibold text-slate-500">Acciones</th>' : ''}
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          ${sorted
+            .map(item => {
+              const status = (item.estatus_validacion ?? '').toString().toUpperCase();
+              const badgeClass = getStatusBadgeClass(status);
+              const statusLabel = formatValidationStatus(status);
+              return `
+                <tr>
+                  <td class="px-4 py-3 text-slate-600">${monthName(item.mes)} ${item.anio}</td>
+                  <td class="px-4 py-3 text-right font-semibold text-slate-800">${formatNumber(item.total_operaciones ?? 0)}</td>
+                  <td class="px-4 py-3 text-right font-semibold text-slate-800">${formatNumber(item.impactos ?? 0)}</td>
+                  <td class="px-4 py-3 text-right font-semibold text-slate-800">${item.tasa != null ? Number(item.tasa).toFixed(4) + '%' : '—'}</td>
+                  <td class="px-4 py-3">
+                    <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${badgeClass}">
+                      ${statusLabel}
+                    </span>
+                    ${item.validado_por && item.fecha_validacion
+                      ? `<p class="mt-1 text-[11px] text-slate-400">Validado el ${formatDate(item.fecha_validacion)}</p>`
+                      : ''}
+                  </td>
+                  ${
+                    allowEdit
+                      ? `<td class="px-4 py-3">
+                          <button
+                            type="button"
+                            class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-blue-500 hover:text-blue-600"
+                            data-action="edit-fauna"
+                            data-id="${item.id}"
+                            data-mes="${item.mes}"
+                            data-anio="${item.anio}"
+                            data-operaciones="${item.total_operaciones ?? 0}"
+                            data-impactos="${item.impactos ?? 0}"
+                            data-tasa="${item.tasa ?? ''}"
+                            data-ediciones="${item.numero_ediciones ?? 0}"
+                          >
+                            <i class="fa-solid fa-pen"></i>
+                            Editar
+                          </button>
+                        </td>`
+                      : ''
+                  }
+                </tr>
+              `;
+            })
+            .join('')}
+        </tbody>
+      </table>
     </div>
   `;
 }
@@ -412,6 +518,19 @@ async function loadIndicatorContent(container, indicatorId, forceReload = false)
       return;
     }
 
+    const isFauna = isFaunaImpactIndicator(indicator);
+
+    if (isFauna) {
+      const faunaHistory = await getFaunaImpactsByIndicator(indicatorId);
+      renderFaunaCapture(container, {
+        indicator,
+        history: faunaHistory,
+        esSubdirector,
+        forceReload
+      });
+      return;
+    }
+
     // CAMBIO IMPORTANTE: Agregar nocache cuando forceReload es true
     // y aumentar el límite para ver más histórico
     const [history, targets] = await Promise.all([
@@ -636,6 +755,305 @@ async function loadIndicatorContent(container, indicatorId, forceReload = false)
     container.innerHTML = '<div class="text-center py-8 text-red-500">Error al cargar el indicador</div>';
     showToast('Error al cargar el indicador', { type: 'error' });
   }
+}
+
+function renderFaunaCapture(container, { indicator, history = [], esSubdirector }) {
+  const currentYearMeasurements = (history ?? []).filter(item => Number(item.anio) === Number(currentYear));
+  const measurementsByMonth = new Map(currentYearMeasurements.map(item => [Number(item.mes), item]));
+  const capturedMonths = new Set(currentYearMeasurements.map(item => Number(item.mes)));
+  const availableMonths = months.filter(month => !capturedMonths.has(month.value));
+
+  let suggestedMonth = new Date().getMonth() + 1;
+  if (currentYearMeasurements.length) {
+    const latest = currentYearMeasurements.sort((a, b) => b.mes - a.mes)[0];
+    suggestedMonth = ((Number(latest.mes) % 12) || 0) + 1;
+    if (Number(latest.mes) === 12) suggestedMonth = 1;
+  }
+
+  const disableCaptureForm = !esSubdirector && availableMonths.length === 0;
+  if (!esSubdirector && availableMonths.length > 0) {
+    suggestedMonth = availableMonths[0].value;
+  }
+
+  const initialMeasurement = measurementsByMonth.get(suggestedMonth);
+  const initialOps = initialMeasurement?.total_operaciones ?? '';
+  const initialImpacts = initialMeasurement?.impactos ?? '';
+  const initialTasa = initialMeasurement?.tasa ?? null;
+  const initialButtonLabel = initialMeasurement ? 'Actualizar medición' : 'Guardar medición';
+
+  const monthOptions = months
+    .map(month => {
+      const measurement = measurementsByMonth.get(month.value);
+      const isCaptured = Boolean(measurement);
+      const disabledAttr = !esSubdirector && isCaptured ? 'disabled' : '';
+      const selectedAttr = month.value === suggestedMonth ? 'selected' : '';
+      const statusLabel = isCaptured
+        ? ` — ${formatNumber(measurement.impactos ?? 0)} impactos`
+        : '';
+      return `
+        <option value="${month.value}" ${selectedAttr} ${disabledAttr}>
+          ${month.label}${statusLabel}
+        </option>
+      `;
+    })
+    .join('');
+
+  container.innerHTML = `
+    <section class="grid gap-6 lg:grid-cols-2">
+      <div class="space-y-4">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="mb-4 flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-slate-800">Registrar medición</h3>
+              <p class="text-xs text-slate-500">${indicator.nombre}</p>
+            </div>
+          </div>
+          <form
+            id="measurement-form"
+            class="space-y-4"
+            data-disable-capture="${disableCaptureForm ? 'true' : 'false'}"
+            data-editing-id="${initialMeasurement ? initialMeasurement.id : ''}"
+            data-ediciones="${initialMeasurement?.numero_ediciones ?? 0}"
+          >
+            <label class="flex flex-col gap-1 text-sm text-slate-600">
+              Mes
+              <select
+                name="month"
+                class="rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                ${disableCaptureForm ? 'disabled' : ''}
+              >
+                ${monthOptions}
+              </select>
+            </label>
+            <div class="grid gap-4 md:grid-cols-2">
+              <label class="flex flex-col gap-1 text-sm text-slate-600">
+                Total de operaciones
+                <input
+                  name="operations"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  class="rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Ingresa las operaciones"
+                  value="${initialOps}"
+                  ${disableCaptureForm && !esSubdirector ? 'disabled' : ''}
+                />
+              </label>
+              <label class="flex flex-col gap-1 text-sm text-slate-600">
+                Impactos
+                <input
+                  name="impacts"
+                  type="number"
+                  min="0"
+                  step="1"
+                  required
+                  class="rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="Ingresa los impactos"
+                  value="${initialImpacts}"
+                  ${disableCaptureForm && !esSubdirector ? 'disabled' : ''}
+                />
+              </label>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tasa preliminar</span>
+                <span class="text-lg font-bold text-slate-900" data-fauna-rate>
+                  ${initialTasa != null ? Number(initialTasa).toFixed(4) + '%' : '—'}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500">La tasa final se calcula automáticamente en base de datos.</p>
+            </div>
+            <button
+              type="submit"
+              class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              ${disableCaptureForm && !esSubdirector ? 'disabled' : ''}
+            >
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span id="measurement-submit-label">${initialButtonLabel}</span>
+            </button>
+            ${disableCaptureForm
+              ? `<p class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  Todos los meses del ${currentYear} ya fueron capturados para este indicador. Contacte a su subdirección para realizar cambios.
+                </p>`
+              : esSubdirector
+                ? '<p class="text-[11px] text-slate-400">Seleccione un mes ya capturado para editarlo. Las actualizaciones quedarán registradas.</p>'
+                : ''}
+          </form>
+        </div>
+
+        <div class="space-y-3">
+          <h3 class="text-sm font-semibold text-slate-600">Histórico de mediciones</h3>
+          <div id="history-table">${buildFaunaHistoryTable(history, { allowEdit: esSubdirector })}</div>
+        </div>
+      </div>
+
+      <!-- No se muestran metas para este indicador -->
+    </section>
+  `;
+
+  initializeFaunaHandlers(indicator.id, esSubdirector, history, container);
+}
+
+function initializeFaunaHandlers(indicatorId, esSubdirector, history, container) {
+  const measurementForm = document.getElementById('measurement-form');
+  const historyTable = document.getElementById('history-table');
+  const monthSelect = measurementForm?.querySelector('select[name="month"]');
+  const operationsInput = measurementForm?.querySelector('input[name="operations"]');
+  const impactsInput = measurementForm?.querySelector('input[name="impacts"]');
+  const rateLabel = measurementForm?.querySelector('[data-fauna-rate]');
+  const measurementSubmitLabel = document.getElementById('measurement-submit-label');
+
+  const measurementsByMonth = new Map(history.map(item => [Number(item.mes), item]));
+  const disableCapture = measurementForm?.dataset?.disableCapture === 'true';
+
+  const updatePreview = () => {
+    if (!rateLabel || !operationsInput || !impactsInput) return;
+    const ops = Number(operationsInput.value);
+    const imp = Number(impactsInput.value);
+    if (Number.isFinite(ops) && ops >= 0 && Number.isFinite(imp) && imp >= 0) {
+      const tasa = ops > 0 ? (imp / ops) * 100 : 0;
+      rateLabel.textContent = `${tasa.toFixed(4)}%`;
+    } else {
+      rateLabel.textContent = '—';
+    }
+  };
+
+  const syncFormWithMonth = () => {
+    if (!monthSelect || !operationsInput || !impactsInput) return;
+    const selectedMonth = Number(monthSelect.value);
+    const measurement = measurementsByMonth.get(selectedMonth);
+    if (measurement) {
+      measurementForm.dataset.editingId = measurement.id ?? '';
+      measurementForm.dataset.ediciones = measurement.numero_ediciones ?? 0;
+      operationsInput.value = measurement.total_operaciones ?? '';
+      impactsInput.value = measurement.impactos ?? '';
+      if (measurementSubmitLabel) {
+        measurementSubmitLabel.textContent = 'Actualizar medición';
+      }
+    } else {
+      measurementForm.dataset.editingId = '';
+      measurementForm.dataset.ediciones = 0;
+      operationsInput.value = '';
+      impactsInput.value = '';
+      if (measurementSubmitLabel) {
+        measurementSubmitLabel.textContent = 'Guardar medición';
+      }
+    }
+    updatePreview();
+  };
+
+  if (monthSelect) {
+    monthSelect.addEventListener('change', syncFormWithMonth);
+    syncFormWithMonth();
+  }
+
+  if (operationsInput) operationsInput.addEventListener('input', updatePreview);
+  if (impactsInput) impactsInput.addEventListener('input', updatePreview);
+
+  if (historyTable && esSubdirector) {
+    historyTable.addEventListener('click', (event) => {
+      const target = event.target.closest('[data-action="edit-fauna"]');
+      if (!target) return;
+      const mes = Number(target.dataset.mes);
+      if (monthSelect) {
+        monthSelect.value = mes;
+      }
+      syncFormWithMonth();
+    });
+  }
+
+  measurementForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (disableCapture && !esSubdirector) {
+      showToast('Todos los meses del año seleccionado ya fueron capturados', { type: 'info' });
+      return;
+    }
+
+    const submit = measurementForm.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    submit.classList.add('opacity-70');
+
+    const month = Number(monthSelect?.value);
+    const ops = Number(operationsInput?.value);
+    const imp = Number(impactsInput?.value);
+
+    if (!Number.isFinite(month) || month < 1 || month > 12) {
+      showToast('Selecciona un mes válido', { type: 'warning' });
+      submit.disabled = false;
+      submit.classList.remove('opacity-70');
+      return;
+    }
+    if (!Number.isFinite(ops) || ops < 0) {
+      showToast('Ingresa un total de operaciones válido (>= 0)', { type: 'warning' });
+      submit.disabled = false;
+      submit.classList.remove('opacity-70');
+      return;
+    }
+    if (!Number.isFinite(imp) || imp < 0) {
+      showToast('Ingresa un número de impactos válido (>= 0)', { type: 'warning' });
+      submit.disabled = false;
+      submit.classList.remove('opacity-70');
+      return;
+    }
+
+    if (ops === 0) {
+      showToast('Con 0 operaciones la tasa se guardará como 0.', { type: 'info' });
+    }
+
+    const session = getSession();
+    const userId = session?.user?.id;
+
+    const existing = measurementsByMonth.get(month);
+    const editingId = measurementForm.dataset.editingId || (existing ? existing.id : '');
+    const basePayload = {
+      indicador_id: indicatorId,
+      anio: currentYear,
+      mes: month,
+      total_operaciones: ops,
+      impactos: imp
+    };
+
+    try {
+      if (editingId) {
+        await updateFaunaImpact(editingId, {
+          ...basePayload,
+          editado_por: userId ?? null,
+          fecha_ultima_edicion: new Date().toISOString(),
+          numero_ediciones: (existing?.numero_ediciones ?? 0) + 1
+        });
+        showToast('Medición actualizada correctamente');
+      } else if (existing) {
+        measurementForm.dataset.editingId = existing.id ?? '';
+        measurementForm.dataset.ediciones = existing.numero_ediciones ?? 0;
+        operationsInput.value = existing.total_operaciones ?? '';
+        impactsInput.value = existing.impactos ?? '';
+        if (measurementSubmitLabel) {
+          measurementSubmitLabel.textContent = 'Actualizar medición';
+        }
+        showToast('Ya existe un registro para este periodo. Se cargó para edición.', { type: 'info' });
+        submit.disabled = false;
+        submit.classList.remove('opacity-70');
+        return;
+      } else {
+        await createFaunaImpact({
+          ...basePayload,
+          capturado_por: userId ?? null
+        });
+        showToast('Medición registrada correctamente');
+      }
+
+      await loadIndicatorContent(container, indicatorId, true);
+    } catch (error) {
+      console.error(error);
+      showToast(error.message ?? 'No fue posible registrar la medición', { type: 'error' });
+      submit.disabled = false;
+      submit.classList.remove('opacity-70');
+    }
+  });
 }
 
 function initializeFormHandlers(indicatorId, esSubdirector, history, container, initialTargets = [], indicator = null) {
