@@ -622,6 +622,45 @@ export async function getImpactosFauna() {
   }
 }
 
+export async function getFaunaImpactsByIndicator(indicadorId) {
+  if (!indicadorId) return [];
+  try {
+    const { data, error } = await supabase
+      .from('impactos_fauna')
+      .select(
+        'id, indicador_id, anio, mes, total_operaciones, impactos, tasa, capturado_por, editado_por, fecha_captura, fecha_ultima_edicion, numero_ediciones, validado_por, fecha_validacion, estatus_validacion, observaciones_validacion'
+      )
+      .eq('indicador_id', indicadorId)
+      .order('anio', { ascending: true })
+      .order('mes', { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
+  } catch (error) {
+    console.error('Error en getFaunaImpactsByIndicator:', error);
+    throw error;
+  }
+}
+
+export async function createFaunaImpact(payload) {
+  if (!payload?.indicador_id) throw new Error('indicador_id es requerido para capturar impactos de fauna.');
+  const { data, error } = await supabase.from('impactos_fauna').insert(payload).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateFaunaImpact(id, payload) {
+  if (!id) throw new Error('Se requiere el id del registro de impactos de fauna para actualizar.');
+  const { data, error } = await supabase
+    .from('impactos_fauna')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function getSmsDocuments({ indicadorId } = {}) {
   try {
     let query = supabase
