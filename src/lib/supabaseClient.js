@@ -229,6 +229,31 @@ function normalizeMeasurement(record) {
   };
 }
 
+function normalizeFaunaImpact(record) {
+  if (!record) return record;
+  const normalizedRecord = syncValidationFields(record);
+  const status = normalizedRecord.estatus_validacion;
+
+  return {
+    ...normalizedRecord,
+    estatus_validacion: typeof status === 'string' ? status.toUpperCase() : status ?? 'PENDIENTE',
+    tasa: normalizedRecord.tasa ?? null,
+    fecha_captura: normalizedRecord.fecha_captura ?? normalizedRecord.creado_en ?? null,
+    fecha_ultima_edicion:
+      normalizedRecord.fecha_ultima_edicion ??
+      normalizedRecord.fecha_actualizacion ??
+      normalizedRecord.actualizado_en ??
+      null,
+    fecha_validacion: normalizedRecord.fecha_validacion ?? normalizedRecord.validado_en ?? null,
+    numero_ediciones: normalizedRecord.numero_ediciones ?? 0,
+    capturado_por: normalizedRecord.capturado_por ?? normalizedRecord.creado_por ?? null,
+    editado_por: normalizedRecord.editado_por ?? normalizedRecord.actualizado_por ?? null,
+    validado_por: normalizedRecord.validado_por ?? normalizedRecord.subdirector_id ?? null,
+    observaciones_validacion:
+      normalizedRecord.observaciones_validacion ?? normalizedRecord.validacion_observaciones ?? null
+  };
+}
+
 function normalizeTarget(record) {
   if (!record) return record;
   return {
@@ -405,9 +430,16 @@ export async function getIndicators() {
 }
 
 export async function getAreas() {
-  const { data, error } = await supabase
-    .from('areas')
-    .select('id,nombre,clave,color_hex,parent_area_id')
+  let query = supabase.from('areas').select('id,nombre,clave,color_hex,parent_area_id,estado,orden_visualizacion');
+
+  try {
+    query = query.eq('estado', 'ACTIVO');
+  } catch (error) {
+    // Si la columna no existe, continuar sin filtrar
+  }
+
+  const { data, error } = await query
+    .order('orden_visualizacion', { ascending: true, nullsLast: true })
     .order('nombre', { ascending: true });
 
   if (error) {
@@ -567,6 +599,40 @@ export async function validateMeasurement(id, { validado_por, observaciones = nu
   
   console.log('✅ Actualizado:', data);
   return normalizeMeasurement(data);
+}
+
+export async function getFaunaImpacts(indicadorId) {
+  if (!indicadorId) return [];
+  const { data, error } = await supabase
+    .from('impactos_fauna')
+    .select('*')
+    .eq('indicador_id', indicadorId)
+    .order('anio', { ascending: true })
+    .order('mes', { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []).map(normalizeFaunaImpact);
+}
+
+export async function createFaunaImpact(payload) {
+  if (!payload?.indicador_id) throw new Error('Se requiere un indicador para capturar impactos de fauna.');
+  const basePayload = { ...payload };
+  const { data, error } = await supabase.from('impactos_fauna').insert(basePayload).select().single();
+  if (error) throw error;
+  return normalizeFaunaImpact(data);
+}
+
+export async function updateFaunaImpact(id, payload) {
+  if (!id) throw new Error('Se requiere un identificador para actualizar impactos de fauna.');
+  const { data, error } = await supabase
+    .from('impactos_fauna')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return normalizeFaunaImpact(data);
 }
 
 export async function upsertTarget(payload) {
